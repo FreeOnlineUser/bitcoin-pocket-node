@@ -1,0 +1,13 @@
+# Bitcoin Core source (downloaded during cross-compile)
+/src/
+
+build/android-arm64/*.bin
+
+# Android app build artifacts
+.gradle/
+app/build/
+local.properties
+
+# Don't commit bundled binaries in assets (13MB+)
+app/src/main/assets/bitcoind
+app/src/main/assets/libc++_shared.so

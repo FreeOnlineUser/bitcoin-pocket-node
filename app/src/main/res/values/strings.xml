@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pocket Node</string>
+    <string name="notification_channel_name">Bitcoin Node</string>
+    <string name="notification_channel_description">Shows bitcoind status while running</string>
+</resources>

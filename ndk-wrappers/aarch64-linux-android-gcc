@@ -1,0 +1,9 @@
+#!/bin/bash
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --target=aarch64-linux-android) ARGS+=("--target=aarch64-linux-android28") ;;
+    *) ARGS+=("$arg") ;;
+  esac
+done
+exec /Users/joehey/tools/android-sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android28-clang "${ARGS[@]}"
