@@ -216,10 +216,9 @@ fun NodeStatusScreen(
                 // Get mempool info
                 try {
                     val mpInfo = rpc.call("getmempoolinfo")
-                    val mpResult = mpInfo?.optJSONObject("result")
-                    if (mpResult != null) {
-                        mempoolSize = mpResult.optInt("size", 0)
-                        mempoolBytes = mpResult.optLong("bytes", 0)
+                    if (mpInfo != null && !mpInfo.optBoolean("_rpc_error", false)) {
+                        mempoolSize = mpInfo.optInt("size", 0)
+                        mempoolBytes = mpInfo.optLong("bytes", 0)
                     }
                 } catch (_: Exception) {}
 
