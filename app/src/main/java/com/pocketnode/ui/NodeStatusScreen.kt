@@ -106,22 +106,44 @@ fun NodeStatusScreen(
                 try {
                     if (logFile.exists() && logFile.length() > 0) {
                         val raf = java.io.RandomAccessFile(logFile, "r")
-                        val readSize = minOf(2048L, raf.length())
+                        val readSize = minOf(4096L, raf.length())
                         raf.seek(raf.length() - readSize)
                         val tail = ByteArray(readSize.toInt())
                         raf.readFully(tail)
                         raf.close()
-                        val lines = String(tail).lines().takeLast(5)
-                        val preSyncLine = lines.lastOrNull { it.contains("Pre-synchronizing blockheaders") }
-                        if (preSyncLine != null) {
-                            val match = preSyncRegex.find(preSyncLine)
-                            if (match != null) {
-                                val h = match.groupValues[1]
-                                val pct = match.groupValues[2]
-                                startupDetail = "Pre-syncing headers: $pct% (${"%,d".format(h.toLong())})"
-                                nodeStatus = "Pre-syncing headers"
+                        val lines = String(tail).lines().takeLast(15)
+
+                        // Match startup phases from debug.log init messages
+                        val detail = when {
+                            lines.any { it.contains("init message: Done loading") } -> "Connecting to peers..."
+                            lines.any { it.contains("init message: Loading mempool") || it.contains("Loading") && it.contains("mempool") } -> "Loading mempool..."
+                            lines.any { it.contains("init message: Pruning blockstore") } -> "Pruning blockstore..."
+                            lines.any { it.contains("init message: Verifying blocks") } -> {
+                                val pctLine = lines.lastOrNull { it.contains("Verification progress:") }
+                                val pct = pctLine?.substringAfter("progress:")?.trim()?.trimEnd('%')?.trim() ?: ""
+                                if (pct.isNotEmpty()) "Verifying blocks... $pct%" else "Verifying blocks..."
                             }
+                            lines.any { it.contains("init message: Loading block index") || it.contains("block index") } -> "Loading block index..."
+                            lines.any { it.contains("init message: Loading wallet") } -> "Loading wallet..."
+                            lines.any { it.contains("Pre-synchronizing blockheaders") } -> {
+                                val preSyncLine = lines.lastOrNull { it.contains("Pre-synchronizing blockheaders") }
+                                val match = preSyncLine?.let { preSyncRegex.find(it) }
+                                if (match != null) {
+                                    val h = match.groupValues[1]
+                                    val pct = match.groupValues[2]
+                                    nodeStatus = "Pre-syncing headers"
+                                    "Pre-syncing headers: $pct% (${"%,d".format(h.toLong())})"
+                                } else "Pre-syncing headers..."
+                            }
+                            lines.any { it.contains("init message: Starting network") } -> "Starting network..."
+                            lines.any { it.contains("init message:") } -> {
+                                val msg = lines.last { it.contains("init message:") }
+                                    .substringAfter("init message:").trim().trimEnd('…', '.')
+                                "$msg..."
+                            }
+                            else -> ""
                         }
+                        if (detail.isNotEmpty()) startupDetail = detail
                     }
                 } catch (_: Exception) {}
             } else {
