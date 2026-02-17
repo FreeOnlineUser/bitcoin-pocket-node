@@ -93,9 +93,9 @@ fun ConnectWalletScreen(onBack: () -> Unit) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "⚠ Requires full background sync to complete before use. " +
-                        "Your node is synced via AssumeUTXO but background validation " +
-                        "must finish before the Electrum server can serve wallet history.",
+                        "⚠ The Electrum server indexes blocks from your node. " +
+                        "If your node is still syncing, wallet history may be incomplete " +
+                        "until it reaches the chain tip.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFFFF9800)
                     )
