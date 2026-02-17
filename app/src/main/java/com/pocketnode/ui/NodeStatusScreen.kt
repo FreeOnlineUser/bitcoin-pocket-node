@@ -156,9 +156,12 @@ fun NodeStatusScreen(
                     }
                 } catch (_: Exception) {}
             } else {
-                // RPC has real data now, clear startup detail and stop log tailing
-                if (startupDetail.isNotEmpty()) startupDetail = ""
-                break
+                // RPC has real data now — clear detail once status moves past "Starting"
+                if (nodeStatus != "Starting" && startupDetail.isNotEmpty()) {
+                    startupDetail = ""
+                }
+                // Keep tailing until status is no longer "Starting"
+                if (nodeStatus != "Starting") break
             }
             delay(2000)
         }
