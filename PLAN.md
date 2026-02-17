@@ -104,3 +104,27 @@ disablewallet=1
 **Why no `blocksonly=1`?** Partial mempool (50MB cap) for fee estimation, payment detection, privacy cover traffic, and compact block reconstruction.
 
 **Why v28.1 instead of Core 30.x?** Core 30 changed OP_RETURN policy. v28.1 with patched AssumeUTXO heights gives us snapshot flexibility while preserving standard transaction relay behavior.
+
+## Nice to Haves / Backlog
+
+### Performance
+- [ ] Optimize stub file creation — only create stubs for files actually in index range (reduce 15 min pruning)
+- [ ] Copy more block files (~3-4 blk/rev pairs) to cover full pruning window (reorg safety)
+
+### BWT / Wallet
+- [ ] Descriptor wallet support — replace `importmulti` with `importdescriptors`
+- [ ] Taproot/P2TR output recognition
+- [ ] Multisig support (comes with descriptor wallets)
+- [ ] Remove `deprecatedrpc=create_bdb` dependency
+
+### Networking
+- [ ] Tor integration for private peer connections
+- [ ] Phone-to-phone chainstate copy (WiFi Direct / hotspot)
+
+### UX
+- [ ] Non-technical setup documentation for everyday users
+- [ ] Expanded device testing beyond Pixel line
+
+### Maintenance
+- [ ] Bitcoin Core version upgrades (v29+)
+- [ ] BWT fork maintenance and modernization
