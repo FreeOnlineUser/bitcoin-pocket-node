@@ -106,16 +106,25 @@ fun NodeStatusScreen(
                 try {
                     if (logFile.exists() && logFile.length() > 0) {
                         val raf = java.io.RandomAccessFile(logFile, "r")
-                        val readSize = minOf(4096L, raf.length())
+                        val readSize = minOf(8192L, raf.length())
                         raf.seek(raf.length() - readSize)
                         val tail = ByteArray(readSize.toInt())
                         raf.readFully(tail)
                         raf.close()
-                        val lines = String(tail).lines().takeLast(15)
+                        val allLines = String(tail).lines()
+                        val lines = allLines.takeLast(15)
 
-                        // Match startup phases from debug.log init messages
+                        // Count peers connected since last "Done loading"
+                        val doneIdx = allLines.indexOfLast { it.contains("init message: Done loading") }
+                        val peerCount2 = if (doneIdx >= 0) {
+                            allLines.drop(doneIdx).count { it.contains("peer connected") }
+                        } else 0
+
                         val detail = when {
-                            lines.any { it.contains("init message: Done loading") } -> "Connecting to peers..."
+                            lines.any { it.contains("init message: Done loading") } -> {
+                                if (peerCount2 > 0) "Finding peers... ($peerCount2 connected)"
+                                else "Starting network..."
+                            }
                             lines.any { it.contains("init message: Loading mempool") || it.contains("Loading") && it.contains("mempool") } -> "Loading mempool..."
                             lines.any { it.contains("init message: Pruning blockstore") } -> "Pruning blockstore..."
                             lines.any { it.contains("init message: Verifying blocks") } -> {
