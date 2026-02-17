@@ -236,7 +236,7 @@ fun OracleCard(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Created by Steve Jeffress · utxo.live",
+                        "UTXOracle · utxo.live",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         textDecoration = TextDecoration.Underline,
