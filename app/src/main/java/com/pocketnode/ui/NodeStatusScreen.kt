@@ -190,7 +190,7 @@ fun NodeStatusScreen(
                         !line.contains("block tree size") &&
                         !line.contains("obfuscation key") &&
                         line.length > 20
-                    }.takeLast(4).map { line ->
+                    }.takeLast(1).map { line ->
                         // Strip timestamp prefix for cleaner display
                         val stripped = line.removePrefix(line.take(20).takeWhile { it != 'Z' } + "Z ")
                         // Truncate long lines
