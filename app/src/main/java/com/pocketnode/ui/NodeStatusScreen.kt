@@ -120,10 +120,19 @@ fun NodeStatusScreen(
                             allLines.drop(doneIdx).count { it.contains("peer connected") }
                         } else 0
 
+                        // Check for UpdateTip after Done loading (catching up)
+                        val lastUpdateTip = allLines.lastOrNull { it.contains("UpdateTip:") && it.contains("height=") }
+                        val catchUpHeight = lastUpdateTip?.let {
+                            Regex("""height=(\d+)""").find(it)?.groupValues?.get(1)?.toLongOrNull()
+                        }
+
                         val detail = when {
                             lines.any { it.contains("init message: Done loading") } -> {
-                                if (peerCount2 > 0) "Finding peers... ($peerCount2 connected)"
-                                else "Starting network..."
+                                when {
+                                    catchUpHeight != null && catchUpHeight > 0 -> "Catching up... block ${"%,d".format(catchUpHeight)} ($peerCount2 peers)"
+                                    peerCount2 > 0 -> "Finding peers... ($peerCount2 connected)"
+                                    else -> "Starting network..."
+                                }
                             }
                             lines.any { it.contains("init message: Loading mempool") || it.contains("Loading") && it.contains("mempool") } -> "Loading mempool..."
                             lines.any { it.contains("init message: Pruning blockstore") } -> "Pruning blockstore..."
