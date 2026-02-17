@@ -101,6 +101,57 @@ class BitcoindService : Service() {
             val dataDir = ConfigGenerator.ensureConfig(this)
             Log.i(TAG, "Data dir: $dataDir")
 
+            // Step 2.5: Check if bitcoind is already running (lock file held by previous instance)
+            val lockFile = dataDir.resolve(".lock")
+            if (lockFile.exists()) {
+                // Try RPC to see if a bitcoind is actually responding
+                val creds = ConfigGenerator.readCredentials(this@BitcoindService)
+                if (creds != null) {
+                    val testRpc = BitcoinRpcClient(creds.first, creds.second)
+                    try {
+                        val info = testRpc.getBlockchainInfo()
+                        if (info != null) {
+                            Log.i(TAG, "bitcoind already running (lock file present, RPC responding) — attaching")
+                            _isRunning.value = true
+                            getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
+                                .edit().putBoolean("node_was_running", true).apply()
+                            updateNotification("Running (attached)")
+
+                            // Start network monitoring and sync control
+                            val monitor = NetworkMonitor(this@BitcoindService)
+                            monitor.start()
+                            networkMonitor = monitor
+                            activeNetworkMonitor = monitor
+                            val controller = SyncController(this@BitcoindService, monitor, testRpc)
+                            controller.start()
+                            syncController = controller
+                            activeSyncController = controller
+                            Log.i(TAG, "Attached to existing bitcoind, network control started")
+
+                            // Stay alive — poll until bitcoind stops responding
+                            while (_isRunning.value) {
+                                delay(10_000)
+                                try {
+                                    val check = testRpc.getBlockchainInfo()
+                                    if (check == null) {
+                                        Log.w(TAG, "Existing bitcoind stopped responding")
+                                        break
+                                    }
+                                } catch (_: Exception) {
+                                    Log.w(TAG, "Existing bitcoind RPC failed")
+                                    break
+                                }
+                            }
+                            _isRunning.value = false
+                            updateNotification("Stopped")
+                            return
+                        }
+                    } catch (_: Exception) {
+                        Log.d(TAG, "Lock file exists but RPC not responding — stale lock, proceeding with start")
+                    }
+                }
+            }
+
             // Step 3: Start the process
             val nativeLibDir = applicationInfo.nativeLibraryDir
 
