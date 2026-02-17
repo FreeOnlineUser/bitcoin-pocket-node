@@ -102,41 +102,79 @@ fun NodeStatusScreen(
     // Startup detail from debug.log (shown when RPC has no data yet)
     var startupDetail by remember { mutableStateOf("") }
 
-    // Tail debug.log for startup progress (pre-sync headers phase where RPC returns 0)
+    // Tail debug.log for startup phases (before RPC has real data)
+    // Phases only advance forward (0→5), never regress, to handle log buffer floods
     LaunchedEffect(isRunning) {
-        if (!isRunning) return@LaunchedEffect
+        if (!isRunning) {
+            startupDetail = ""
+            return@LaunchedEffect
+        }
         val logFile = java.io.File(context.filesDir, "bitcoin/debug.log")
+        // Record log size at launch — only read bytes written after this point
+        val logStartOffset = if (logFile.exists()) logFile.length() else 0L
+        var phase = 0 // 0=init, 1=loading index, 2=verifying, 3=pruning, 4=network, 5=done
         val preSyncRegex = Regex("""height:\s*(\d+)\s*\(~?([\d.]+)%\)""")
+
         while (isActive && isRunning) {
-            // Only read log when RPC hasn't provided real data yet
-            if (blockHeight <= 0 && headerHeight <= 0) {
-                try {
-                    if (logFile.exists() && logFile.length() > 0) {
-                        val raf = java.io.RandomAccessFile(logFile, "r")
-                        val readSize = minOf(2048L, raf.length())
-                        raf.seek(raf.length() - readSize)
-                        val tail = ByteArray(readSize.toInt())
-                        raf.readFully(tail)
-                        raf.close()
-                        val lines = String(tail).lines().takeLast(5)
-                        val preSyncLine = lines.lastOrNull { it.contains("Pre-synchronizing blockheaders") }
-                        if (preSyncLine != null) {
-                            val match = preSyncRegex.find(preSyncLine)
-                            if (match != null) {
-                                val h = match.groupValues[1]
-                                val pct = match.groupValues[2]
-                                startupDetail = "Pre-syncing headers: $pct% (${"%,d".format(h.toLong())})"
-                                nodeStatus = "Pre-syncing headers"
-                            }
-                        }
-                    }
-                } catch (_: Exception) {}
-            } else {
-                // RPC has real data now, clear startup detail and stop log tailing
+            // Once RPC has real data, clear startup detail and stop
+            if (blockHeight > 0 || headerHeight > 0) {
                 if (startupDetail.isNotEmpty()) startupDetail = ""
                 break
             }
-            delay(2000)
+            try {
+                if (logFile.exists() && logFile.length() > logStartOffset) {
+                    val raf = java.io.RandomAccessFile(logFile, "r")
+                    val newBytes = (logFile.length() - logStartOffset).coerceAtMost(16384)
+                    raf.seek(logFile.length() - newBytes)
+                    val buf = ByteArray(newBytes.toInt())
+                    raf.readFully(buf)
+                    raf.close()
+                    val text = String(buf)
+
+                    // Scan for phase markers — only advance, never go back
+                    if (phase < 1 && text.contains("Loading block index")) {
+                        phase = 1; nodeStatus = "Loading block index"; startupDetail = "Opening database…"
+                    }
+                    if (phase < 2 && text.contains("Verifying blocks")) {
+                        phase = 2; nodeStatus = "Verifying blocks"; startupDetail = ""
+                    }
+                    // Extract chain height from "Loaded best chain" line
+                    if (phase < 2) {
+                        val chainMatch = Regex("""Loaded best chain:.*height=(\d+)""").find(text)
+                        if (chainMatch != null) {
+                            startupDetail = "Chain height: ${"%,d".format(chainMatch.groupValues[1].toLong())}"
+                        }
+                    }
+                    if (phase < 3 && text.contains("Pruning blockstore")) {
+                        phase = 3; nodeStatus = "Pruning"; startupDetail = ""
+                    }
+                    if (phase < 4 && text.contains("Starting network threads")) {
+                        phase = 4; nodeStatus = "Starting network"; startupDetail = ""
+                    }
+                    if (phase < 5 && text.contains("Done loading")) {
+                        phase = 5; nodeStatus = "Catching up"; startupDetail = "Waiting for peers…"
+                    }
+                    // Pre-sync headers (can happen at any phase before RPC data)
+                    val preSyncLine = text.lines().lastOrNull { it.contains("Pre-synchronizing blockheaders") }
+                    if (preSyncLine != null) {
+                        val match = preSyncRegex.find(preSyncLine)
+                        if (match != null) {
+                            val h = match.groupValues[1]
+                            val pct = match.groupValues[2]
+                            startupDetail = "Pre-syncing headers: $pct% (${"%,d".format(h.toLong())})"
+                            if (phase < 5) nodeStatus = "Pre-syncing headers"
+                        }
+                    }
+                    // Peer connections
+                    if (phase >= 4) {
+                        val peerLines = text.lines().count { it.contains("peer connected") }
+                        if (peerLines > 0) {
+                            startupDetail = "$peerLines peer${if (peerLines > 1) "s" else ""} connected"
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+            delay(1000) // check every second for snappy feedback
         }
     }
 
@@ -350,6 +388,11 @@ private fun StatusHeader(nodeStatus: String, chain: String, detail: String = "")
             nodeStatus.startsWith("Headers") -> Color(0xFF2196F3)
             nodeStatus == "Connected" -> Color(0xFF03A9F4)
             nodeStatus.startsWith("Pre-syncing") -> Color(0xFF2196F3)
+            nodeStatus == "Loading block index" -> Color(0xFFFFC107)
+            nodeStatus == "Verifying blocks" -> Color(0xFFFFC107)
+            nodeStatus == "Pruning" -> Color(0xFFFFC107)
+            nodeStatus == "Starting network" -> Color(0xFF03A9F4)
+            nodeStatus == "Catching up" -> Color(0xFF2196F3)
             nodeStatus == "Starting" -> Color(0xFFFFC107)
             nodeStatus == "Error" -> Color(0xFFF44336)
             else -> Color(0xFF757575)
