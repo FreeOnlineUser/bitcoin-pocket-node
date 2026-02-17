@@ -123,25 +123,34 @@ fun NodeStatusScreen(
                             Regex("""height=(\d+)""").find(it)?.groupValues?.get(1)?.toLongOrNull()
                         }
 
+                        // Use allLines for phase detection (last 15 lines get flooded by UpdateTip)
+                        // Find the latest init message to determine current phase
+                        val lastInitIdx = allLines.indexOfLast { it.contains("init message:") }
+                        val lastInitMsg = if (lastInitIdx >= 0) allLines[lastInitIdx] else ""
+
                         val detail = when {
-                            lines.any { it.contains("init message: Done loading") } -> {
+                            lastInitMsg.contains("Done loading") -> {
                                 when {
                                     catchUpHeight != null && catchUpHeight > 0 -> "Catching up... block ${"%,d".format(catchUpHeight)} ($peerCount2 peers)"
                                     peerCount2 > 0 -> "Finding peers... ($peerCount2 connected)"
-                                    else -> "Starting network..."
+                                    else -> "Connecting to peers..."
                                 }
                             }
-                            lines.any { it.contains("init message: Loading mempool") || it.contains("Loading") && it.contains("mempool") } -> "Loading mempool..."
-                            lines.any { it.contains("init message: Pruning blockstore") } -> "Pruning blockstore..."
-                            lines.any { it.contains("init message: Verifying blocks") } -> {
-                                val pctLine = lines.lastOrNull { it.contains("Verification progress:") }
+                            lastInitMsg.contains("Starting network") -> {
+                                if (peerCount2 > 0) "Finding peers... ($peerCount2 connected)"
+                                else "Starting network..."
+                            }
+                            lastInitMsg.contains("Loading mempool") || allLines.any { it.contains("Loading") && it.contains("mempool") } -> "Loading mempool..."
+                            lastInitMsg.contains("Pruning blockstore") -> "Pruning blockstore..."
+                            lastInitMsg.contains("Verifying blocks") -> {
+                                val pctLine = allLines.lastOrNull { it.contains("Verification progress:") }
                                 val pct = pctLine?.substringAfter("progress:")?.trim()?.trimEnd('%')?.trim() ?: ""
                                 if (pct.isNotEmpty()) "Verifying blocks... $pct%" else "Verifying blocks..."
                             }
-                            lines.any { it.contains("init message: Loading block index") || it.contains("block index") } -> "Loading block index..."
-                            lines.any { it.contains("init message: Loading wallet") } -> "Loading wallet..."
-                            lines.any { it.contains("Pre-synchronizing blockheaders") } -> {
-                                val preSyncLine = lines.lastOrNull { it.contains("Pre-synchronizing blockheaders") }
+                            lastInitMsg.contains("Loading block index") -> "Loading block index..."
+                            lastInitMsg.contains("Loading wallet") -> "Loading wallet..."
+                            allLines.any { it.contains("Pre-synchronizing blockheaders") } -> {
+                                val preSyncLine = allLines.lastOrNull { it.contains("Pre-synchronizing blockheaders") }
                                 val match = preSyncLine?.let { preSyncRegex.find(it) }
                                 if (match != null) {
                                     val h = match.groupValues[1]
@@ -150,10 +159,8 @@ fun NodeStatusScreen(
                                     "Pre-syncing headers: $pct% (${"%,d".format(h.toLong())})"
                                 } else "Pre-syncing headers..."
                             }
-                            lines.any { it.contains("init message: Starting network") } -> "Starting network..."
-                            lines.any { it.contains("init message:") } -> {
-                                val msg = lines.last { it.contains("init message:") }
-                                    .substringAfter("init message:").trim().trimEnd('…', '.')
+                            lastInitMsg.isNotEmpty() -> {
+                                val msg = lastInitMsg.substringAfter("init message:").trim().trimEnd('…', '.')
                                 "$msg..."
                             }
                             else -> ""
