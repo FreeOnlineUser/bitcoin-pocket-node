@@ -80,6 +80,7 @@ fun NodeStatusScreen(
         }
     }
     var ibd by remember { mutableStateOf(true) }
+    var bwtAutoStarted by remember { mutableStateOf(false) }
     var sizeOnDisk by remember { mutableStateOf(0L) }
     var mempoolSize by remember { mutableStateOf(0) }
     var mempoolBytes by remember { mutableStateOf(0L) }
@@ -225,6 +226,16 @@ fun NodeStatusScreen(
             } catch (_: Exception) {
                 if (nodeStatus != "Starting") nodeStatus = "Error"
             }
+            // Auto-start BWT if it was previously running and node is synced
+            if (!bwtAutoStarted && (nodeStatus == "Synced" || nodeStatus == "Synced (validating)")) {
+                val bwtPrefs = context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                if (bwtPrefs.getBoolean("bwt_was_running", false) && !com.pocketnode.service.BwtService.isRunningFlow.value) {
+                    val bwtService = com.pocketnode.service.BwtService(context)
+                    bwtService.start(saveState = false)
+                    bwtAutoStarted = true
+                }
+            }
+
             delay(3_000) // poll every 3 seconds for snappy UI
         }
     }

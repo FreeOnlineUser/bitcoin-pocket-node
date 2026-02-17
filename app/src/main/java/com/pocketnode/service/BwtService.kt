@@ -47,8 +47,12 @@ class BwtService(private val context: Context) {
      * Start BWT, connecting to the local bitcoind.
      * Ensures the bwt wallet exists in bitcoind first.
      */
-    fun start() {
+    fun start(saveState: Boolean = true) {
         if (_isRunning.value) return
+        if (saveState) {
+            context.getSharedPreferences("pocketnode_prefs", Context.MODE_PRIVATE)
+                .edit().putBoolean("bwt_was_running", true).apply()
+        }
         _state.value = BwtState(status = BwtState.Status.STARTING)
 
         scope.launch {
@@ -151,7 +155,11 @@ class BwtService(private val context: Context) {
         }
     }
 
-    fun stop() {
+    fun stop(saveState: Boolean = true) {
+        if (saveState) {
+            context.getSharedPreferences("pocketnode_prefs", Context.MODE_PRIVATE)
+                .edit().putBoolean("bwt_was_running", false).apply()
+        }
         bwtProcess?.let { process ->
             if (process.isAlive) {
                 process.destroyForcibly()
