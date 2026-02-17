@@ -124,6 +124,8 @@ fun NodeStatusScreen(
     var startupDetail by remember { mutableStateOf("") }
     // Mini log — last few meaningful lines from debug.log during startup
     var miniLog by remember { mutableStateOf(listOf<String>()) }
+    // Track whether we've already auto-started BWT this session
+    var bwtAutoStarted by remember { mutableStateOf(false) }
 
     // Tail debug.log for startup phases (before RPC has real data)
     // Phases only advance forward (0→5), never regress, to handle log buffer floods
@@ -302,7 +304,7 @@ fun NodeStatusScreen(
                         (blockHeight.toDouble() / headerHeight * 100)
                     } else 0.0
 
-                    nodeStatus = when {
+                    val newStatus = when {
                         assumeUtxoActive -> "Synced (validating)"
                         syncProgress >= 0.9999 && !ibd -> "Synced"
                         syncProgress >= 0.9999 -> "Almost synced"
@@ -317,6 +319,18 @@ fun NodeStatusScreen(
                         peerCount > 0 -> "Connected"
                         else -> "Starting"
                     }
+
+                    // Auto-start BWT when node becomes synced (if it was running before)
+                    if (newStatus.startsWith("Synced") && !nodeStatus.startsWith("Synced") && !bwtAutoStarted) {
+                        val prefs = context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                        if (prefs.getBoolean("bwt_was_running", false)) {
+                            bwtAutoStarted = true
+                            val bwtIntent = android.content.Intent(context, com.pocketnode.service.BwtService::class.java)
+                            context.startForegroundService(bwtIntent)
+                            android.util.Log.i("NodeStatusScreen", "Auto-started BWT (was previously running)")
+                        }
+                    }
+                    nodeStatus = newStatus
                 }
 
                 peerCount = rpc.getPeerCount()

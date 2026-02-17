@@ -43,8 +43,9 @@ fun PocketNodeApp(
         val activeMonitor = networkMonitor ?: serviceMonitor
         val activeController = syncController ?: serviceController
 
+        // Default to WIFI (no banner) until NetworkMonitor is ready — avoids false "no network" flash
         val networkState by (activeMonitor?.networkState
-            ?: remember { kotlinx.coroutines.flow.MutableStateFlow(NetworkState.OFFLINE) })
+            ?: remember { kotlinx.coroutines.flow.MutableStateFlow(NetworkState.WIFI) })
             .collectAsState()
         val syncPaused by (activeController?.syncPaused
             ?: remember { kotlinx.coroutines.flow.MutableStateFlow(false) })
