@@ -367,7 +367,9 @@ class UTXOracle(private val rpc: BitcoinRpcClient) {
         val numBins = bins.size
         val binCounts = DoubleArray(numBins)
 
-        // ── Step 6: Parse blocks, extract outputs ────────────────────────
+        // ── Step 6: Fetch decoded blocks (verbosity 1), extract outputs ──
+        // Uses JSON-decoded blocks instead of raw hex parsing.
+        // Eliminates SHA256 txid computation and binary parsing — much faster on mobile.
         emit("Loading transactions from ${blockNums.size} blocks...")
 
         val todaysTxids = HashSet<String>()
@@ -379,93 +381,52 @@ class UTXOracle(private val rpc: BitcoinRpcClient) {
             emit("Block ${idx + 1}/${blockHashes.size}")
             kotlinx.coroutines.yield()
 
-            val rawHex = getRawBlock(bh)
-            val rawBytes = hexToBytes(rawHex)
-            val stream = BlockStream(rawBytes)
-
-            // Skip 80-byte header
-            stream.read(80)
-            val txCount = stream.readVarint().toInt()
-
+            // Verbosity 2: full transaction objects with vout values, vin refs
+            val block = rpcCallLong("getblock", bh, 2)
+            val txArray = block.getJSONArray("tx")
             val txsToAdd = mutableListOf<Double>()
 
-            for (txIdx in 0 until txCount) {
-                val startTx = stream.tell()
-                stream.read(4) // version
+            for (txIdx in 0 until txArray.length()) {
+                val tx = txArray.getJSONObject(txIdx)
+                val txid = tx.getString("txid")
+                val vin = tx.getJSONArray("vin")
+                val vout = tx.getJSONArray("vout")
+                val inputCount = vin.length()
+                val outputCount = vout.length()
 
-                val markerFlag = stream.read(2)
-                val isSegwit = markerFlag[0] == 0x00.toByte() && markerFlag[1] == 0x01.toByte()
-                if (!isSegwit) stream.seek(startTx + 4)
+                // Coinbase check
+                val isCoinbase = inputCount > 0 && vin.getJSONObject(0).has("coinbase")
 
-                val inputCount = stream.readVarint().toInt()
-                var isCoinbase = false
-                var hasOpReturn = false
-                var witnessExceeds = false
+                // Input txids for same-day filter
                 val inputTxids = mutableListOf<String>()
-
                 for (i in 0 until inputCount) {
-                    val prevTxid = stream.read(32)
-                    val prevIndex = stream.read(4)
-                    val scriptLen = stream.readVarint().toInt()
-                    stream.read(scriptLen)
-                    stream.read(4) // sequence
-
-                    // Input txid in reversed hex
-                    inputTxids.add(prevTxid.reversed().joinToString("") { "%02x".format(it) })
-
-                    if (prevTxid.all { it == 0x00.toByte() } &&
-                        prevIndex.all { it == 0xFF.toByte() }) {
-                        isCoinbase = true
-                    }
+                    val input = vin.getJSONObject(i)
+                    if (input.has("txid")) inputTxids.add(input.getString("txid"))
                 }
 
-                val outputCount = stream.readVarint().toInt()
+                // Output values + OP_RETURN check
+                var hasOpReturn = false
                 val outputValues = mutableListOf<Double>()
-
                 for (i in 0 until outputCount) {
-                    val valueSats = stream.readUInt64LE()
-                    val scriptLen = stream.readVarint().toInt()
-                    val script = stream.read(scriptLen)
-
-                    if (script.isNotEmpty() && (script[0].toInt() and 0xFF) == 0x6A) {
-                        hasOpReturn = true
-                    }
-
-                    val valueBtc = valueSats / 1e8
-                    if (valueBtc > 1e-5 && valueBtc < 1e5) {
-                        outputValues.add(valueBtc)
-                    }
+                    val output = vout.getJSONObject(i)
+                    val valueBtc = output.getDouble("value")
+                    val scriptPubKey = output.optJSONObject("scriptPubKey")
+                    if (scriptPubKey?.optString("type", "") == "nulldata") hasOpReturn = true
+                    if (valueBtc > 1e-5 && valueBtc < 1e5) outputValues.add(valueBtc)
                 }
 
-                // Witness
-                if (isSegwit) {
-                    for (i in 0 until inputCount) {
-                        val stackCount = stream.readVarint().toInt()
-                        var totalWitnessLen = 0
-                        for (k in 0 until stackCount) {
-                            val itemLen = stream.readVarint().toInt()
-                            totalWitnessLen += itemLen
-                            stream.read(itemLen)
-                            if (itemLen > 500 || totalWitnessLen > 500) {
-                                witnessExceeds = true
-                            }
-                        }
-                    }
-                }
+                // Witness size filter via tx weight (proxy for Python's 500-byte witness check)
+                // witness_bytes ≈ (weight - vsize) / inputCount
+                val weight = tx.optInt("weight", 0)
+                val vsize = tx.optInt("vsize", 0)
+                val witnessExceeds = if (vsize > 0 && inputCount > 0) {
+                    ((weight - vsize).toLong() / inputCount) > 500
+                } else false
 
-                // Locktime
-                stream.read(4)
-                val endTx = stream.tell()
-
-                // Compute txid
-                stream.seek(startTx)
-                val rawTx = stream.read(endTx - startTx)
-                val txid = computeTxid(rawTx)
                 todaysTxids.add(txid)
-
                 val isSameDayTx = inputTxids.any { it in todaysTxids }
 
-                // Apply filters
+                // Apply filters (same as Python original)
                 if (inputCount <= 5 && outputCount == 2 && !isCoinbase &&
                     !hasOpReturn && !witnessExceeds && !isSameDayTx) {
                     for (amount in outputValues) {
