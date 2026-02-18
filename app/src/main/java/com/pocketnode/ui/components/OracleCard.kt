@@ -47,14 +47,18 @@ fun OracleCard(
     val prefs = remember { context.getSharedPreferences("oracle_cache", android.content.Context.MODE_PRIVATE) }
 
     fun saveResult(r: OracleResult) {
+        val now = System.currentTimeMillis()
+        val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(now))
         prefs.edit()
             .putInt("price", r.price)
             .putString("date", r.date)
+            .putString("updatedAt", timeStr)
             .putInt("blockStart", r.blockRange.first)
             .putInt("blockEnd", r.blockRange.last)
             .putInt("outputCount", r.outputCount)
             .putFloat("deviation", r.deviation.toFloat())
-            .putLong("cachedAt", System.currentTimeMillis())
+            .putLong("cachedAt", now)
             .apply()
     }
 
@@ -247,8 +251,13 @@ fun OracleCard(
                                 )
                             }
                             result != null -> {
+                                val displayText = if (result!!.date == "recent-blocks") {
+                                    "Block ${"%,d".format(result!!.blockRange.last)}"
+                                } else {
+                                    result!!.date
+                                }
                                 Text(
-                                    result!!.date,
+                                    displayText,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 )
@@ -302,7 +311,12 @@ fun OracleCard(
                     if (result != null) {
                         val r = result!!
                         DetailRow("Price", "$${"%,d".format(r.price)} USD")
-                        DetailRow("Date", r.date)
+                        val updatedAt = prefs.getString("updatedAt", null)
+                        if (r.date == "recent-blocks" && updatedAt != null) {
+                            DetailRow("Updated", updatedAt)
+                        } else {
+                            DetailRow("Date", r.date)
+                        }
                         DetailRow("Blocks", "${r.blockRange.first}–${r.blockRange.last} (${r.blockRange.last - r.blockRange.first + 1} blocks)")
                         DetailRow("Transactions", "${"%,d".format(r.outputCount)} filtered outputs")
                         DetailRow("Deviation", "${"%.1f".format(r.deviation * 100)}%")
