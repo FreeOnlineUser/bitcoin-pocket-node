@@ -10,6 +10,8 @@ import com.pocketnode.rpc.RpcConfig
 import com.pocketnode.rpc.RpcConfigDefaults
 import com.pocketnode.rpc.RpcException
 import com.pocketnode.storage.WatchListManager
+import com.pocketnode.notifications.TransactionNotificationManager
+import com.pocketnode.widget.MempoolWidgetProvider
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +41,9 @@ class MempoolService : Service() {
     
     // Watch list manager
     private lateinit var watchListManager: WatchListManager
+    
+    // Notification manager
+    private lateinit var notificationManager: TransactionNotificationManager
     
     // GBT generator
     private var gbtGenerator: GbtGenerator? = null
@@ -81,6 +86,7 @@ class MempoolService : Service() {
         Log.d(TAG, "MempoolService created")
         initializeRpcClient()
         initializeWatchListManager()
+        initializeNotificationManager()
         initializeGbtGenerator()
         startPolling()
     }
@@ -110,6 +116,11 @@ class MempoolService : Service() {
     private fun initializeWatchListManager() {
         watchListManager = WatchListManager(this)
         Log.d(TAG, "Watch list manager initialized")
+    }
+    
+    private fun initializeNotificationManager() {
+        notificationManager = TransactionNotificationManager(this)
+        Log.d(TAG, "Notification manager initialized")
     }
 
     private fun initializeGbtGenerator() {
@@ -207,6 +218,9 @@ class MempoolService : Service() {
             
             // Check watched transactions for confirmations
             checkWatchedTransactions()
+            
+            // Update home screen widget
+            updateWidget()
             
         } catch (e: RpcException) {
             Log.e(TAG, "RPC error in updateMempoolData", e)
@@ -390,9 +404,19 @@ class MempoolService : Service() {
                     // Transaction is no longer in mempool, might be confirmed
                     try {
                         val txDetails = rpcClient.getRawTransaction(txid, true)
-                        if (txDetails.jsonObject["confirmations"]?.jsonPrimitive?.int ?: 0 > 0) {
+                        val confirmations = txDetails.jsonObject["confirmations"]?.jsonPrimitive?.int ?: 0
+                        if (confirmations > 0) {
+                            val blockHeight = txDetails.jsonObject["blockheight"]?.jsonPrimitive?.int ?: 0
                             confirmedTxs.add(txid)
-                            Log.d(TAG, "Watched transaction $txid has been confirmed")
+                            
+                            // Send notification
+                            notificationManager.notifyTransactionConfirmed(
+                                txid = txid,
+                                blockNumber = blockHeight,
+                                confirmations = confirmations
+                            )
+                            
+                            Log.d(TAG, "Watched transaction $txid confirmed in block $blockHeight with $confirmations confirmations")
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to check confirmation for watched tx $txid", e)
@@ -494,6 +518,22 @@ class MempoolService : Service() {
             }
         }
         return null
+    }
+    
+    private fun updateWidget() {
+        try {
+            val mempoolState = _mempoolState.value
+            val feeEstimates = _feeEstimates.value
+            
+            MempoolWidgetProvider.updateWidgetData(
+                context = this,
+                txCount = mempoolState.transactionCount,
+                totalVmb = (mempoolState.totalVbytes / 1_000_000.0).toFloat(),
+                nextBlockFee = feeEstimates.fastestFee
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating widget", e)
+        }
     }
 }
 

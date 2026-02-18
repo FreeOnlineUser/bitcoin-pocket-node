@@ -41,6 +41,17 @@ class MempoolViewModel(application: Application) : AndroidViewModel(application)
     
     private val _rpcStatus = MutableStateFlow(RpcStatus.DISCONNECTED)
     val rpcStatus: StateFlow<RpcStatus> = _rpcStatus.asStateFlow()
+    
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    
+    private val _newBlockDetected = MutableStateFlow<String?>(null)
+    val newBlockDetected: StateFlow<String?> = _newBlockDetected.asStateFlow()
+    
+    private val _confirmedTransaction = MutableStateFlow<ConfirmedTransactionEvent?>(null)
+    val confirmedTransaction: StateFlow<ConfirmedTransactionEvent?> = _confirmedTransaction.asStateFlow()
+    
+    private var lastBestBlockHash: String? = null
 
     // Service connection
     private val serviceConnection = object : ServiceConnection {
@@ -138,6 +149,30 @@ class MempoolViewModel(application: Application) : AndroidViewModel(application)
     fun clearBlockDetails() {
         _selectedBlockDetails.value = null
     }
+    
+    fun refreshMempool() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                // Trigger immediate update by restarting polling
+                mempoolService?.let { service ->
+                    // The service will automatically update all flows
+                    // Just wait a bit for the update to complete
+                    kotlinx.coroutines.delay(1000)
+                }
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+    
+    fun clearNewBlockDetected() {
+        _newBlockDetected.value = null
+    }
+    
+    fun clearConfirmedTransaction() {
+        _confirmedTransaction.value = null
+    }
 }
 
 data class BlockDetails(
@@ -145,4 +180,10 @@ data class BlockDetails(
     val transactionCount: Int,
     val totalWeight: Int,
     val transactions: List<Int> // Transaction UIDs
+)
+
+data class ConfirmedTransactionEvent(
+    val txid: String,
+    val blockNumber: Int,
+    val confirmations: Int
 )

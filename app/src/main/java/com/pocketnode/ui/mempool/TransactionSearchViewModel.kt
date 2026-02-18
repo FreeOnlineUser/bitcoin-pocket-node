@@ -118,9 +118,11 @@ class TransactionSearchViewModel(application: Application) : AndroidViewModel(ap
                                 feeRate = 0.0, // Not available for confirmed tx
                                 vsize = 0,     // Not available for confirmed tx
                                 fee = 0.0,     // Not available for confirmed tx
-                                timeInMempool = "Confirmed (${result.confirmations} confirmations)",
+                                timeInMempool = "Confirmed",
                                 projectedBlockPosition = null,
-                                isWatched = false
+                                isWatched = false,
+                                confirmations = result.confirmations,
+                                blockHeight = null // TODO: Extract from block hash if needed
                             )
                         )
                     }
@@ -202,5 +204,7 @@ data class TransactionDetails(
     val fee: Double, // BTC
     val timeInMempool: String,
     val projectedBlockPosition: Int?, // Which projected block (0-based index)
-    val isWatched: Boolean = false
+    val isWatched: Boolean = false,
+    val confirmations: Int = 0, // Number of confirmations (0 for unconfirmed)
+    val blockHeight: Int? = null // Block height if confirmed
 )

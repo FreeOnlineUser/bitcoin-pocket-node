@@ -39,4 +39,7 @@
     <!-- Fee rate distribution -->
     <string name="fee_rate_distribution_title">Fee Rate Distribution</string>
     <string name="fee_rate_distribution_no_data">No fee rate data available</string>
+    
+    <!-- Widget -->
+    <string name="widget_description">Shows current mempool depth and fee rates</string>
 </resources>

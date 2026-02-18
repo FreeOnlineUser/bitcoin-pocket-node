@@ -12,8 +12,15 @@
     
     <!-- Wake locks to keep Bitcoin node running -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Notifications for transaction confirmations -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- Vibration for haptic feedback -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
+        android:name=".BitcoinPocketNodeApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -46,6 +53,19 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="bitcoin_mempool_analysis" />
         </service>
+        
+        <!-- Mempool widget -->
+        <receiver
+            android:name=".widget.MempoolWidgetProvider"
+            android:exported="false"
+            android:label="Mempool Stats">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mempool_widget_info" />
+        </receiver>
         
     </application>
 

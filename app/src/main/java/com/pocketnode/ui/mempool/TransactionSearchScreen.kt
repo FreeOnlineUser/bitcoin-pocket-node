@@ -5,6 +5,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -204,8 +205,13 @@ private fun TransactionDetailsCard(
             DetailRow("Fee", String.format("%.8f BTC", transaction.fee))
             DetailRow("Time in Mempool", transaction.timeInMempool)
 
-            // Block position
-            if (transaction.projectedBlockPosition != null) {
+            // Block position or confirmations
+            if (transaction.confirmations > 0) {
+                ConfirmationProgressSection(
+                    confirmations = transaction.confirmations,
+                    blockHeight = transaction.blockHeight
+                )
+            } else if (transaction.projectedBlockPosition != null) {
                 DetailRow("Projected Block", "#${transaction.projectedBlockPosition + 1}")
             } else {
                 DetailRow("Projected Block", "Not projected")
@@ -243,5 +249,76 @@ private fun DetailRow(label: String, value: String) {
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun ConfirmationProgressSection(
+    confirmations: Int,
+    blockHeight: Int?
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Confirmations text
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Confirmations",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (confirmations >= 6) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Confirmed",
+                        tint = Color(0xFF00FF00), // Green
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Text(
+                    text = "$confirmations/6",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = if (confirmations >= 6) Color(0xFF00FF00) else MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+        
+        // Progress bar
+        LinearProgressIndicator(
+            progress = (confirmations.coerceAtMost(6) / 6.0).toFloat(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp),
+            color = if (confirmations >= 6) Color(0xFF00FF00) else Color(0xFFFF9500), // Green if confirmed, orange otherwise
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+        
+        // Block height if available
+        blockHeight?.let { height ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Block Height",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "#$height",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }

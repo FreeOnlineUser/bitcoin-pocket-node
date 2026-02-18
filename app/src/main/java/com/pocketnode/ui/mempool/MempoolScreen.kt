@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,7 +16,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,6 +36,10 @@ fun MempoolScreen(
     val mempoolState by viewModel.mempoolState.collectAsStateWithLifecycle()
     val gbtResult by viewModel.gbtResult.collectAsStateWithLifecycle()
     val feeRateHistogram by viewModel.feeRateHistogram.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val newBlockDetected by viewModel.newBlockDetected.collectAsStateWithLifecycle()
+    val confirmedTransaction by viewModel.confirmedTransaction.collectAsStateWithLifecycle()
+    val hapticFeedback = LocalHapticFeedback.current
 
     LaunchedEffect(Unit) {
         viewModel.startMempoolUpdates()
@@ -43,13 +50,35 @@ fun MempoolScreen(
             viewModel.stopMempoolUpdates()
         }
     }
+    
+    // Handle new block detection with haptic feedback
+    LaunchedEffect(newBlockDetected) {
+        newBlockDetected?.let { blockHash ->
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+            viewModel.clearNewBlockDetected()
+        }
+    }
+    
+    // Handle transaction confirmation with stronger haptic feedback
+    LaunchedEffect(confirmedTransaction) {
+        confirmedTransaction?.let { event ->
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+            // TODO: Show toast/snackbar with confirmation message
+            viewModel.clearConfirmedTransaction()
+        }
+    }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.refreshMempool() },
+        modifier = Modifier.fillMaxSize()
     ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         item {
             MempoolStatsCard(mempoolState = mempoolState)
         }
@@ -100,6 +129,7 @@ fun MempoolScreen(
 
         item {
             FeeRateHistogramCard(feeRateHistogram = feeRateHistogram)
+        }
         }
     }
 }
