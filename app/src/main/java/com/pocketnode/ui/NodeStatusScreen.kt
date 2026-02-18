@@ -68,6 +68,8 @@ fun NodeStatusScreen(
     var chain by remember { mutableStateOf("") }
     var isRunning by remember { mutableStateOf(BitcoindService.isRunningFlow.value) }
     var assumeUtxoActive by remember { mutableStateOf(false) }
+    val appPrefs = remember { context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE) }
+    var showPrice by remember { mutableStateOf(appPrefs.getBoolean("show_price", false)) }
     var bgValidationHeight by remember { mutableStateOf(-1L) }
 
     // Sync local UI state with service state (handles start/stop while on other screens)
@@ -412,17 +414,21 @@ fun NodeStatusScreen(
                     )
                 }
 
-                // UTXOracle price card (shows when synced)
-                com.pocketnode.ui.components.OracleCard(
-                    isNodeSynced = nodeStatus.startsWith("Synced"),
-                    blockHeight = blockHeight
-                )
+                // UTXOracle price card (shows when synced + enabled)
+                if (showPrice) {
+                    com.pocketnode.ui.components.OracleCard(
+                        isNodeSynced = nodeStatus.startsWith("Synced"),
+                        blockHeight = blockHeight
+                    )
+                }
 
                 Spacer(Modifier.weight(1f))
 
                 // Action buttons
                 ActionButtons(
                     isRunning = isRunning,
+                    showPrice = showPrice,
+                    onShowPriceChange = { showPrice = it; appPrefs.edit().putBoolean("show_price", it).apply() },
                     onNavigateToDataUsage = onNavigateToDataUsage,
                     onNavigateToNetworkSettings = onNavigateToNetworkSettings,
                     onNavigateToSnapshot = onNavigateToSnapshot,
@@ -778,6 +784,8 @@ private fun StatsGrid(
 @Composable
 private fun ActionButtons(
     isRunning: Boolean,
+    showPrice: Boolean,
+    onShowPriceChange: (Boolean) -> Unit,
     onNavigateToDataUsage: () -> Unit,
     onNavigateToNetworkSettings: () -> Unit,
     onNavigateToSnapshot: () -> Unit,
@@ -806,6 +814,24 @@ private fun ActionButtons(
                     autoStartOnBoot = it
                     bootPrefs.edit().putBoolean("auto_start_on_boot", it).apply()
                 },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = Color(0xFFFF9800)
+                )
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Show price",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Switch(
+                checked = showPrice,
+                onCheckedChange = { onShowPriceChange(it) },
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = Color(0xFFFF9800)
                 )
