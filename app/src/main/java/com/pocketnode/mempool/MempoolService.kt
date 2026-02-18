@@ -5,14 +5,16 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import com.pocketnode.rpc.BitcoinRpcClient
+import com.pocketnode.rpc.RpcConfig
+import com.pocketnode.rpc.RpcConfigDefaults
+import com.pocketnode.rpc.RpcException
+import com.pocketnode.storage.WatchListManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -31,8 +33,12 @@ class MempoolService : Service() {
     private var serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var pollingJob: Job? = null
     
-    // Bitcoin RPC client - assume it exists in the app
-    // private lateinit var rpcClient: BitcoinRpcClient
+    // Bitcoin RPC client
+    private lateinit var rpcClient: BitcoinRpcClient
+    private var isRpcConnected = false
+    
+    // Watch list manager
+    private lateinit var watchListManager: WatchListManager
     
     // GBT generator
     private var gbtGenerator: GbtGenerator? = null
@@ -43,8 +49,7 @@ class MempoolService : Service() {
     private val uidToTxId = ConcurrentHashMap<Int, String>()
     private val uidCounter = AtomicInteger(1)
     
-    // Watched transactions for confirmation tracking
-    private val watchedTransactions = ConcurrentHashMap<String, Long>() // txid -> time added
+    // Note: Watched transactions now managed by WatchListManager
     
     // StateFlow for UI updates
     private val _mempoolState = MutableStateFlow(MempoolState())
@@ -56,6 +61,14 @@ class MempoolService : Service() {
     // Fee rate histogram data
     private val _feeRateHistogram = MutableStateFlow<Map<Int, Int>>(emptyMap())
     val feeRateHistogram: StateFlow<Map<Int, Int>> = _feeRateHistogram.asStateFlow()
+    
+    // Fee estimates from estimatesmartfee
+    private val _feeEstimates = MutableStateFlow(FeeEstimates())
+    val feeEstimates: StateFlow<FeeEstimates> = _feeEstimates.asStateFlow()
+    
+    // RPC connection status
+    private val _rpcStatus = MutableStateFlow(RpcStatus.DISCONNECTED)
+    val rpcStatus: StateFlow<RpcStatus> = _rpcStatus.asStateFlow()
 
     inner class MempoolBinder : Binder() {
         fun getService(): MempoolService = this@MempoolService
@@ -66,6 +79,8 @@ class MempoolService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "MempoolService created")
+        initializeRpcClient()
+        initializeWatchListManager()
         initializeGbtGenerator()
         startPolling()
     }
@@ -76,6 +91,25 @@ class MempoolService : Service() {
         stopPolling()
         gbtGenerator?.destroy()
         serviceScope.cancel()
+    }
+
+    private fun initializeRpcClient() {
+        // Initialize defaults if needed
+        RpcConfigDefaults.initializeDefaultsIfNeeded(this)
+        
+        val config = RpcConfig.load(this)
+        rpcClient = BitcoinRpcClient(
+            rpcHost = config.host,
+            rpcPort = config.port,
+            rpcUser = config.username,
+            rpcPassword = config.password
+        )
+        Log.d(TAG, "RPC client initialized for ${config.host}:${config.port} (${config.network})")
+    }
+    
+    private fun initializeWatchListManager() {
+        watchListManager = WatchListManager(this)
+        Log.d(TAG, "Watch list manager initialized")
     }
 
     private fun initializeGbtGenerator() {
@@ -106,12 +140,31 @@ class MempoolService : Service() {
     }
 
     private suspend fun updateMempoolData() {
-        // TODO: Replace with actual RPC client calls
-        // For now, we'll simulate the RPC calls
-        
         try {
-            // Simulate getrawmempool true call
-            val newMempoolData = getRawMempool() ?: return
+            // First check RPC connection
+            if (!isRpcConnected) {
+                val pingResult = testRpcConnection()
+                if (!pingResult) {
+                    _rpcStatus.value = RpcStatus.DISCONNECTED
+                    return
+                }
+                isRpcConnected = true
+                _rpcStatus.value = RpcStatus.CONNECTED
+            }
+            
+            // Get mempool data and info in parallel
+            val mempoolDataDeferred = async { getRawMempool() }
+            val mempoolInfoDeferred = async { getMempoolInfo() }
+            val feeEstimatesDeferred = async { getFeeEstimates() }
+            
+            val newMempoolData = mempoolDataDeferred.await()
+            val mempoolInfo = mempoolInfoDeferred.await()
+            val feeEstimates = feeEstimatesDeferred.await()
+            
+            if (newMempoolData == null) return
+            
+            // Update fee estimates
+            _feeEstimates.value = feeEstimates
             
             // Find new and removed transactions
             val newTxIds = newMempoolData.keys.toSet()
@@ -136,11 +189,12 @@ class MempoolService : Service() {
                 }
             }
             
-            // Update mempool state
+            // Update mempool state with real data from mempoolinfo
             _mempoolState.value = MempoolState(
-                transactionCount = currentMempool.size,
-                totalVbytes = currentMempool.values.sumOf { it.vsize },
-                totalFees = currentMempool.values.sumOf { it.fee }
+                transactionCount = mempoolInfo?.size ?: currentMempool.size,
+                totalVbytes = mempoolInfo?.bytes ?: currentMempool.values.sumOf { it.vsize },
+                totalFees = currentMempool.values.sumOf { it.fee },
+                vbytesPerSecond = 0.0 // TODO: Calculate from historical data
             )
             
             // Update fee rate histogram
@@ -154,29 +208,77 @@ class MempoolService : Service() {
             // Check watched transactions for confirmations
             checkWatchedTransactions()
             
+        } catch (e: RpcException) {
+            Log.e(TAG, "RPC error in updateMempoolData", e)
+            isRpcConnected = false
+            _rpcStatus.value = RpcStatus.ERROR
         } catch (e: Exception) {
             Log.e(TAG, "Error in updateMempoolData", e)
         }
     }
 
-    private suspend fun getRawMempool(): Map<String, MempoolEntry>? {
-        // TODO: Implement actual Bitcoin RPC call to getrawmempool true
-        // For now return empty map to avoid crashes during development
-        return emptyMap()
-        
-        /*
+    private suspend fun testRpcConnection(): Boolean {
         return try {
-            val response = rpcClient.call("getrawmempool", listOf(true))
-            val json = Json.parseToJsonElement(response).jsonObject
+            rpcClient.ping()
+        } catch (e: Exception) {
+            Log.w(TAG, "RPC connection test failed", e)
+            false
+        }
+    }
+
+    private suspend fun getRawMempool(): Map<String, MempoolEntry>? {
+        return try {
+            val json = rpcClient.getRawMempool()
+            val result = mutableMapOf<String, MempoolEntry>()
             
-            json.mapValues { (_, value) ->
-                Json.decodeFromJsonElement(MempoolEntry.serializer(), value)
+            json.forEach { (txid, entryJson) ->
+                try {
+                    val entry = Json.decodeFromJsonElement(MempoolEntry.serializer(), entryJson)
+                    result[txid] = entry
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to parse mempool entry for $txid", e)
+                }
             }
+            
+            result
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get raw mempool", e)
             null
         }
-        */
+    }
+    
+    private suspend fun getMempoolInfo(): MempoolInfo? {
+        return try {
+            val json = rpcClient.getMempoolInfo()
+            MempoolInfo(
+                size = json["size"]?.jsonPrimitive?.int ?: 0,
+                bytes = json["bytes"]?.jsonPrimitive?.int ?: 0,
+                usage = json["usage"]?.jsonPrimitive?.long ?: 0L,
+                maxmempool = json["maxmempool"]?.jsonPrimitive?.long ?: 0L,
+                mempoolminfee = json["mempoolminfee"]?.jsonPrimitive?.double ?: 0.0,
+                minrelaytxfee = json["minrelaytxfee"]?.jsonPrimitive?.double ?: 0.0
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get mempool info", e)
+            null
+        }
+    }
+    
+    private suspend fun getFeeEstimates(): FeeEstimates {
+        return try {
+            val estimates1 = rpcClient.estimateSmartFee(1)
+            val estimates3 = rpcClient.estimateSmartFee(3)
+            val estimates6 = rpcClient.estimateSmartFee(6)
+            
+            FeeEstimates(
+                fastestFee = estimates1["feerate"]?.jsonPrimitive?.double?.let { (it * 100_000_000).toInt() } ?: 0,
+                halfHourFee = estimates3["feerate"]?.jsonPrimitive?.double?.let { (it * 100_000_000).toInt() } ?: 0,
+                hourFee = estimates6["feerate"]?.jsonPrimitive?.double?.let { (it * 100_000_000).toInt() } ?: 0
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get fee estimates", e)
+            FeeEstimates()
+        }
     }
 
     private fun runGbtAlgorithm(addedTxIds: Set<String>, removedTxIds: Set<String>) {
@@ -276,16 +378,43 @@ class MempoolService : Service() {
     }
 
     private suspend fun checkWatchedTransactions() {
-        // TODO: Check if watched transactions have been confirmed
-        // This would involve checking if they're still in the mempool
-        // and potentially querying recent blocks
+        val watchedTxIds = watchListManager.getWatchedTransactionIds()
+        if (watchedTxIds.isEmpty()) return
+        
+        try {
+            // Check which watched transactions are no longer in mempool
+            val confirmedTxs = mutableListOf<String>()
+            
+            watchedTxIds.forEach { txid ->
+                if (!currentMempool.containsKey(txid)) {
+                    // Transaction is no longer in mempool, might be confirmed
+                    try {
+                        val txDetails = rpcClient.getRawTransaction(txid, true)
+                        if (txDetails.jsonObject["confirmations"]?.jsonPrimitive?.int ?: 0 > 0) {
+                            confirmedTxs.add(txid)
+                            Log.d(TAG, "Watched transaction $txid has been confirmed")
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to check confirmation for watched tx $txid", e)
+                    }
+                }
+            }
+            
+            // Clean up confirmed transactions from watch list
+            confirmedTxs.forEach { txid ->
+                watchListManager.removeTransaction(txid)
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking watched transactions", e)
+        }
     }
 
     /**
      * Add a transaction to the watch list for confirmation tracking
      */
     fun watchTransaction(txId: String) {
-        watchedTransactions[txId] = System.currentTimeMillis()
+        watchListManager.addTransaction(txId)
         Log.d(TAG, "Now watching transaction: $txId")
     }
 
@@ -293,14 +422,19 @@ class MempoolService : Service() {
      * Remove a transaction from the watch list
      */
     fun unwatchTransaction(txId: String) {
-        watchedTransactions.remove(txId)
+        watchListManager.removeTransaction(txId)
         Log.d(TAG, "Stopped watching transaction: $txId")
     }
 
     /**
      * Get list of currently watched transactions
      */
-    fun getWatchedTransactions(): List<String> = watchedTransactions.keys.toList()
+    fun getWatchedTransactions(): List<String> = watchListManager.getWatchedTransactionIds()
+    
+    /**
+     * Check if a transaction is being watched
+     */
+    fun isWatched(txId: String): Boolean = watchListManager.isWatched(txId)
 
     /**
      * Enable/disable mempool polling based on UI visibility
@@ -311,6 +445,55 @@ class MempoolService : Service() {
         } else if (!enabled && pollingJob?.isActive == true) {
             stopPolling()
         }
+    }
+
+    /**
+     * Search for a transaction by ID
+     */
+    suspend fun searchTransaction(txid: String): TransactionSearchResult {
+        return try {
+            // First check if it's in current mempool
+            currentMempool[txid]?.let { entry ->
+                val uid = txIdToUid[txid]
+                val blockPosition = findTransactionInProjectedBlocks(uid)
+                
+                return TransactionSearchResult.InMempool(
+                    txid = txid,
+                    entry = entry,
+                    projectedBlockPosition = blockPosition
+                )
+            }
+            
+            // If not in mempool, try to get it via RPC
+            val txDetails = rpcClient.getRawTransaction(txid, true).jsonObject
+            val confirmations = txDetails["confirmations"]?.jsonPrimitive?.int ?: 0
+            
+            if (confirmations > 0) {
+                TransactionSearchResult.Confirmed(
+                    txid = txid,
+                    confirmations = confirmations,
+                    blockHash = txDetails["blockhash"]?.jsonPrimitive?.content
+                )
+            } else {
+                TransactionSearchResult.NotFound
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error searching transaction $txid", e)
+            TransactionSearchResult.Error("Search failed: ${e.message}")
+        }
+    }
+    
+    private fun findTransactionInProjectedBlocks(uid: Int?): Int? {
+        if (uid == null) return null
+        
+        val currentGbt = _gbtResult.value ?: return null
+        currentGbt.blocks.forEachIndexed { index, block ->
+            if (block.contains(uid)) {
+                return index
+            }
+        }
+        return null
     }
 }
 
@@ -324,3 +507,54 @@ data class MempoolState(
     val vbytesPerSecond: Double = 0.0, // Inflow rate
     val lastUpdated: Long = System.currentTimeMillis()
 )
+
+/**
+ * Mempool info from getmempoolinfo RPC
+ */
+data class MempoolInfo(
+    val size: Int,
+    val bytes: Int,
+    val usage: Long,
+    val maxmempool: Long,
+    val mempoolminfee: Double,
+    val minrelaytxfee: Double
+)
+
+/**
+ * Fee estimates from estimatesmartfee RPC
+ */
+data class FeeEstimates(
+    val fastestFee: Int = 0, // sat/vB for next block
+    val halfHourFee: Int = 0, // sat/vB for ~30 min
+    val hourFee: Int = 0 // sat/vB for ~1 hour
+)
+
+/**
+ * RPC connection status
+ */
+enum class RpcStatus {
+    CONNECTED,
+    DISCONNECTED,
+    ERROR
+}
+
+/**
+ * Transaction search result
+ */
+sealed class TransactionSearchResult {
+    data class InMempool(
+        val txid: String,
+        val entry: MempoolEntry,
+        val projectedBlockPosition: Int?
+    ) : TransactionSearchResult()
+    
+    data class Confirmed(
+        val txid: String,
+        val confirmations: Int,
+        val blockHash: String?
+    ) : TransactionSearchResult()
+    
+    object NotFound : TransactionSearchResult()
+    
+    data class Error(val message: String) : TransactionSearchResult()
+}

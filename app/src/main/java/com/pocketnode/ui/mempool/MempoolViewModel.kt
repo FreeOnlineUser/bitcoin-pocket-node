@@ -9,9 +9,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.pocketnode.mempool.GbtResult
-import com.pocketnode.mempool.MempoolService
-import com.pocketnode.mempool.MempoolState
+import com.pocketnode.mempool.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +35,12 @@ class MempoolViewModel(application: Application) : AndroidViewModel(application)
 
     private val _selectedBlockDetails = MutableStateFlow<BlockDetails?>(null)
     val selectedBlockDetails: StateFlow<BlockDetails?> = _selectedBlockDetails.asStateFlow()
+    
+    private val _feeEstimates = MutableStateFlow(FeeEstimates())
+    val feeEstimates: StateFlow<FeeEstimates> = _feeEstimates.asStateFlow()
+    
+    private val _rpcStatus = MutableStateFlow(RpcStatus.DISCONNECTED)
+    val rpcStatus: StateFlow<RpcStatus> = _rpcStatus.asStateFlow()
 
     // Service connection
     private val serviceConnection = object : ServiceConnection {
@@ -62,6 +66,18 @@ class MempoolViewModel(application: Application) : AndroidViewModel(application)
             viewModelScope.launch {
                 mempoolService?.feeRateHistogram?.collect {
                     _feeRateHistogram.value = it
+                }
+            }
+            
+            viewModelScope.launch {
+                mempoolService?.feeEstimates?.collect {
+                    _feeEstimates.value = it
+                }
+            }
+            
+            viewModelScope.launch {
+                mempoolService?.rpcStatus?.collect {
+                    _rpcStatus.value = it
                 }
             }
         }

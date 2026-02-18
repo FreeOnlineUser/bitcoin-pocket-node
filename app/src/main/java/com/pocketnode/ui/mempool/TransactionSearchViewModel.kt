@@ -88,15 +88,51 @@ class TransactionSearchViewModel(application: Application) : AndroidViewModel(ap
 
         viewModelScope.launch {
             try {
-                // TODO: Implement actual transaction search via RPC
-                // For now, simulate search behavior
-                
-                // Simulate network delay
-                kotlinx.coroutines.delay(1000)
+                val service = mempoolService
+                if (service == null) {
+                    _searchResult.value = TransactionSearchResult.Error("Mempool service not available")
+                    return@launch
+                }
 
-                // Mock search result
-                val mockResult = searchMockTransaction(txid)
-                _searchResult.value = mockResult
+                when (val result = service.searchTransaction(txid)) {
+                    is com.pocketnode.mempool.TransactionSearchResult.InMempool -> {
+                        val timeInMempool = calculateTimeInMempool(result.entry.time)
+                        
+                        _searchResult.value = TransactionSearchResult.Found(
+                            TransactionDetails(
+                                txid = txid,
+                                feeRate = result.entry.fee / result.entry.vsize,
+                                vsize = result.entry.vsize,
+                                fee = result.entry.fee,
+                                timeInMempool = timeInMempool,
+                                projectedBlockPosition = result.projectedBlockPosition,
+                                isWatched = service.isWatched(txid)
+                            )
+                        )
+                    }
+                    
+                    is com.pocketnode.mempool.TransactionSearchResult.Confirmed -> {
+                        _searchResult.value = TransactionSearchResult.Found(
+                            TransactionDetails(
+                                txid = txid,
+                                feeRate = 0.0, // Not available for confirmed tx
+                                vsize = 0,     // Not available for confirmed tx
+                                fee = 0.0,     // Not available for confirmed tx
+                                timeInMempool = "Confirmed (${result.confirmations} confirmations)",
+                                projectedBlockPosition = null,
+                                isWatched = false
+                            )
+                        )
+                    }
+                    
+                    is com.pocketnode.mempool.TransactionSearchResult.NotFound -> {
+                        _searchResult.value = TransactionSearchResult.NotFound
+                    }
+                    
+                    is com.pocketnode.mempool.TransactionSearchResult.Error -> {
+                        _searchResult.value = TransactionSearchResult.Error(result.message)
+                    }
+                }
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Error searching transaction", e)
@@ -107,25 +143,27 @@ class TransactionSearchViewModel(application: Application) : AndroidViewModel(ap
         }
     }
 
-    private fun searchMockTransaction(txid: String): TransactionSearchResult {
-        // Mock implementation - replace with actual Bitcoin RPC call
-        return if (txid.startsWith("a") || txid.startsWith("b")) {
-            // Simulate found transaction
-            val watchedTxs = mempoolService?.getWatchedTransactions() ?: emptyList()
-            TransactionSearchResult.Found(
-                TransactionDetails(
-                    txid = txid,
-                    feeRate = 25.5,
-                    vsize = 225,
-                    fee = 0.00005737, // 5737 sats
-                    timeInMempool = "15m 32s",
-                    projectedBlockPosition = 1, // In block #2
-                    isWatched = watchedTxs.contains(txid)
-                )
-            )
-        } else {
-            // Simulate not found
-            TransactionSearchResult.NotFound
+    private fun calculateTimeInMempool(unixTime: Long): String {
+        val currentTime = System.currentTimeMillis() / 1000
+        val secondsInMempool = currentTime - unixTime
+        
+        return when {
+            secondsInMempool < 60 -> "${secondsInMempool}s"
+            secondsInMempool < 3600 -> {
+                val minutes = secondsInMempool / 60
+                val seconds = secondsInMempool % 60
+                "${minutes}m ${seconds}s"
+            }
+            secondsInMempool < 86400 -> {
+                val hours = secondsInMempool / 3600
+                val minutes = (secondsInMempool % 3600) / 60
+                "${hours}h ${minutes}m"
+            }
+            else -> {
+                val days = secondsInMempool / 86400
+                val hours = (secondsInMempool % 86400) / 3600
+                "${days}d ${hours}h"
+            }
         }
     }
 
