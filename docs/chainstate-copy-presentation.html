@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitcoin Pocket Node — How It Works</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --card: #1c2333;
+    --orange: #FF9800;
+    --orange-dim: #FF980040;
+    --green: #4CAF50;
+    --blue: #58a6ff;
+    --red: #f85149;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --purple: #bc8cff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .slide {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px;
+    opacity: 0;
+    transform: translateX(100px);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .slide.exit {
+    opacity: 0;
+    transform: translateX(-100px);
+  }
+
+  h1 {
+    font-size: 3.5em;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    font-size: 2.4em;
+    font-weight: 700;
+    margin-bottom: 30px;
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-size: 1.4em;
+    font-weight: 600;
+    color: var(--orange);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .subtitle {
+    font-size: 1.3em;
+    color: var(--text-dim);
+    max-width: 700px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .highlight { color: var(--orange); }
+  .green { color: var(--green); }
+  .blue { color: var(--blue); }
+  .purple { color: var(--purple); }
+  .red { color: var(--red); }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Diagram styles */
+  .diagram {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    margin: 40px 0;
+  }
+
+  .device {
+    background: var(--card);
+    border: 2px solid var(--text-dim);
+    border-radius: 16px;
+    padding: 30px;
+    text-align: center;
+    min-width: 180px;
+    position: relative;
+  }
+
+  .device.source { border-color: var(--blue); }
+  .device.target { border-color: var(--orange); }
+  .device.synced { border-color: var(--green); }
+
+  .device-icon { font-size: 3em; margin-bottom: 10px; }
+  .device-label { font-weight: 600; font-size: 1.1em; }
+  .device-detail { color: var(--text-dim); font-size: 0.85em; margin-top: 4px; }
+
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .arrow-line {
+    width: 120px;
+    height: 4px;
+    background: var(--orange);
+    position: relative;
+    border-radius: 2px;
+  }
+
+  .arrow-line::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: -6px;
+    border: 8px solid transparent;
+    border-left-color: var(--orange);
+  }
+
+  .arrow-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    color: var(--orange);
+  }
+
+  /* Step cards */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 800px;
+    width: 100%;
+  }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: var(--card);
+    padding: 20px 24px;
+    border-radius: 12px;
+    border-left: 4px solid var(--orange);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: stepIn 0.5s ease forwards;
+  }
+
+  .step:nth-child(1) { animation-delay: 0.1s; }
+  .step:nth-child(2) { animation-delay: 0.3s; }
+  .step:nth-child(3) { animation-delay: 0.5s; }
+  .step:nth-child(4) { animation-delay: 0.7s; }
+  .step:nth-child(5) { animation-delay: 0.9s; }
+
+  .step-num {
+    background: var(--orange);
+    color: var(--bg);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .step-content { flex: 1; }
+  .step-title { font-weight: 600; margin-bottom: 4px; }
+  .step-desc { color: var(--text-dim); font-size: 0.9em; line-height: 1.5; }
+
+  @keyframes stepIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* File tree */
+  .file-tree {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95em;
+    line-height: 2;
+    min-width: 500px;
+  }
+
+  .file-tree .dir { color: var(--blue); }
+  .file-tree .file { color: var(--text); }
+  .file-tree .size { color: var(--text-dim); float: right; }
+  .file-tree .copied { color: var(--green); }
+  .file-tree .stub { color: var(--text-dim); font-style: italic; }
+  .file-tree .key { color: var(--orange); }
+
+  /* Stats row */
+  .stats {
+    display: flex;
+    gap: 30px;
+    margin: 30px 0;
+  }
+
+  .stat {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px 32px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 2.5em;
+    font-weight: 900;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .stat-label {
+    color: var(--text-dim);
+    font-size: 0.9em;
+    margin-top: 4px;
+  }
+
+  /* Comparison */
+  .comparison {
+    display: flex;
+    gap: 30px;
+    margin: 20px 0;
+  }
+
+  .compare-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 30px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .compare-card.bad { border-top: 4px solid var(--red); }
+  .compare-card.good { border-top: 4px solid var(--green); }
+
+  .compare-time {
+    font-size: 3em;
+    font-weight: 900;
+    font-family: 'JetBrains Mono', monospace;
+    margin: 10px 0;
+  }
+
+  /* Progress animation */
+  .progress-bar {
+    width: 100%;
+    max-width: 600px;
+    height: 12px;
+    background: var(--surface);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--orange), var(--green));
+    border-radius: 6px;
+    width: 0%;
+    animation: fillProgress 3s ease forwards;
+  }
+
+  @keyframes fillProgress {
+    to { width: 100%; }
+  }
+
+  /* Data flow animation */
+  .flow-container {
+    position: relative;
+    width: 700px;
+    height: 200px;
+    margin: 30px 0;
+  }
+
+  .flow-node {
+    position: absolute;
+    background: var(--card);
+    border: 2px solid var(--text-dim);
+    border-radius: 12px;
+    padding: 16px 24px;
+    text-align: center;
+  }
+
+  .flow-node.left { left: 0; top: 50%; transform: translateY(-50%); border-color: var(--blue); }
+  .flow-node.right { right: 0; top: 50%; transform: translateY(-50%); border-color: var(--orange); }
+
+  .flow-packets {
+    position: absolute;
+    top: 50%;
+    left: 200px;
+    width: 300px;
+    height: 4px;
+    background: var(--surface);
+    transform: translateY(-50%);
+  }
+
+  .packet {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: var(--orange);
+    border-radius: 50%;
+    top: -8px;
+    animation: movePacket 2s linear infinite;
+    opacity: 0.8;
+  }
+
+  .packet:nth-child(2) { animation-delay: 0.5s; }
+  .packet:nth-child(3) { animation-delay: 1.0s; }
+  .packet:nth-child(4) { animation-delay: 1.5s; }
+
+  @keyframes movePacket {
+    0% { left: 0; opacity: 0; }
+    10% { opacity: 0.8; }
+    90% { opacity: 0.8; }
+    100% { left: 280px; opacity: 0; }
+  }
+
+  /* Navigation */
+  .nav {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 100;
+  }
+
+  .nav-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    opacity: 0.3;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .nav-dot.active {
+    background: var(--orange);
+    opacity: 1;
+    transform: scale(1.3);
+  }
+
+  .nav-arrows {
+    position: fixed;
+    bottom: 30px;
+    right: 40px;
+    display: flex;
+    gap: 12px;
+    z-index: 100;
+  }
+
+  .nav-btn {
+    background: var(--card);
+    border: 1px solid var(--text-dim);
+    color: var(--text);
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .nav-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+  .slide-counter {
+    position: fixed;
+    bottom: 36px;
+    left: 40px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    z-index: 100;
+  }
+
+  /* Two column layout */
+  .two-col {
+    display: flex;
+    gap: 50px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .col { flex: 1; }
+
+  /* Trick callout */
+  .trick {
+    background: var(--orange-dim);
+    border: 1px solid var(--orange);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    font-size: 0.9em;
+  }
+
+  .trick::before {
+    content: '💡 ';
+  }
+
+  /* Bitcoin logo */
+  .btc-logo {
+    font-size: 4em;
+    margin-bottom: 20px;
+  }
+
+  .tag {
+    display: inline-block;
+    background: var(--card);
+    border: 1px solid var(--text-dim);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.8em;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    margin: 2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<div class="slide active" id="slide-0">
+  <div class="btc-logo">₿</div>
+  <h1>Bitcoin <span class="highlight">Pocket Node</span></h1>
+  <p class="subtitle">Full node on your phone in <span class="highlight">under 20 minutes</span><br>No days-long sync. No trusted third parties.</p>
+  <div class="stats" style="margin-top: 40px;">
+    <div class="stat">
+      <div class="stat-value highlight">~2 GB</div>
+      <div class="stat-label">Disk usage (pruned)</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value green">20 min</div>
+      <div class="stat-label">Zero to full node</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value blue">v28.1</div>
+      <div class="stat-label">Bitcoin Core</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 2: The Problem -->
+<div class="slide" id="slide-1">
+  <h3>The Problem</h3>
+  <h2>Running a node on a phone <span class="red">shouldn't take days</span></h2>
+  <div class="comparison">
+    <div class="compare-card bad">
+      <div style="font-size: 2em; margin-bottom: 8px;">🐌</div>
+      <div style="font-weight: 600;">Traditional Sync</div>
+      <div class="compare-time red">3–7 days</div>
+      <div class="stat-label">Download entire blockchain<br>Validate every block since 2009<br>~600 GB of data</div>
+    </div>
+    <div class="compare-card bad">
+      <div style="font-size: 2em; margin-bottom: 8px;">⏳</div>
+      <div style="font-weight: 600;">AssumeUTXO</div>
+      <div class="compare-time" style="color: var(--text-dim);">3 hours</div>
+      <div class="stat-label">Faster start, but still needs<br>full background validation<br>Uses more disk space</div>
+    </div>
+    <div class="compare-card good">
+      <div style="font-size: 2em; margin-bottom: 8px;">⚡</div>
+      <div style="font-weight: 600;">Chainstate Copy</div>
+      <div class="compare-time green">20 min</div>
+      <div class="stat-label">Copy verified state from<br>your own trusted node<br>Instant full validation</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 3: What You Need -->
+<div class="slide" id="slide-2">
+  <h3>Prerequisites</h3>
+  <h2>What you need</h2>
+  <div class="diagram">
+    <div class="device source">
+      <div class="device-icon">🖥️</div>
+      <div class="device-label">Source Node</div>
+      <div class="device-detail">Any Bitcoin Core node<br>Umbrel, RaspiBlitz, etc.<br><span class="mono blue">unpruned preferred</span></div>
+    </div>
+    <div style="font-size: 2em; color: var(--text-dim);">+</div>
+    <div class="device target">
+      <div class="device-icon">📱</div>
+      <div class="device-label">Android Phone</div>
+      <div class="device-detail">ARM64 (Pixel, Samsung, etc.)<br>~15 GB free space<br><span class="mono highlight">same WiFi network</span></div>
+    </div>
+  </div>
+  <p class="subtitle" style="margin-top: 20px;">Both devices on the same local network. The phone copies directly from <em>your own</em> node — no external servers involved.</p>
+</div>
+
+<!-- Slide 4: The Architecture -->
+<div class="slide" id="slide-3">
+  <h3>Step 1</h3>
+  <h2>Stop the source node & <span class="highlight">copy chainstate</span></h2>
+  <div class="two-col">
+    <div class="col">
+      <div class="file-tree">
+        <div><span class="dir">📂 bitcoin/</span></div>
+        <div>&nbsp;&nbsp;<span class="dir copied">📂 chainstate/</span> <span class="size green">~11 GB</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file copied">UTXO database</span></div>
+        <div>&nbsp;&nbsp;<span class="dir copied">📂 blocks/index/</span> <span class="size green">~500 MB</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file copied">Block location index</span></div>
+        <div>&nbsp;&nbsp;<span class="file key">🔑 xor.dat</span> <span class="size green">8 bytes</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file" style="color: var(--orange)">Obfuscation key</span></div>
+        <div>&nbsp;&nbsp;<span class="dir">📂 blocks/</span> <span class="size" style="color: var(--red)">~600 GB ✗</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="stub">NOT copied (too large)</span></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="steps">
+        <div class="step" style="animation-delay: 0.1s;">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Chainstate (~11 GB)</div>
+            <div class="step-desc">The UTXO set — every unspent output on the network. This <em>is</em> Bitcoin's current state.</div>
+          </div>
+        </div>
+        <div class="step" style="animation-delay: 0.3s;">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Block Index (~500 MB)</div>
+            <div class="step-desc">Maps block hashes to file locations. Needed so bitcoind knows what it has.</div>
+          </div>
+        </div>
+        <div class="step" style="animation-delay: 0.5s;">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">XOR Key (8 bytes)</div>
+            <div class="step-desc">Each node's chainstate DB is XOR-obfuscated with a unique key. Must match.</div>
+            <div class="trick">Without this file, bitcoind sees corrupted data and refuses to start!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 5: The Trick — Stub Files -->
+<div class="slide" id="slide-4">
+  <h3>Step 2</h3>
+  <h2>The <span class="highlight">stub file</span> trick</h2>
+  <div class="two-col">
+    <div class="col">
+      <p class="subtitle" style="text-align: left; margin-bottom: 24px;">
+        The block index references hundreds of <span class="mono">blk*.dat</span> files.
+        If they're missing, bitcoind <span class="red">crashes</span>.
+      </p>
+      <p class="subtitle" style="text-align: left; margin-bottom: 24px;">
+        But we don't need the actual block data — just the files to <em>exist</em>.
+      </p>
+      <p class="subtitle" style="text-align: left;">
+        Solution: create <span class="highlight">empty stub files</span> for every block file the index expects.
+      </p>
+      <div class="trick" style="max-width: 500px; margin-top: 24px;">
+        Bitcoind checks file existence, not contents. Empty files are enough to start pruned mode — it knows those blocks are "pruned away."
+      </div>
+    </div>
+    <div class="col">
+      <div class="file-tree">
+        <div><span class="dir">📂 blocks/</span></div>
+        <div>&nbsp;&nbsp;<span class="dir copied">📂 index/</span> <span class="size green">copied</span></div>
+        <div>&nbsp;&nbsp;<span class="stub">📄 blk00000.dat</span> <span class="size">0 bytes</span></div>
+        <div>&nbsp;&nbsp;<span class="stub">📄 blk00001.dat</span> <span class="size">0 bytes</span></div>
+        <div>&nbsp;&nbsp;<span class="stub">📄 blk00002.dat</span> <span class="size">0 bytes</span></div>
+        <div>&nbsp;&nbsp;<span class="stub">📄 ...</span></div>
+        <div>&nbsp;&nbsp;<span class="stub">📄 blk00734.dat</span> <span class="size">0 bytes</span></div>
+        <div>&nbsp;&nbsp;<span class="stub">📄 rev00000.dat</span> <span class="size">0 bytes</span></div>
+        <div>&nbsp;&nbsp;<span class="stub">📄 rev00001.dat</span> <span class="size">0 bytes</span></div>
+        <div>&nbsp;&nbsp;<span class="stub">📄 ...</span></div>
+        <div>&nbsp;&nbsp;<span class="copied">📄 blk00734.dat</span> <span class="size green">tip blocks</span></div>
+        <div style="margin-top: 12px; color: var(--text-dim); font-size: 0.85em;">
+          ~1,470 stub files = <span class="highlight">0 bytes</span> total
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 6: Tip Blocks -->
+<div class="slide" id="slide-5">
+  <h3>Step 3</h3>
+  <h2>Copy the <span class="highlight">tip blocks</span></h2>
+  <div class="two-col">
+    <div class="col">
+      <div class="steps">
+        <div class="step" style="animation-delay: 0.1s; border-left-color: var(--blue);">
+          <div class="step-num" style="background: var(--blue);">?</div>
+          <div class="step-content">
+            <div class="step-title">Why not just chainstate?</div>
+            <div class="step-desc">Bitcoind needs the most recent blocks to verify the chain tip. Without them, it can't validate new incoming blocks.</div>
+          </div>
+        </div>
+        <div class="step" style="animation-delay: 0.3s;">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">Copy last ~10 blocks</div>
+            <div class="step-desc">Only the blocks in the final <span class="mono">blk*.dat</span> file. Usually 10-50 MB — tiny compared to 600 GB.</div>
+          </div>
+        </div>
+        <div class="step" style="animation-delay: 0.5s;">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <div class="step-title">Plus matching <span class="mono">rev*.dat</span></div>
+            <div class="step-desc">Undo data for the tip blocks. Needed for reorg handling.</div>
+          </div>
+        </div>
+      </div>
+      <div class="trick" style="max-width: 500px; margin-top: 16px;">
+        The block index tells us which <span class="mono">blk*.dat</span> file has the chain tip. We only need that one file — everything else is stubs.
+      </div>
+    </div>
+    <div class="col" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div style="background: var(--card); border-radius: 12px; padding: 30px; text-align: center;">
+        <div style="font-size: 1.2em; font-weight: 600; margin-bottom: 20px;">What gets copied</div>
+        <div class="stats" style="margin: 0;">
+          <div class="stat">
+            <div class="stat-value green" style="font-size: 1.8em;">11 GB</div>
+            <div class="stat-label">Chainstate</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value blue" style="font-size: 1.8em;">500 MB</div>
+            <div class="stat-label">Block Index</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value purple" style="font-size: 1.8em;">~50 MB</div>
+            <div class="stat-label">Tip Blocks</div>
+          </div>
+        </div>
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--text-dim);">
+          <span style="font-size: 1.4em; font-weight: 700;">Total: <span class="highlight">~11.5 GB</span></span>
+          <div class="stat-label">vs 600+ GB full blockchain</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 7: The Transfer -->
+<div class="slide" id="slide-6">
+  <h3>Step 4</h3>
+  <h2>Transfer over <span class="highlight">local network</span></h2>
+  <div class="flow-container">
+    <div class="flow-node left">
+      <div style="font-size: 2em;">🖥️</div>
+      <div style="font-weight: 600;">Source Node</div>
+      <div style="color: var(--text-dim); font-size: 0.85em;">Umbrel / raspi / PC</div>
+    </div>
+    <div class="flow-packets">
+      <div class="packet"></div>
+      <div class="packet"></div>
+      <div class="packet"></div>
+      <div class="packet"></div>
+    </div>
+    <div class="flow-node right">
+      <div style="font-size: 2em;">📱</div>
+      <div style="font-weight: 600;">Phone</div>
+      <div style="color: var(--text-dim); font-size: 0.85em;">Pixel 7 Pro</div>
+    </div>
+  </div>
+  <div class="steps" style="max-width: 700px;">
+    <div class="step" style="animation-delay: 0.1s;">
+      <div class="step-num">📡</div>
+      <div class="step-content">
+        <div class="step-title">WiFi LAN Transfer</div>
+        <div class="step-desc">~11.5 GB over local WiFi. At 50 MB/s = <span class="highlight">~4 minutes</span>. At 10 MB/s = ~20 minutes. No internet needed.</div>
+      </div>
+    </div>
+    <div class="step" style="animation-delay: 0.3s;">
+      <div class="step-num">🔒</div>
+      <div class="step-content">
+        <div class="step-title">Trust Model</div>
+        <div class="step-desc">You're copying from <em>your own node</em> that already validated everything. No trusted third party. Same security as running the source node.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 8: First Start -->
+<div class="slide" id="slide-7">
+  <h3>Step 5</h3>
+  <h2>Start bitcoind & <span class="green">catch up</span></h2>
+  <div class="steps" style="max-width: 700px;">
+    <div class="step" style="animation-delay: 0.1s; border-left-color: var(--green);">
+      <div class="step-num" style="background: var(--green);">1</div>
+      <div class="step-content">
+        <div class="step-title">Loading block index...</div>
+        <div class="step-desc">Bitcoind reads the index, sees all block references. Stub files satisfy existence checks.</div>
+      </div>
+    </div>
+    <div class="step" style="animation-delay: 0.3s; border-left-color: var(--green);">
+      <div class="step-num" style="background: var(--green);">2</div>
+      <div class="step-content">
+        <div class="step-title">Verifying chainstate...</div>
+        <div class="step-desc">Quick validation of the UTXO database integrity. Takes seconds.</div>
+      </div>
+    </div>
+    <div class="step" style="animation-delay: 0.5s; border-left-color: var(--green);">
+      <div class="step-num" style="background: var(--green);">3</div>
+      <div class="step-content">
+        <div class="step-title">Auto-pruning kicks in</div>
+        <div class="step-desc">Bitcoind sees it has "blocks" but limited space. Pruning mode activates — it only keeps recent blocks going forward.</div>
+        <div class="trick">Set <span class="mono">prune=2048</span> in bitcoin.conf to keep ~2 GB of recent blocks.</div>
+      </div>
+    </div>
+    <div class="step" style="animation-delay: 0.7s; border-left-color: var(--green);">
+      <div class="step-num" style="background: var(--green);">4</div>
+      <div class="step-content">
+        <div class="step-title">Catching up to chain tip</div>
+        <div class="step-desc">Downloads and validates only the blocks mined <em>since the copy</em>. Usually minutes' worth.</div>
+      </div>
+    </div>
+    <div class="step" style="animation-delay: 0.9s; border-left-color: var(--green);">
+      <div class="step-num" style="background: var(--green);">✓</div>
+      <div class="step-content">
+        <div class="step-title green">Fully synced!</div>
+        <div class="step-desc">Your phone is now a fully-validating Bitcoin node. Verifies every transaction. Trusts no one.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 9: The Result -->
+<div class="slide" id="slide-8">
+  <h3>Result</h3>
+  <h2>A <span class="highlight">real node</span> in your pocket</h2>
+  <div class="diagram">
+    <div class="device synced">
+      <div class="device-icon">📱</div>
+      <div class="device-label" style="color: var(--green);">✅ Synced</div>
+      <div class="device-detail">
+        Block 937,162<br>
+        4 peers connected<br>
+        2.0 GB pruned
+      </div>
+    </div>
+    <div style="font-size: 2em;">→</div>
+    <div style="text-align: left;">
+      <div style="margin-bottom: 20px;">
+        <span class="tag">Validates every transaction</span>
+        <span class="tag">Enforces consensus rules</span>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <span class="tag">Built-in Electrum server</span>
+        <span class="tag">BlueWallet compatible</span>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <span class="tag">UTXOracle price feed</span>
+        <span class="tag">No external APIs</span>
+      </div>
+      <div>
+        <span class="tag">Auto-start on boot</span>
+        <span class="tag">Metered network detection</span>
+      </div>
+    </div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill"></div>
+  </div>
+  <p class="subtitle">From zero to sovereign in 20 minutes.<br><span class="highlight mono">github.com/FreeOnlineUser/bitcoin-pocket-node</span></p>
+</div>
+
+<!-- Navigation -->
+<div class="slide-counter"><span id="current">1</span> / <span id="total">9</span></div>
+<div class="nav" id="nav-dots"></div>
+<div class="nav-arrows">
+  <button class="nav-btn" onclick="prev()">←</button>
+  <button class="nav-btn" onclick="next()">→</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const totalSlides = slides.length;
+  let current = 0;
+
+  // Build nav dots
+  const nav = document.getElementById('nav-dots');
+  for (let i = 0; i < totalSlides; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+    dot.onclick = () => goTo(i);
+    nav.appendChild(dot);
+  }
+
+  document.getElementById('total').textContent = totalSlides;
+
+  function goTo(n) {
+    if (n < 0 || n >= totalSlides || n === current) return;
+    const direction = n > current ? 1 : -1;
+
+    slides[current].className = 'slide exit';
+    current = n;
+    slides[current].className = 'slide active';
+
+    // Update dots
+    document.querySelectorAll('.nav-dot').forEach((d, i) => {
+      d.className = 'nav-dot' + (i === current ? ' active' : '');
+    });
+    document.getElementById('current').textContent = current + 1;
+
+    // Re-trigger step animations
+    slides[current].querySelectorAll('.step').forEach(s => {
+      s.style.animation = 'none';
+      s.offsetHeight; // trigger reflow
+      s.style.animation = '';
+    });
+
+    // Re-trigger progress bar
+    const fill = slides[current].querySelector('.progress-fill');
+    if (fill) {
+      fill.style.animation = 'none';
+      fill.offsetHeight;
+      fill.style.animation = '';
+    }
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+    if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    if (e.key === 'End') { e.preventDefault(); goTo(totalSlides - 1); }
+  });
+
+  // Touch/swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) next(); else prev();
+    }
+  });
+</script>
+
+</body>
+</html>
