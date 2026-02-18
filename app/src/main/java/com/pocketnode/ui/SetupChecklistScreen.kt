@@ -203,16 +203,6 @@ fun SetupChecklistScreen(
                         )
                     }
                 }
-
-                Spacer(Modifier.height(8.dp))
-
-                // Network settings shortcut
-                OutlinedButton(
-                    onClick = onNavigateToNetworkSettings,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Network Settings")
-                }
             }
         }
     }
