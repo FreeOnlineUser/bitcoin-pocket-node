@@ -585,7 +585,7 @@
         Solution: create <span class="highlight">empty stub files</span> for every block file the index expects.
       </p>
       <div class="trick" style="max-width: 500px; margin-top: 24px;">
-        Bitcoind checks file existence on startup. Empty files prevent the crash. Once running in pruned mode, it never tries to read old block data — so it never discovers they're empty.
+        Bitcoind reads the stub files, finds them empty, and begins backfilling them in pruned mode — only keeping the most recent blocks and discarding old ones as it goes.
       </div>
     </div>
     <div class="col">
