@@ -294,7 +294,7 @@ private fun ConverterField(
     focusManager: androidx.compose.ui.focus.FocusManager
 ) {
     val brightColor = MaterialTheme.colorScheme.onSurface
-    val dimColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+    val dimColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
 
     OutlinedTextField(
         value = value,
