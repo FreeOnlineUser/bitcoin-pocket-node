@@ -173,12 +173,38 @@ fun NetworkSettingsScreen(
                     "Set to 0 or leave empty for unlimited."
             )
 
-            // Data Usage section
-            val recentUsage = remember(networkMonitor) {
-                networkMonitor?.getRecentUsage(7) ?: emptyList()
+            // Data Usage section — reads from SharedPreferences directly so it works
+            // even when NetworkMonitor isn't running (e.g. node failed to start)
+            val usagePrefs = remember { context.getSharedPreferences("network_usage", android.content.Context.MODE_PRIVATE) }
+            val recentUsage = remember {
+                val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                val cal = java.util.Calendar.getInstance()
+                (0 until 7).map { _ ->
+                    val date = fmt.format(cal.time)
+                    cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+                    DataUsageEntry(
+                        date = date,
+                        wifiRx = usagePrefs.getLong("${date}_wifi_rx", 0),
+                        wifiTx = usagePrefs.getLong("${date}_wifi_tx", 0),
+                        cellularRx = usagePrefs.getLong("${date}_cell_rx", 0),
+                        cellularTx = usagePrefs.getLong("${date}_cell_tx", 0)
+                    )
+                }
             }
-            val monthCellular = remember(networkMonitor) {
-                networkMonitor?.getMonthCellularUsage() ?: 0L
+            val monthCellular = remember {
+                val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                val monthPrefix = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
+                val cal = java.util.Calendar.getInstance()
+                var total = 0L
+                val dayOfMonth = cal.get(java.util.Calendar.DAY_OF_MONTH)
+                for (i in 0 until dayOfMonth) {
+                    val date = fmt.format(cal.time)
+                    if (date.startsWith(monthPrefix)) {
+                        total += usagePrefs.getLong("${date}_cell_rx", 0) + usagePrefs.getLong("${date}_cell_tx", 0)
+                    }
+                    cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+                }
+                total
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
