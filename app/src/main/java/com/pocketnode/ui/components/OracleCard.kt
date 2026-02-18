@@ -144,51 +144,61 @@ fun OracleCard(
         }
     }
 
-    // Initial full run when node is synced and cache is stale
+    // Initial run when node is synced — restore from cache if available, else full scan
     LaunchedEffect(isNodeSynced) {
-        val cacheAgeMs = System.currentTimeMillis() - prefs.getLong("cachedAt", 0)
-        val isStale = result == null || cacheAgeMs > 12 * 60 * 60 * 1000 // 12 hours
-        if (isNodeSynced && isStale && !isRunning) {
-            val creds = ConfigGenerator.readCredentials(context) ?: return@LaunchedEffect
-            isRunning = true
-            error = null
-            try {
-                val rpc = BitcoinRpcClient(creds.first, creds.second)
-                val oracleInstance = UTXOracle(rpc)
-                oracle.value = oracleInstance
+        if (!isNodeSynced || isRunning) return@LaunchedEffect
 
-                val progressJob = launch {
-                    oracleInstance.progress.collect { progressText = it }
-                }
+        val creds = ConfigGenerator.readCredentials(context) ?: return@LaunchedEffect
+        val rpc = BitcoinRpcClient(creds.first, creds.second)
 
-                val r = oracleInstance.getPriceRecentBlocks()
-                result = r
-                onPriceUpdate?.invoke(r.price)
-                saveResult(r)
-                saveCachedBlocks(oracleInstance.cachedBlocks)
-                lastUpdatedHeight = r.blockRange.last.toLong()
-                progressJob.cancel()
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                android.util.Log.d("OracleCard", "Oracle calculation cancelled (recomposition)")
-                isRunning = false
-                throw e
-            } catch (e: Exception) {
-                android.util.Log.e("OracleCard", "UTXOracle failed", e)
-                error = e.message ?: "Unknown error"
-            } finally {
-                isRunning = false
-                progressText = ""
-            }
-        } else if (isNodeSynced && !isStale && oracle.value == null) {
-            // Restore oracle instance from cache for incremental updates
-            val creds = ConfigGenerator.readCredentials(context) ?: return@LaunchedEffect
-            val rpc = BitcoinRpcClient(creds.first, creds.second)
+        // Try to restore from cached block data first
+        val cached = loadCachedBlocks()
+        if (cached.isNotEmpty()) {
+            // Restore oracle with cached blocks — incremental updates will catch up
             val oracleInstance = UTXOracle(rpc)
-            val cached = loadCachedBlocks()
-            if (cached.isNotEmpty()) {
-                oracleInstance.setCachedBlocks(cached)
-                oracle.value = oracleInstance
+            oracleInstance.setCachedBlocks(cached)
+            oracle.value = oracleInstance
+
+            // If we have a cached result, show it immediately
+            if (result == null) {
+                loadCachedResult()?.let {
+                    result = it
+                    onPriceUpdate?.invoke(it.price)
+                }
             }
+            android.util.Log.i("OracleCard", "Restored ${cached.size} cached blocks, incremental update will catch up")
+            return@LaunchedEffect
+        }
+
+        // No cached blocks — full scan needed
+        if (result != null) return@LaunchedEffect // have a result but no blocks is odd, skip
+        isRunning = true
+        error = null
+        try {
+            val oracleInstance = UTXOracle(rpc)
+            oracle.value = oracleInstance
+
+            val progressJob = launch {
+                oracleInstance.progress.collect { progressText = it }
+            }
+
+            val r = oracleInstance.getPriceRecentBlocks()
+            result = r
+            onPriceUpdate?.invoke(r.price)
+            saveResult(r)
+            saveCachedBlocks(oracleInstance.cachedBlocks)
+            lastUpdatedHeight = r.blockRange.last.toLong()
+            progressJob.cancel()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            android.util.Log.d("OracleCard", "Oracle calculation cancelled (recomposition)")
+            isRunning = false
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("OracleCard", "UTXOracle failed", e)
+            error = e.message ?: "Unknown error"
+        } finally {
+            isRunning = false
+            progressText = ""
         }
     }
 
