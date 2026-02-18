@@ -731,8 +731,8 @@
       <div class="step-num" style="background: var(--orange);">★</div>
       <div class="step-content">
         <div class="step-title highlight">Key Innovation #2: Pruning takes over</div>
-        <div class="step-desc">With <span class="mono">prune=2048</span>, bitcoind only keeps recent blocks and never looks back at old ones. The stub files survive because pruned mode has no reason to read them. Together they turn a 600 GB requirement into 2 GB.</div>
-        <div class="trick">We're working around a limitation: bitcoind has no official "start from chainstate" mode. Stub files + pruning achieve the same result by ensuring it never discovers the old blocks are empty.</div>
+        <div class="step-desc">This is normal pruned node behaviour — bitcoind finds empty block files, recognises them as pruned, and continues forward keeping only recent blocks. With <span class="mono">prune=2048</span> it maintains ~2 GB of recent data.</div>
+        <div class="trick">We're deliberately creating the conditions that trigger standard pruning. No hacks — just giving bitcoind a valid chainstate and letting its built-in pruning logic do the rest.</div>
       </div>
     </div>
     <div class="step" style="animation-delay: 0.7s; border-left-color: var(--green);">
