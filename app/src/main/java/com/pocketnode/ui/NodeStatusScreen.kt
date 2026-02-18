@@ -748,32 +748,32 @@ private fun StatsGrid(
     ibd: Boolean
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StatCard(
             label = "Peers",
             value = peerCount.toString(),
             subtitle = "connected",
-            modifier = Modifier.weight(1f).fillMaxHeight()
+            modifier = Modifier.weight(1f)
         )
         StatCard(
             label = "Disk",
             value = formatBytes(sizeOnDisk),
             subtitle = if (pruned) "pruned" else "full",
-            modifier = Modifier.weight(1f).fillMaxHeight()
+            modifier = Modifier.weight(1f)
         )
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StatCard(
             label = "Mempool",
             value = if (ibd) "—" else "%,d".format(mempoolSize),
             subtitle = if (ibd) "waiting for sync" else formatBytes(mempoolBytes),
-            modifier = Modifier.weight(1f).fillMaxHeight()
+            modifier = Modifier.weight(1f)
         )
         StatCard(
             label = "Last Block",
@@ -781,7 +781,7 @@ private fun StatsGrid(
             subtitle = if (lastBlockTime > 0) {
                 SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(lastBlockTime * 1000))
             } else "",
-            modifier = Modifier.weight(1f).fillMaxHeight()
+            modifier = Modifier.weight(1f)
         )
     }
 }
