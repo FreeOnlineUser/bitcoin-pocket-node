@@ -57,6 +57,7 @@ class BitcoindService : Service() {
     }
 
     private var bitcoindProcess: Process? = null
+    private var notificationJob: Job? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     // Network-aware sync control
@@ -73,13 +74,14 @@ class BitcoindService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification("Starting..."))
+        startForeground(NOTIFICATION_ID, buildNotification(status = "Starting..."))
         serviceScope.launch { startBitcoind() }
         return START_STICKY
     }
 
     override fun onDestroy() {
         _isRunning.value = false
+        notificationJob?.cancel()
         syncController?.stop()
         networkMonitor?.stop()
         activeNetworkMonitor = null
@@ -126,6 +128,7 @@ class BitcoindService : Service() {
                             controller.start()
                             syncController = controller
                             activeSyncController = controller
+                            startNotificationUpdater(testRpc)
                             Log.i(TAG, "Attached to existing bitcoind, network control started")
 
                             // Stay alive — poll until bitcoind stops responding
@@ -188,6 +191,7 @@ class BitcoindService : Service() {
                 controller.start()
                 syncController = controller
                 activeSyncController = controller
+                startNotificationUpdater(rpc)
                 Log.i(TAG, "Network-aware sync control started")
             }
 
@@ -253,12 +257,57 @@ class BitcoindService : Service() {
             NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = getString(R.string.notification_channel_description)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
     }
 
-    private fun buildNotification(status: String): Notification {
+    /**
+     * Starts a coroutine that polls RPC every 30s and updates the
+     * foreground notification with live node stats.
+     */
+    private fun startNotificationUpdater(rpc: BitcoinRpcClient) {
+        notificationJob?.cancel()
+        notificationJob = serviceScope.launch {
+            while (isActive && _isRunning.value) {
+                try {
+                    val info = rpc.getBlockchainInfo()
+                    if (info != null && !info.has("_rpc_error")) {
+                        val height = info.optLong("blocks", 0)
+                        val headers = info.optLong("headers", 0)
+                        val progress = info.optDouble("verificationprogress", 0.0)
+                        val peers = rpc.getPeerCount()
+                        val synced = progress > 0.9999
+
+                        // Read cached oracle price
+                        val oraclePrefs = getSharedPreferences("oracle_cache", MODE_PRIVATE)
+                        val oraclePrice = oraclePrefs.getInt("price", -1)
+
+                        val title = if (synced) "₿ Synced" else "₿ Syncing"
+
+                        val sb = StringBuilder()
+                        sb.append("Block ${"%,d".format(height)}")
+                        if (!synced) {
+                            sb.append(" / ${"%,d".format(headers)}")
+                            sb.append(" · ${"%.1f".format(progress * 100)}%")
+                        }
+                        sb.append(" · $peers peer${if (peers != 1) "s" else ""}")
+                        if (oraclePrice > 0) {
+                            sb.append(" · \$${"%,d".format(oraclePrice)}")
+                        }
+
+                        updateNotification(title, sb.toString())
+                    }
+                } catch (e: Exception) {
+                    Log.d(TAG, "Notification updater: ${e.message}")
+                }
+                delay(30_000)
+            }
+        }
+    }
+
+    private fun buildNotification(title: String = "₿ Pocket Node", status: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java),
@@ -266,16 +315,21 @@ class BitcoindService : Service() {
         )
 
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("₿ Pocket Node")
+            .setContentTitle(title)
             .setContentText(status)
             .setSmallIcon(android.R.drawable.ic_menu_manage)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .build()
     }
 
     private fun updateNotification(status: String) {
+        updateNotification("₿ Pocket Node", status)
+    }
+
+    private fun updateNotification(title: String, status: String) {
         val manager = getSystemService(NotificationManager::class.java)
-        manager.notify(NOTIFICATION_ID, buildNotification(status))
+        manager.notify(NOTIFICATION_ID, buildNotification(title, status))
     }
 }
