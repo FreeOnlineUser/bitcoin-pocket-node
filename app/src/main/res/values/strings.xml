@@ -1,0 +1,42 @@
+<resources>
+    <string name="app_name">Bitcoin Pocket Node</string>
+    <string name="mempool_explorer_title">Mempool Explorer</string>
+    <string name="transaction_search_title">Transaction Search</string>
+    
+    <!-- Mempool stats -->
+    <string name="mempool_stats_transactions">Transactions</string>
+    <string name="mempool_stats_total_vmb">Total vMB</string>
+    <string name="mempool_stats_vb_per_sec">vB/s Inflow</string>
+    
+    <!-- Fee estimates -->
+    <string name="fee_estimates_title">Recommended Fees</string>
+    <string name="fee_estimates_next_block">Next Block</string>
+    <string name="fee_estimates_30_minutes">30 minutes</string>
+    <string name="fee_estimates_1_hour">1 hour</string>
+    
+    <!-- Projected blocks -->
+    <string name="projected_blocks_title">Projected Blocks</string>
+    <string name="projected_blocks_no_data">No mempool data available</string>
+    
+    <!-- Transaction search -->
+    <string name="transaction_search_hint">Enter Transaction ID (TXID)</string>
+    <string name="transaction_search_placeholder">64-character hex string...</string>
+    <string name="transaction_search_button">Search Transaction</string>
+    <string name="transaction_not_found_title">Transaction Not Found</string>
+    <string name="transaction_not_found_message">This transaction is not currently in the mempool. It may have been confirmed or never existed.</string>
+    <string name="transaction_search_error_title">Search Error</string>
+    
+    <!-- Transaction details -->
+    <string name="transaction_details_title">Transaction Details</string>
+    <string name="transaction_details_fee_rate">Fee Rate</string>
+    <string name="transaction_details_vsize">Virtual Size</string>
+    <string name="transaction_details_fee">Fee</string>
+    <string name="transaction_details_time_in_mempool">Time in Mempool</string>
+    <string name="transaction_details_projected_block">Projected Block</string>
+    <string name="transaction_details_watch_button">Watch for Confirmation</string>
+    <string name="transaction_details_stop_watching_button">Stop Watching</string>
+    
+    <!-- Fee rate distribution -->
+    <string name="fee_rate_distribution_title">Fee Rate Distribution</string>
+    <string name="fee_rate_distribution_no_data">No fee rate data available</string>
+</resources>
