@@ -37,15 +37,45 @@ fun OracleCard(
     val uriHandler = LocalUriHandler.current
 
     var expanded by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<OracleResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var isRunning by remember { mutableStateOf(false) }
     var progressText by remember { mutableStateOf("") }
 
+    // Cache oracle results in SharedPreferences
+    val prefs = remember { context.getSharedPreferences("oracle_cache", android.content.Context.MODE_PRIVATE) }
+
+    fun saveResult(r: OracleResult) {
+        prefs.edit()
+            .putInt("price", r.price)
+            .putString("date", r.date)
+            .putInt("blockStart", r.blockRange.first)
+            .putInt("blockEnd", r.blockRange.last)
+            .putInt("outputCount", r.outputCount)
+            .putFloat("deviation", r.deviation.toFloat())
+            .putLong("cachedAt", System.currentTimeMillis())
+            .apply()
+    }
+
+    fun loadCachedResult(): OracleResult? {
+        val price = prefs.getInt("price", -1)
+        if (price < 0) return null
+        return OracleResult(
+            price = price,
+            date = prefs.getString("date", "") ?: "",
+            blockRange = prefs.getInt("blockStart", 0)..prefs.getInt("blockEnd", 0),
+            outputCount = prefs.getInt("outputCount", 0),
+            deviation = prefs.getFloat("deviation", 0f).toDouble()
+        )
+    }
+
+    var result by remember { mutableStateOf(loadCachedResult()) }
+
     // Auto-run once when node is synced and we haven't run yet
     // Use scope that survives recomposition (won't cancel on scroll)
     LaunchedEffect(isNodeSynced) {
-        if (isNodeSynced && result == null && !isRunning) {
+        val cacheAgeMs = System.currentTimeMillis() - prefs.getLong("cachedAt", 0)
+        val isStale = result == null || cacheAgeMs > 12 * 60 * 60 * 1000 // 12 hours
+        if (isNodeSynced && isStale && !isRunning) {
             val creds = ConfigGenerator.readCredentials(context) ?: return@LaunchedEffect
             isRunning = true
             error = null
@@ -58,7 +88,9 @@ fun OracleCard(
                     oracle.progress.collect { progressText = it }
                 }
 
-                result = oracle.getPrice()
+                val r = oracle.getPrice()
+                result = r
+                saveResult(r)
                 progressJob.cancel()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Composable left composition — don't treat as error, will retry
@@ -193,7 +225,9 @@ fun OracleCard(
                                         val progressJob = launch {
                                             oracle.progress.collect { progressText = it }
                                         }
-                                        result = oracle.getPriceRecentBlocks()
+                                        val r = oracle.getPriceRecentBlocks()
+                                        result = r
+                                        saveResult(r)
                                         progressJob.cancel()
                                     } catch (e: Exception) {
                                         android.util.Log.e("OracleCard", "UTXOracle refresh failed", e)
