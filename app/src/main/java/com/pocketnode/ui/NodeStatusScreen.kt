@@ -430,12 +430,15 @@ fun NodeStatusScreen(
                         isNodeSynced = nodeStatus.startsWith("Synced"),
                         blockHeight = blockHeight,
                         onPriceUpdate = { oraclePrice = it },
-                        onExpanded = { isExpanded -> if (isExpanded) scope.launch {
+                        onExpanded = { isExpanded -> scope.launch {
                             kotlinx.coroutines.delay(150)
-                            dashboardScrollState.animateScrollTo(
-                                dashboardScrollState.maxValue,
-                                androidx.compose.animation.core.tween(700)
-                            )
+                            val anim = androidx.compose.animation.core.tween<Int>(700)
+                            if (isExpanded) {
+                                dashboardScrollState.animateScrollTo(dashboardScrollState.value + 700, anim)
+                            } else {
+                                kotlinx.coroutines.delay(300) // wait for collapse to shrink content
+                                dashboardScrollState.animateScrollTo((dashboardScrollState.value - 700).coerceAtLeast(0), anim)
+                            }
                         } }
                     )
                 }
@@ -448,12 +451,15 @@ fun NodeStatusScreen(
                 ) {
                     com.pocketnode.ui.components.FairTradeCard(
                         oraclePrice = oraclePrice,
-                        onExpanded = { isExpanded -> if (isExpanded) scope.launch {
+                        onExpanded = { isExpanded -> scope.launch {
                             kotlinx.coroutines.delay(150)
-                            dashboardScrollState.animateScrollTo(
-                                dashboardScrollState.maxValue,
-                                androidx.compose.animation.core.tween(700)
-                            )
+                            val anim = androidx.compose.animation.core.tween<Int>(700)
+                            if (isExpanded) {
+                                dashboardScrollState.animateScrollTo(dashboardScrollState.value + 700, anim)
+                            } else {
+                                kotlinx.coroutines.delay(300)
+                                dashboardScrollState.animateScrollTo((dashboardScrollState.value - 700).coerceAtLeast(0), anim)
+                            }
                         } }
                     )
                 }
