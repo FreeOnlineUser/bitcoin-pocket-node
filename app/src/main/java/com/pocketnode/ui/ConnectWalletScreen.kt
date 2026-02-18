@@ -238,24 +238,10 @@ fun ConnectWalletScreen(onBack: () -> Unit) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Tracked Wallets", fontWeight = FontWeight.Bold)
-                        Row {
-                            TextButton(onClick = { showAddXpub = true }) {
-                                Text("+ wallet")
-                            }
-                            TextButton(onClick = { showAddAddress = true }) {
-                                Text("+ address")
-                            }
-                        }
-                    }
+                    Text("Tracked Wallets", fontWeight = FontWeight.Bold)
 
                     if (xpubs.isEmpty() && addresses.isEmpty()) {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text(
                             "No wallets configured yet.\nAdd your wallet's xpub to track all addresses,\nor add individual addresses.",
                             style = MaterialTheme.typography.bodySmall,
@@ -266,52 +252,70 @@ fun ConnectWalletScreen(onBack: () -> Unit) {
                     }
 
                     if (xpubs.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text("Wallets (zpub/xpub/ypub)", style = MaterialTheme.typography.labelSmall,
+                        Spacer(Modifier.height(12.dp))
+                        Text("WALLETS", style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(8.dp))
                         xpubs.forEach { xpub ->
-                            Spacer(Modifier.height(4.dp))
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(Icons.Outlined.AccountBalanceWallet, contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(18.dp),
                                     tint = Color(0xFFF7931A))
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    "${xpub.take(12)}...${xpub.takeLast(8)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.weight(1f)
-                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "${xpub.take(8)}...${xpub.takeLast(8)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                    Text(
+                                        when {
+                                            xpub.startsWith("zpub") -> "Native SegWit (zpub)"
+                                            xpub.startsWith("ypub") -> "SegWit (ypub)"
+                                            xpub.startsWith("xpub") -> "Legacy (xpub)"
+                                            else -> "Extended public key"
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    )
+                                }
                                 IconButton(onClick = {
                                     BwtService.SavedConfig.removeXpub(context, xpub)
                                     xpubs.remove(xpub)
                                 }, modifier = Modifier.size(32.dp)) {
                                     Icon(Icons.Outlined.Delete, contentDescription = "Remove",
-                                        modifier = Modifier.size(18.dp))
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                                 }
                             }
                         }
                     }
 
                     if (addresses.isNotEmpty()) {
-                        Spacer(Modifier.height(if (xpubs.isNotEmpty()) 12.dp else 8.dp))
-                        Text("Individual Addresses", style = MaterialTheme.typography.labelSmall,
+                        Spacer(Modifier.height(12.dp))
+                        Text("ADDRESSES", style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(8.dp))
                         addresses.forEach { addr ->
-                            Spacer(Modifier.height(4.dp))
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(Icons.Outlined.Tag, contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(18.dp),
                                     tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(8.dp))
+                                Spacer(Modifier.width(10.dp))
                                 Text(
-                                    "${addr.take(12)}...${addr.takeLast(8)}",
+                                    "${addr.take(8)}...${addr.takeLast(8)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontFamily = FontFamily.Monospace,
                                     modifier = Modifier.weight(1f)
@@ -321,9 +325,36 @@ fun ConnectWalletScreen(onBack: () -> Unit) {
                                     addresses.remove(addr)
                                 }, modifier = Modifier.size(32.dp)) {
                                     Icon(Icons.Outlined.Delete, contentDescription = "Remove",
-                                        modifier = Modifier.size(18.dp))
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                                 }
                             }
+                        }
+                    }
+
+                    // Add buttons
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showAddXpub = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFF7931A)
+                            )
+                        ) {
+                            Text("+ Wallet", style = MaterialTheme.typography.labelMedium)
+                        }
+                        OutlinedButton(
+                            onClick = { showAddAddress = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("+ Address", style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
