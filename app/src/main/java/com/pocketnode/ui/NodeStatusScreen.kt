@@ -915,19 +915,19 @@ private fun ActionButtons(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedButton(
-                onClick = onNavigateToSetup,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
-            ) { Text("Setup Checklist", fontWeight = FontWeight.Medium) }
-            OutlinedButton(
                 onClick = onNavigateToSnapshot,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.primary
                 )
             ) { Text("Setup", fontWeight = FontWeight.Medium) }
+            OutlinedButton(
+                onClick = onNavigateToSetup,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) { Text("Checklist", fontWeight = FontWeight.Medium) }
         }
 
         Row(
