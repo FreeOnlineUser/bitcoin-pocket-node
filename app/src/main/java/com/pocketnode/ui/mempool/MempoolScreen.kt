@@ -80,14 +80,7 @@ fun MempoolScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                // Refresh button
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Button(onClick = { viewModel.refreshMempool() }, enabled = !isRefreshing) {
-                        Text(if (isRefreshing) "Refreshing..." else "Refresh")
-                    }
-                }
-            }
+            // Auto-refreshes every 10 seconds
 
             item { MempoolStatsCard(mempoolState = mempoolState) }
             item { FeeEstimatePanel() }
