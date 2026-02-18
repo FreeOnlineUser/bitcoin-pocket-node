@@ -752,8 +752,66 @@
   </div>
 </div>
 
-<!-- Slide 9: The Result -->
+<!-- Slide 9: Mobile Challenges -->
 <div class="slide" id="slide-8">
+  <h3>Making it work on mobile</h3>
+  <h2>Challenges we <span class="highlight">solved</span></h2>
+  <div class="two-col">
+    <div class="col">
+      <div class="steps">
+        <div class="step" style="animation-delay: 0.1s; border-left-color: var(--purple);">
+          <div class="step-num" style="background: var(--purple);">4</div>
+          <div class="step-content">
+            <div class="step-title">Why only 4 peers?</div>
+            <div class="step-desc">Default Bitcoin Core connects to 8-10 peers. On a phone, each peer costs battery and bandwidth. <span class="highlight">maxconnections=4</span> keeps the node fully validated while cutting resource use in half.</div>
+          </div>
+        </div>
+        <div class="step" style="animation-delay: 0.3s; border-left-color: var(--purple);">
+          <div class="step-num" style="background: var(--purple);">🔄</div>
+          <div class="step-content">
+            <div class="step-title">Orphan process survival</div>
+            <div class="step-desc">Android kills apps aggressively. If the app dies, bitcoind keeps running as an orphan holding the lock file. On restart, the app <em>detects and re-attaches</em> via RPC instead of crashing.</div>
+          </div>
+        </div>
+        <div class="step" style="animation-delay: 0.5s; border-left-color: var(--purple);">
+          <div class="step-num" style="background: var(--purple);">📱</div>
+          <div class="step-content">
+            <div class="step-title">Auto-start on boot</div>
+            <div class="step-desc">Phones restart nightly (GrapheneOS). A boot receiver re-launches the node automatically — zero downtime without user intervention.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="steps">
+        <div class="step" style="animation-delay: 0.7s; border-left-color: var(--purple);">
+          <div class="step-num" style="background: var(--purple);">📶</div>
+          <div class="step-content">
+            <div class="step-title">Metered network detection</div>
+            <div class="step-desc">VPN over cellular looks like WiFi to Android. We detect <span class="highlight">metered connections</span> and warn before syncing over mobile data — blocks are ~2 MB each.</div>
+          </div>
+        </div>
+        <div class="step" style="animation-delay: 0.9s; border-left-color: var(--purple);">
+          <div class="step-num" style="background: var(--purple);">🔮</div>
+          <div class="step-content">
+            <div class="step-title">Sovereign price discovery</div>
+            <div class="step-desc">UTXOracle derives the BTC/USD price from on-chain transaction patterns. <em>Zero external APIs.</em> Updates incrementally with each new block (~4 seconds).</div>
+          </div>
+        </div>
+        <div class="step" style="animation-delay: 1.1s; border-left-color: var(--purple);">
+          <div class="step-num" style="background: var(--purple);">⚡</div>
+          <div class="step-content">
+            <div class="step-title">Built-in Electrum server</div>
+            <div class="step-desc">BWT runs alongside bitcoind, serving your wallet over localhost. BlueWallet connects directly — your keys, your node, your rules.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 10: The Result -->
+<div class="slide" id="slide-9">
   <h3>Result</h3>
   <h2>A <span class="highlight">real node</span> in your pocket</h2>
   <div class="diagram">
@@ -793,7 +851,7 @@
 </div>
 
 <!-- Navigation -->
-<div class="slide-counter"><span id="current">1</span> / <span id="total">9</span></div>
+<div class="slide-counter"><span id="current">1</span> / <span id="total">10</span></div>
 <div class="nav" id="nav-dots"></div>
 <div class="nav-arrows">
   <button class="nav-btn" onclick="prev()">←</button>
