@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun FairTradeCard(
     oraclePrice: Int?,
-    onExpanded: (() -> Unit)? = null
+    onExpanded: ((Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -113,7 +113,7 @@ fun FairTradeCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded; if (expanded) onExpanded?.invoke() },
+            .clickable { expanded = !expanded; onExpanded?.invoke(expanded) },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )

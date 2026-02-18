@@ -430,7 +430,11 @@ fun NodeStatusScreen(
                         isNodeSynced = nodeStatus.startsWith("Synced"),
                         blockHeight = blockHeight,
                         onPriceUpdate = { oraclePrice = it },
-                        onExpanded = { scope.launch { dashboardScrollState.animateScrollTo(dashboardScrollState.value + 600, androidx.compose.animation.core.tween(600)) } }
+                        onExpanded = { expanded -> scope.launch {
+                            val anim = androidx.compose.animation.core.tween<Int>(600)
+                            if (expanded) dashboardScrollState.animateScrollTo(dashboardScrollState.value + 700, anim)
+                            else dashboardScrollState.animateScrollTo((dashboardScrollState.value - 700).coerceAtLeast(0), anim)
+                        } }
                     )
                 }
 
@@ -442,7 +446,11 @@ fun NodeStatusScreen(
                 ) {
                     com.pocketnode.ui.components.FairTradeCard(
                         oraclePrice = oraclePrice,
-                        onExpanded = { scope.launch { dashboardScrollState.animateScrollTo(dashboardScrollState.value + 600, androidx.compose.animation.core.tween(600)) } }
+                        onExpanded = { expanded -> scope.launch {
+                            val anim = androidx.compose.animation.core.tween<Int>(600)
+                            if (expanded) dashboardScrollState.animateScrollTo(dashboardScrollState.value + 700, anim)
+                            else dashboardScrollState.animateScrollTo((dashboardScrollState.value - 700).coerceAtLeast(0), anim)
+                        } }
                     )
                 }
 

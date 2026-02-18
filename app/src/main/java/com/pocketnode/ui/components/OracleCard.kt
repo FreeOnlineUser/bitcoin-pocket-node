@@ -34,7 +34,7 @@ fun OracleCard(
     isNodeSynced: Boolean,
     blockHeight: Long = -1,
     onPriceUpdate: ((Int) -> Unit)? = null,
-    onExpanded: (() -> Unit)? = null
+    onExpanded: ((Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -235,7 +235,7 @@ fun OracleCard(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (isRunning) Modifier.defaultMinSize(minHeight = 120.dp) else Modifier)
-            .clickable { expanded = !expanded; if (expanded) onExpanded?.invoke() },
+            .clickable { expanded = !expanded; onExpanded?.invoke(expanded) },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
