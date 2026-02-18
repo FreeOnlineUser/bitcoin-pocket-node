@@ -85,9 +85,7 @@ fun PocketNodeApp(
                 )
             }
             composable("data_usage") {
-                DataUsageScreen(
-                    networkMonitor = activeMonitor,
-                    cellularBudgetMb = syncController?.cellularBudgetMb ?: 0,
+                MempoolScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
