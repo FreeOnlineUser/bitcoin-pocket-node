@@ -214,6 +214,7 @@ fun OracleCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (isRunning) Modifier.defaultMinSize(minHeight = 120.dp) else Modifier)
             .clickable { expanded = !expanded },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -285,15 +286,6 @@ fun OracleCard(
                         )
                     }
                 }
-            }
-
-            // ── Progress bar while running ──
-            if (isRunning) {
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary
-                )
             }
 
             // ── Expanded view ──
