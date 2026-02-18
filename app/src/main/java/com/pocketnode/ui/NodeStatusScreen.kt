@@ -885,6 +885,29 @@ private fun ActionButtons(
                 )
             )
         }
+        // Battery saver toggle
+        var batterySaver by remember { mutableStateOf(bootPrefs.getBoolean("battery_saver_enabled", false)) }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Pause on battery < 50%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Switch(
+                checked = batterySaver,
+                onCheckedChange = {
+                    batterySaver = it
+                    bootPrefs.edit().putBoolean("battery_saver_enabled", it).apply()
+                },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = Color(0xFFFF9800)
+                )
+            )
+        }
 
         // Setup button — always accessible
         OutlinedButton(
