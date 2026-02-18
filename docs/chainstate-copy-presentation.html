@@ -570,7 +570,7 @@
 
 <!-- Slide 5: The Trick — Stub Files -->
 <div class="slide" id="slide-4">
-  <h3>Step 2</h3>
+  <h3>Key Innovation #1</h3>
   <h2>The <span class="highlight">stub file</span> trick</h2>
   <div class="two-col">
     <div class="col">
@@ -727,12 +727,12 @@
         <div class="step-desc">Quick validation of the UTXO database integrity. Takes seconds.</div>
       </div>
     </div>
-    <div class="step" style="animation-delay: 0.5s; border-left-color: var(--green);">
-      <div class="step-num" style="background: var(--green);">3</div>
+    <div class="step" style="animation-delay: 0.5s; border-left-color: var(--orange);">
+      <div class="step-num" style="background: var(--orange);">★</div>
       <div class="step-content">
-        <div class="step-title">Auto-pruning kicks in</div>
-        <div class="step-desc">Bitcoind sees it has "blocks" but limited space. Pruning mode activates — it only keeps recent blocks going forward.</div>
-        <div class="trick">Set <span class="mono">prune=2048</span> in bitcoin.conf to keep ~2 GB of recent blocks.</div>
+        <div class="step-title highlight">Key Innovation #2: Pruning takes over</div>
+        <div class="step-desc">Bitcoind sees stub files as "already pruned" blocks. With <span class="mono">prune=2048</span>, it seamlessly continues in pruned mode — only storing new blocks going forward. The stub files + pruning together turn a 600 GB requirement into 2 GB.</div>
+        <div class="trick">This is the magic: bitcoind doesn't know the blocks were never there. It just sees a pruned node that's been running for years.</div>
       </div>
     </div>
     <div class="step" style="animation-delay: 0.7s; border-left-color: var(--green);">
