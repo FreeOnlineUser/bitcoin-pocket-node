@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
 fun OracleCard(
     isNodeSynced: Boolean,
     blockHeight: Long = -1,
-    onPriceUpdate: ((Int) -> Unit)? = null
+    onPriceUpdate: ((Int) -> Unit)? = null,
+    onExpanded: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -234,7 +235,7 @@ fun OracleCard(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (isRunning) Modifier.defaultMinSize(minHeight = 120.dp) else Modifier)
-            .clickable { expanded = !expanded },
+            .clickable { expanded = !expanded; if (expanded) onExpanded?.invoke() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )

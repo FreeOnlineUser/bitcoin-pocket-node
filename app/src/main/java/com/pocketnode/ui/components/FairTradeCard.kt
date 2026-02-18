@@ -37,7 +37,8 @@ import androidx.compose.ui.unit.sp
  */
 @Composable
 fun FairTradeCard(
-    oraclePrice: Int?
+    oraclePrice: Int?,
+    onExpanded: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -112,7 +113,7 @@ fun FairTradeCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded },
+            .clickable { expanded = !expanded; if (expanded) onExpanded?.invoke() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -303,8 +304,8 @@ private fun ConverterField(
     keyboardType: KeyboardType,
     focusManager: androidx.compose.ui.focus.FocusManager
 ) {
-    val brightColor = MaterialTheme.colorScheme.onSurface
-    val dimColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+    val brightColor = Color(0xFFFF9800) // Bitcoin orange
+    val dimColor = Color(0xFFCC7A00)   // Darker orange
 
     OutlinedTextField(
         value = value,

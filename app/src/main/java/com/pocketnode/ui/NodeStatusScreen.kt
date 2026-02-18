@@ -7,6 +7,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -72,6 +74,8 @@ fun NodeStatusScreen(
     var showPrice by remember { mutableStateOf(appPrefs.getBoolean("show_price", false)) }
     var showFairTrade by remember { mutableStateOf(appPrefs.getBoolean("show_fair_trade", false)) }
     var oraclePrice by remember { mutableStateOf<Int?>(null) }
+    val dashboardScrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
     var bgValidationHeight by remember { mutableStateOf(-1L) }
 
     // Sync local UI state with service state (handles start/stop while on other screens)
@@ -382,7 +386,7 @@ fun NodeStatusScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp, vertical = 12.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(dashboardScrollState),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Status indicator
@@ -425,7 +429,8 @@ fun NodeStatusScreen(
                     com.pocketnode.ui.components.OracleCard(
                         isNodeSynced = nodeStatus.startsWith("Synced"),
                         blockHeight = blockHeight,
-                        onPriceUpdate = { oraclePrice = it }
+                        onPriceUpdate = { oraclePrice = it },
+                        onExpanded = { scope.launch { dashboardScrollState.animateScrollTo(dashboardScrollState.maxValue) } }
                     )
                 }
 
@@ -436,7 +441,8 @@ fun NodeStatusScreen(
                     exit = androidx.compose.animation.shrinkVertically()
                 ) {
                     com.pocketnode.ui.components.FairTradeCard(
-                        oraclePrice = oraclePrice
+                        oraclePrice = oraclePrice,
+                        onExpanded = { scope.launch { dashboardScrollState.animateScrollTo(dashboardScrollState.maxValue) } }
                     )
                 }
 
