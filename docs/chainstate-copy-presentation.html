@@ -530,11 +530,11 @@
       <div class="file-tree">
         <div><span class="dir">📂 bitcoin/</span></div>
         <div>&nbsp;&nbsp;<span class="dir copied">📂 chainstate/</span> <span class="size green">~11 GB</span></div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file copied">UTXO database</span></div>
-        <div>&nbsp;&nbsp;<span class="file key">🔑 xor.dat</span> <span class="size green">8 bytes</span></div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file" style="color: var(--orange)">Obfuscation key</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file copied">UTXO database (own internal key)</span></div>
         <div>&nbsp;&nbsp;<span class="dir copied">📂 blocks/index/</span> <span class="size green">~500 MB</span></div>
         <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file copied">Block location index</span></div>
+        <div>&nbsp;&nbsp;<span class="file key">🔑 blocks/xor.dat</span> <span class="size green">8 bytes</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file" style="color: var(--orange)">Block file obfuscation key</span></div>
         <div>&nbsp;&nbsp;<span class="dir">📂 blocks/</span> <span class="size" style="color: var(--red)">~600 GB ✗</span></div>
         <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="stub">NOT copied (too large)</span></div>
       </div>
@@ -552,8 +552,8 @@
           <div class="step-num">2</div>
           <div class="step-content">
             <div class="step-title">XOR Key (8 bytes)</div>
-            <div class="step-desc">Since Core 28, <span class="mono">xor.dat</span> is used for data obfuscation - each node generates a unique key. The key must travel with the chainstate.</div>
-            <div class="trick">Without this file, the data can't be decoded correctly - the chainstate looks corrupt and bitcoind refuses to start!</div>
+            <div class="step-desc">Since Core 28, <span class="mono">xor.dat</span> is used for block file data obfuscation - each node generates a unique key. The key must travel with the block files. (The chainstate has its own separate internal obfuscation key.)</div>
+            <div class="trick">Without this file, the block data can't be decoded correctly - bitcoind sees corrupt block files and refuses to start!</div>
           </div>
         </div>
         <div class="step" style="animation-delay: 0.5s;">
