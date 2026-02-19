@@ -48,8 +48,10 @@ fun NetworkSettingsScreen(
     val effectiveCellular = if (cellularBudgetMb > 0) cellularBudgetMb else persistedCellular
     val effectiveWifi = if (wifiBudgetMb > 0) wifiBudgetMb else persistedWifi
 
-    var budgetText by remember { mutableStateOf(if (effectiveCellular > 0) effectiveCellular.toString() else "") }
-    var wifiBudgetText by remember { mutableStateOf(if (effectiveWifi > 0) effectiveWifi.toString() else "") }
+    val hasStoredCellular = syncPrefs.contains("cellular_budget_mb")
+    val hasStoredWifi = syncPrefs.contains("wifi_budget_mb")
+    var budgetText by remember { mutableStateOf(if (hasStoredCellular) effectiveCellular.toString() else "") }
+    var wifiBudgetText by remember { mutableStateOf(if (hasStoredWifi) effectiveWifi.toString() else "") }
 
     Scaffold(
         topBar = {
@@ -331,9 +333,9 @@ private fun BudgetCard(
                 Spacer(Modifier.height(8.dp))
             }
             OutlinedTextField(
-                value = budgetText,
+                value = if (budgetText == "0") "" else budgetText,
                 onValueChange = onBudgetTextChange,
-                label = { Text("Budget (MB)") },
+                label = { Text(if (budgetText == "0") "Unlimited" else "Budget (MB)") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
