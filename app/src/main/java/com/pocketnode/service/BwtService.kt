@@ -29,6 +29,10 @@ class BwtService(private val context: Context) {
 
         private val _isRunning = MutableStateFlow(false)
         val isRunningFlow: StateFlow<Boolean> = _isRunning
+
+        // Shared across all instances so stop/start from different screens works
+        private var bwtProcess: Process? = null
+        private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     }
 
     data class BwtState(
@@ -39,9 +43,6 @@ class BwtService(private val context: Context) {
     ) {
         enum class Status { STOPPED, STARTING, RUNNING, ERROR }
     }
-
-    private var bwtProcess: Process? = null
-    private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     /**
      * Start BWT, connecting to the local bitcoind.
