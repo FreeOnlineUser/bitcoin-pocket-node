@@ -461,8 +461,8 @@
   <p class="subtitle">Full node on your phone in <span class="highlight">under 20 minutes</span><br>No days-long sync. No trusted third parties.</p>
   <div class="stats" style="margin-top: 40px;">
     <div class="stat">
-      <div class="stat-value highlight">~2 GB</div>
-      <div class="stat-label">Disk usage (pruned)</div>
+      <div class="stat-value highlight">~13 GB</div>
+      <div class="stat-label">Total disk (11 GB chainstate + 2 GB blocks)</div>
     </div>
     <div class="stat">
       <div class="stat-value green">20 min</div>
@@ -731,7 +731,7 @@
       <div class="step-num" style="background: var(--orange);">★</div>
       <div class="step-content">
         <div class="step-title highlight">Pruning takes over</div>
-        <div class="step-desc">This is normal pruned node behaviour - bitcoind finds empty block files, recognises them as pruned, and continues forward keeping only recent blocks. With <span class="mono">prune=2048</span> it maintains ~2 GB of recent data.</div>
+        <div class="step-desc">This is normal pruned node behaviour - bitcoind finds empty block files, recognises them as pruned, and continues forward keeping only recent blocks. With <span class="mono">prune=2048</span> it maintains ~2 GB of recent block data. Total disk usage is ~13 GB including the 11 GB chainstate (UTXO set).</div>
         <div class="trick">We're deliberately creating the conditions that trigger standard pruning. No hacks - just giving bitcoind a valid chainstate and letting its built-in pruning logic do the rest.</div>
       </div>
     </div>
@@ -821,7 +821,7 @@
       <div class="device-detail">
         Block 937,162<br>
         4 peers connected<br>
-        2.0 GB pruned
+        ~13 GB total
       </div>
     </div>
     <div style="font-size: 2em;">→</div>

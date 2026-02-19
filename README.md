@@ -10,7 +10,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 - **167 million UTXOs** loaded via AssumeUTXO on a Pixel 7 Pro
 - Syncing from block 910,000 to chain tip
 - Phone stays cool, runs overnight without issues
-- Pruned to ~2 GB disk usage
+- ~13 GB total disk usage (11 GB chainstate + 2 GB pruned blocks)
 - **BWT Electrum server** — BlueWallet connects to local node for private transaction queries
 
 ## Screenshots
