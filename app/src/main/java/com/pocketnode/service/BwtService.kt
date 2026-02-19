@@ -41,7 +41,7 @@ class BwtService(private val context: Context) {
     }
 
     private var bwtProcess: Process? = null
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     /**
      * Start BWT, connecting to the local bitcoind.
@@ -170,6 +170,7 @@ class BwtService(private val context: Context) {
         _isRunning.value = false
         _state.value = BwtState(status = BwtState.Status.STOPPED)
         scope.cancel()
+        scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     }
 
     private suspend fun ensureBwtWallet() {

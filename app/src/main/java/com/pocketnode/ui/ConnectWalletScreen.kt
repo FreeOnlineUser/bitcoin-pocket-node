@@ -174,7 +174,7 @@ fun ConnectWalletScreen(onBack: () -> Unit) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Tracked Wallets", fontWeight = FontWeight.Bold)
+                    Text("Electrum Tracked Wallets", fontWeight = FontWeight.Bold)
 
                     if (xpubs.isEmpty() && addresses.isEmpty()) {
                         Spacer(Modifier.height(12.dp))
