@@ -147,8 +147,13 @@ disablewallet=1
   - Yellow: forward OK but downgrade needs reindex (e.g. 28 -> 29 OK, 29 -> 28 risky)
   - Red: incompatible, requires full reindex or re-copy from donor
   - Matrix displayed before confirming version change
-- [ ] **Pre-switch safety check** — record current version + chainstate format marker before switching
-- [ ] **Downgrade warning** — "Reverting to vX may require reindex (hours). Continue?" with option to cancel
+- [ ] **v28.1 baseline chainstate** — keep a frozen copy of the 28.1 chainstate as backup (~11 GB)
+  - Two chainstates max on disk: active + 28.1 backup (~24 GB total)
+  - Forward upgrades always safe (28.1 -> any newer version)
+  - Downgrade = restore 28.1 backup, then fast-forward on target version (minutes, not reindex)
+  - No reindex ever needed — just restore and catch up
+  - Created from initial donor copy, never modified
+- [ ] **Downgrade warning** — "This will restore v28.1 chainstate and catch up to chain tip. Continue?"
 - [ ] Populate matrix from Bitcoin Core release notes (chainstate format changes are documented)
 
 ### Lightning (Zeus Integration via Neutrino)
