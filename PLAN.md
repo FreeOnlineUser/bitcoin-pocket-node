@@ -144,15 +144,45 @@ disablewallet=1
 - [ ] ~20MB per binary, 3-4 versions keeps APK under 100MB
 - [ ] User controls which consensus rules they run — never auto-update
 
-### Lightning (Zeus Integration)
-- [ ] **Guided Lightning setup** — enable block filters on donor node, download filter index (~5 GB), configure local bitcoind with `blockfilterindex=1` + `peerblockfilters=1`
-- [ ] Warning screen: additional ~5 GB data, explain what it enables
-- [ ] SSH to donor node, enable `blockfilterindex=1` if not already set, wait for index build
-- [ ] Copy block filter index during chainstate copy (or as separate download)
-- [ ] Revert donor node config immediately after copy (don't leave changes on donor)
-- [ ] Zeus connects to local bitcoind via Neutrino (BIP 157/158) on localhost
-- [ ] Stack: Pocket Node (chain validation) + BlueWallet (on-chain via Electrum) + Zeus (Lightning via Neutrino)
-- [ ] Future: VLS (Validating Lightning Signer) for sovereign signing with remote Lightning node
+### Lightning (Zeus Integration via Neutrino)
+
+**Concept:** Enable Zeus wallet to connect to Pocket Node's bitcoind for sovereign Lightning chain validation. No new Lightning code in our app — Zeus handles Lightning, we provide the trusted chain backend via BIP 157/158 compact block filters.
+
+**The Sovereign Phone Stack:**
+- **Pocket Node** — full validating Bitcoin node (trust anchor)
+- **BlueWallet** — on-chain wallet via our Electrum server (BWT, port 50001)
+- **Zeus** — Lightning wallet via our bitcoind Neutrino (BIP 157/158, port 8333)
+
+**Setup Flow:**
+- [ ] "Enable Lightning" toggle in settings with warning: "Requires ~5 GB additional data from your source node"
+- [ ] Reuse existing SSH credentials from chainstate copy (no new login needed)
+- [ ] SSH to donor node, add `blockfilterindex=1` to `bitcoin.conf`
+- [ ] Restart donor's bitcoind, monitor index build via RPC (`getindexinfo`)
+- [ ] Once index built, copy `indexes/blockfilter/basic/` directory to phone
+- [ ] Check for XOR key in filter index directory — copy alongside if present (same pattern as chainstate xor.dat)
+- [ ] Revert donor's `bitcoin.conf` immediately after copy (remove `blockfilterindex=1`)
+- [ ] Restart donor's bitcoind — donor back to original state, completely out of the picture
+- [ ] Configure local bitcoind: `blockfilterindex=1` + `peerblockfilters=1`
+- [ ] Restart local bitcoind — now serves compact block filters
+
+**Standalone Operation:**
+- Historical filters copied from donor, new block filters built locally as blocks arrive
+- Filter index doesn't need block data to serve — only to build. Pre-built = works on pruned node
+- Phone never needs donor again after copy (same as chainstate copy)
+- Zeus connects to localhost, gets filters, fully sovereign Lightning
+
+**Implementation Notes:**
+- [ ] Filter index lives in `indexes/blockfilter/basic/` (separate LevelDB from chainstate)
+- [ ] Verify XOR obfuscation: own key vs shared with blocks index
+- [ ] Can be done during initial chainstate copy or as separate "Lightning upgrade" download later
+- [ ] If donor already has `blockfilterindex=1` enabled, skip the enable/build/revert — just copy
+- [ ] Progress UI: index build can take hours on donor, need monitoring and status display
+- [ ] Test with Umbrel and Start9 (different file paths, permissions)
+
+**Future Enhancements:**
+- [ ] VLS (Validating Lightning Signer) — phone holds signing keys, remote server runs always-online Lightning node. Even server operator can't steal funds.
+- [ ] Partnership with sovereign data center for LSP/VLS infrastructure
+- [ ] LAN exposure toggle for Zeus on separate device (same network)
 
 ### Maintenance
 - [ ] BWT fork maintenance and modernization
