@@ -118,7 +118,13 @@ disablewallet=1
 - [ ] Remove `deprecatedrpc=create_bdb` dependency
 
 ### Chainstate Copy
-- [ ] XOR re-encoding — after chainstate copy, decode both block index (xor.dat key) and chainstate (embedded LevelDB obfuscation key) from source node, re-encode with locally generated keys. Eliminates need to copy xor.dat, every node is unique on disk from first boot
+- [ ] XOR re-encoding — after chainstate copy, decode both block index (xor.dat key) and chainstate (embedded obfuscation key at `\x0e\x00obfuscate_key`) from source node, re-encode with locally generated keys. Every node unique on disk from first boot.
+  - Must run after transfer, before bitcoind first starts
+  - Only LevelDB values are obfuscated, not keys
+  - Need to handle all LevelDB layers (SST files, WAL logs) — safest to read entire DB with old key, write fresh DB with new key
+  - Chainstate is ~11GB, re-encoding adds a few minutes — needs progress indicator
+  - Verify a sample of entries after re-encoding before first start
+  - **Requires bundling a LevelDB library** (Java/Kotlin impl or JNI with C++ lib) — biggest practical hurdle
 - [ ] Phone-to-phone chainstate copy (WiFi Direct / hotspot)
 
 ### Networking
