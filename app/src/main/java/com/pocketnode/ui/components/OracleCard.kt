@@ -252,6 +252,7 @@ fun OracleCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // ── Collapsed view: always visible ──
+            // Top row: emoji + label
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -260,59 +261,61 @@ fun OracleCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("🔮", fontSize = 18.sp)
                     Spacer(Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            "UTXOracle Block Window Price",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                        when {
-                            isRunning -> {
-                                Text(
-                                    progressText.ifEmpty { "Calculating…" },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            error != null -> {
-                                Text(
-                                    "Error",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                            result != null -> {
-                                val displayText = if (result!!.date == "recent-blocks") {
-                                    "Block ${"%,d".format(result!!.blockRange.last)}"
-                                } else {
-                                    result!!.date
-                                }
-                                Text(
-                                    displayText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        "UTXOracle Block Window Price",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 }
-
-                // Price or progress indicator
                 when {
                     isRunning -> {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    result != null -> {
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            // Price row
+            when {
+                isRunning -> {
+                    Text(
+                        progressText.ifEmpty { "Calculating…" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                error != null -> {
+                    Text(
+                        "Error: ${error}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                result != null -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
                         Text(
                             "$${"%,d".format(result!!.price)}",
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
                             color = Color(0xFFFF9800) // Bitcoin orange
+                        )
+                        val displayText = if (result!!.date == "recent-blocks") {
+                            "Block ${"%,d".format(result!!.blockRange.last)}"
+                        } else {
+                            result!!.date
+                        }
+                        Text(
+                            displayText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
                 }
