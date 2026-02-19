@@ -139,10 +139,17 @@ disablewallet=1
 - [ ] Bundle multiple Bitcoin Core versions in the APK (v28.1, v29, etc.)
 - [ ] User-selectable in settings — pick which version to run
 - [ ] Restart node with selected binary, no download needed
-- [ ] Warn on chainstate format changes between versions (may need reindex)
-- [ ] Note policy differences (e.g. v30 OP_RETURN changes)
 - [ ] ~20MB per binary, 3-4 versions keeps APK under 100MB
 - [ ] User controls which consensus rules they run — never auto-update
+- [ ] Note policy differences (e.g. v30 OP_RETURN changes)
+- [ ] **Version compatibility matrix** — built-in table showing which versions can safely switch between each other
+  - Green: safe to swap both directions (e.g. 28.0 <-> 28.1)
+  - Yellow: forward OK but downgrade needs reindex (e.g. 28 -> 29 OK, 29 -> 28 risky)
+  - Red: incompatible, requires full reindex or re-copy from donor
+  - Matrix displayed before confirming version change
+- [ ] **Pre-switch safety check** — record current version + chainstate format marker before switching
+- [ ] **Downgrade warning** — "Reverting to vX may require reindex (hours). Continue?" with option to cancel
+- [ ] Populate matrix from Bitcoin Core release notes (chainstate format changes are documented)
 
 ### Lightning (Zeus Integration via Neutrino)
 
