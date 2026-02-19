@@ -134,8 +134,16 @@ disablewallet=1
 - [ ] Non-technical setup documentation for everyday users
 - [ ] Expanded device testing beyond Pixel line
 
+### Bitcoin Core Version Selection
+- [ ] Bundle multiple Bitcoin Core versions in the APK (v28.1, v29, etc.)
+- [ ] User-selectable in settings — pick which version to run
+- [ ] Restart node with selected binary, no download needed
+- [ ] Warn on chainstate format changes between versions (may need reindex)
+- [ ] Note policy differences (e.g. v30 OP_RETURN changes)
+- [ ] ~20MB per binary, 3-4 versions keeps APK under 100MB
+- [ ] User controls which consensus rules they run — never auto-update
+
 ### Maintenance
-- [ ] Bitcoin Core version upgrades (v29+)
 - [ ] BWT fork maintenance and modernization
 
 ### Visuals
