@@ -333,8 +333,8 @@ fun NodeStatusScreen(
                         val prefs = context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
                         if (prefs.getBoolean("bwt_was_running", false)) {
                             bwtAutoStarted = true
-                            val bwtIntent = android.content.Intent(context, com.pocketnode.service.BwtService::class.java)
-                            context.startForegroundService(bwtIntent)
+                            val bwt = com.pocketnode.service.BwtService(context)
+                            bwt.start(saveState = false) // don't re-save, already true
                             android.util.Log.i("NodeStatusScreen", "Auto-started BWT (was previously running)")
                         }
                     }
