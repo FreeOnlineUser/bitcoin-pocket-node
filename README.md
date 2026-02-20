@@ -43,7 +43,8 @@ See [Direct Chainstate Copy](docs/direct-chainstate-copy.md) for a detailed comp
 
 - **Two bootstrap paths** — direct chainstate copy (~20 min) or AssumeUTXO (~3 hours)
 - **BWT Electrum server** — run a local Electrum server so BlueWallet can query your own node
-- **Wallet integration** — ConnectWalletScreen guides BlueWallet connection setup
+- **Lightning support** — one-tap block filter copy from your home node, enabling Zeus Lightning wallet via Neutrino on localhost
+- **Wallet integration** — ConnectWalletScreen guides BlueWallet and Zeus connection setup
 - **AssumeUTXO fast sync** — full node in under 3 hours, not days
 - **Snapshot validation** — verifies block hash before loading, auto-redownloads if invalid
 - **Non-blocking snapshot load** — progress tracking during the ~25 min load process
@@ -133,6 +134,33 @@ You can view the pocketnode credentials and **fully remove access** from the app
 - bitcoind runs as `libbitcoind.so` in `jniLibs/` for GrapheneOS W^X compliance
 - No internet-facing ports — RPC is localhost only, BWT Electrum is localhost only
 
+## Lightning Support (Zeus)
+
+The app can copy BIP 157/158 block filter indexes (~13 GB) from your home node, enabling Zeus to run as a fully sovereign Lightning wallet -- all on localhost, no external dependencies.
+
+### How It Works
+1. Tap "Add Lightning Support" on the dashboard
+2. Enter your home node SSH credentials
+3. The app detects block filters on your node, stops it briefly, archives filters alongside chainstate, downloads everything, and restarts your home node
+4. Your phone's bitcoind restarts with `blockfilterindex=1`, `peerblockfilters=1`, `listen=1`, `bind=127.0.0.1`
+5. Zeus connects via Neutrino to `127.0.0.1:8333` for compact block filters
+
+### Zeus Setup
+1. Install **Zeus v0.12.2** from [GitHub releases](https://github.com/ZeusLN/zeus/releases/tag/v0.12.2) (v0.12.3+ has a [SQLite bug](https://github.com/ZeusLN/zeus/issues/3672) that stalls sync at block 123,000)
+2. Open Zeus, select **Create embedded LND**
+3. Wait ~10 minutes on the boot animation while initial header sync completes (don't change settings yet)
+4. Wait for the warning icon to appear at the top of the screen
+5. Tap the warning icon to open node settings
+6. Delete all default Neutrino peers
+7. Add `127.0.0.1:8333` as the only Neutrino peer
+8. Restart Zeus -- it connects to your local bitcoind and the wallet appears
+
+### Full Sovereign Stack
+```
+bitcoind (phone) --> block filters --> Zeus Neutrino --> Lightning wallet
+         all on localhost, zero external dependencies
+```
+
 ## Target Platform
 
 - **OS:** GrapheneOS (or any Android 10+)
@@ -176,8 +204,11 @@ app/src/main/java/com/pocketnode/
 │   └── NetworkMonitor.kt       # WiFi/cellular/VPN detection + data tracking
 ├── snapshot/
 │   ├── ChainstateManager.kt    # AssumeUTXO snapshot flow (generate/download/load)
+│   ├── BlockFilterManager.kt   # Lightning block filter copy/remove
 │   ├── NodeSetupManager.kt     # SSH setup + teardown
 │   └── SnapshotDownloader.kt   # SFTP download with progress
+├── ssh/
+│   └── SshUtils.kt             # Shared SSH/SFTP utilities
 ├── rpc/
 │   └── BitcoinRpcClient.kt     # Local bitcoind JSON-RPC (configurable timeouts)
 ├── ui/
@@ -186,7 +217,8 @@ app/src/main/java/com/pocketnode/
 │   ├── SetupChecklistScreen.kt # Config mode setup wizard
 │   ├── SnapshotSourceScreen.kt # Source picker
 │   ├── ChainstateCopyScreen.kt # Snapshot load progress (4-step flow)
-│   ├── ConnectWalletScreen.kt  # BlueWallet / Electrum wallet connection guide
+│   ├── ConnectWalletScreen.kt  # BlueWallet / Electrum / Zeus wallet connection guide
+│   ├── BlockFilterUpgradeScreen.kt # Lightning block filter management
 │   ├── DataUsageScreen.kt      # Data usage breakdown
 │   ├── NetworkSettingsScreen.kt # Cellular/WiFi budgets
 │   ├── NodeAccessScreen.kt     # View/remove node access
@@ -207,6 +239,9 @@ app/src/main/java/com/pocketnode/
 - [Direct Chainstate Copy](docs/direct-chainstate-copy.md)
 - [Snapshot Testing](docs/snapshot-testing.md)
 - [Umbrel Integration](docs/umbrel-integration.md)
+- [Block Filter Design](docs/BLOCK-FILTER-DESIGN.md)
+- [Block Index Consistency](docs/BLOCK-INDEX-CONSISTENCY.md)
+- [LDK Research](docs/LDK-RESEARCH.md)
 
 ## Tested On
 
