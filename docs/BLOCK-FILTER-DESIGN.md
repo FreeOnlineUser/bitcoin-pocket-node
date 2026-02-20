@@ -8,32 +8,38 @@ Optional BIP 157/158 compact block filter index copy from donor node. Enables Ze
 ### Option A: During Initial Node Copy
 On the SnapshotSourceScreen, after selecting "Sync from your node":
 1. NodeConnectionScreen collects SSH credentials (existing flow)
-2. **New:** Before starting copy, check if donor has `blockfilterindex=1` enabled via RPC (`getindexinfo`)
-3. If **enabled and synced**: Show option card:
-   - "Include Lightning support (~X GB extra)"
+2. **New:** Before starting copy, check if donor has block filter index via SSH
+3. If **exists and synced**: Show option card:
+   - "Include Lightning support (~13 GB extra)"
    - "Enables Zeus and other Lightning wallets to use your node"
    - Checkbox, unchecked by default
-4. If **not enabled**: Show option card:
-   - "Enable Lightning support (~X GB extra)"
-   - "Your source node will build a block filter index. This may take several hours. You can start the copy later."
-   - Checkbox, unchecked by default
-5. If checked and not built: enable `blockfilterindex=1` on donor, wait/poll for build, then include in archive
-6. Archive includes `indexes/blockfilter/basic/` alongside chainstate
-7. After copy: revert donor config immediately (remove `blockfilterindex=1`, restart)
-8. Configure local bitcoind: `blockfilterindex=1` + `peerblockfilters=1`
+   - If checked: include `indexes/blockfilter/basic/` in the archive alongside chainstate
+4. If **not present**: Show option card greyed out:
+   - "Lightning support not available — your source node doesn't have block filters built"
+   - "Complete node setup first, then add Lightning support from the dashboard"
+   - No blocking, no building during initial copy — get the node running first
+5. After copy (if filters included): configure local bitcoind with `blockfilterindex=1` + `peerblockfilters=1`
 
-### Option B: Post-Setup Upgrade
+### Option B: Post-Setup Upgrade (Primary path when donor lacks filters)
 On the dashboard, below the existing Setup/Checklist buttons:
 1. **"Add Lightning Support"** button (only shown if block filters not already installed)
 2. Tap opens a screen explaining:
    - "Download block filter index from your source node"
    - "Enables Zeus and other Lightning wallets to validate against your node"
-   - "Requires ~X GB storage"
+   - "Requires ~13 GB storage"
    - "Your source node needs to be reachable"
 3. Reuses saved SSH credentials (or prompts if not saved)
-4. Same check/build/copy/revert flow as Option A
+4. SSH to donor, check if filter index exists:
+   - **If exists:** Copy directly. No donor config changes needed.
+   - **If not exists:** Multi-step flow:
+     a. Explain: "Your source node needs to build a block filter index. This takes several hours but only needs to happen once."
+     b. Enable `blockfilterindex=1` on donor's `bitcoin.conf`, restart donor bitcoind
+     c. Poll `getindexinfo` every 10-15 min until synced (can run in background)
+     d. Notification when ready: "Lightning data ready — downloading now"
+     e. Copy filter index to phone
+     f. Revert donor config immediately (remove `blockfilterindex=1`, restart)
 5. No need to stop local node — filter index is a separate directory
-6. After copy, update local `bitcoin.conf` and restart bitcoind
+6. After copy, update local `bitcoin.conf` with `blockfilterindex=1` + `peerblockfilters=1` and restart bitcoind
 
 ### Remove Block Filters
 In Network Settings or a dedicated Lightning Settings screen:
