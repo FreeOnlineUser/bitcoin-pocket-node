@@ -59,6 +59,7 @@ fun NodeStatusScreen(
     onNavigateToNetworkSettings: () -> Unit = {},
     onNavigateToNodeAccess: () -> Unit = {},
     onNavigateToWallet: () -> Unit = {},
+    onNavigateToBlockFilter: () -> Unit = {},
     mempoolPaneVisible: Boolean = false
 ) {
     val context = LocalContext.current
@@ -468,6 +469,7 @@ fun NodeStatusScreen(
                     onNavigateToNodeAccess = onNavigateToNodeAccess,
                     onNavigateToSetup = onNavigateToSetup,
                     onNavigateToWallet = onNavigateToWallet,
+                    onNavigateToBlockFilter = onNavigateToBlockFilter,
                     mempoolPaneVisible = mempoolPaneVisible,
                     onToggleNode = {
                         if (isRunning) {
@@ -828,6 +830,7 @@ private fun ActionButtons(
     onNavigateToNodeAccess: () -> Unit = {},
     onNavigateToSetup: () -> Unit = {},
     onNavigateToWallet: () -> Unit = {},
+    onNavigateToBlockFilter: () -> Unit = {},
     mempoolPaneVisible: Boolean = false,
     onToggleNode: () -> Unit
 ) {
@@ -964,6 +967,15 @@ private fun ActionButtons(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
             ) { Text("Connect", maxLines = 1, style = MaterialTheme.typography.labelSmall) }
+        }
+
+        // Lightning support button
+        OutlinedButton(
+            onClick = onNavigateToBlockFilter,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+        ) {
+            Text("⚡ Lightning Support", style = MaterialTheme.typography.labelSmall)
         }
 
         Button(

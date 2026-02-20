@@ -83,6 +83,7 @@ fun PocketNodeApp(
                                 onNavigateToNetworkSettings = { navController.navigate("network_settings") },
                                 onNavigateToNodeAccess = { navController.navigate("node_access") },
                                 onNavigateToWallet = { navController.navigate("connect_wallet") },
+                                onNavigateToBlockFilter = { navController.navigate("block_filter") },
                                 mempoolPaneVisible = true
                             )
                         }
@@ -110,7 +111,8 @@ fun PocketNodeApp(
                     onNavigateToDataUsage = { navController.navigate("data_usage") },
                     onNavigateToNetworkSettings = { navController.navigate("network_settings") },
                     onNavigateToNodeAccess = { navController.navigate("node_access") },
-                    onNavigateToWallet = { navController.navigate("connect_wallet") }
+                    onNavigateToWallet = { navController.navigate("connect_wallet") },
+                    onNavigateToBlockFilter = { navController.navigate("block_filter") }
                 )
                 }
             }
@@ -226,6 +228,14 @@ fun PocketNodeApp(
             composable("connect_wallet") {
                 ConnectWalletScreen(
                     onBack = { navController.popBackStack() }
+                )
+            }
+            composable("block_filter") {
+                BlockFilterUpgradeScreen(
+                    onBack = { navController.popBackStack() },
+                    onRestartNode = {
+                        navController.popBackStack("status", inclusive = false)
+                    }
                 )
             }
             composable("node_connect") {
