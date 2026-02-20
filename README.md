@@ -143,7 +143,7 @@ The app can copy BIP 157/158 block filter indexes (~13 GB) from your home node, 
 2. Enter your home node SSH credentials
 3. The app detects block filters on your node, stops it briefly, archives filters alongside chainstate, downloads everything, and restarts your home node
 4. Your phone's bitcoind restarts with `blockfilterindex=1`, `peerblockfilters=1`, `listen=1`, `bind=127.0.0.1`
-5. Zeus connects via Neutrino to `127.0.0.1:8333` for compact block filters
+5. Zeus connects via Neutrino to `127.0.0.1` for compact block filters
 
 ### Zeus Setup
 1. Install **Zeus v0.12.2** from [GitHub releases](https://github.com/ZeusLN/zeus/releases/tag/v0.12.2) (v0.12.3+ has a [SQLite bug](https://github.com/ZeusLN/zeus/issues/3672) that stalls sync at block 123,000)
@@ -152,10 +152,11 @@ The app can copy BIP 157/158 block filter indexes (~13 GB) from your home node, 
 4. Restart the app
 5. Wait for the warning icon to appear at the top of the screen
 6. Tap the warning icon to open node settings
-7. Delete all default Neutrino peers
-8. Add `127.0.0.1:8333` as the only Neutrino peer
-9. Restart Zeus -- it connects to your local bitcoind and the wallet appears
-10. To confirm: **Settings > Embedded node > Peers > Neutrino Peers** should show `127.0.0.1` as the only peer
+7. Go to **Embedded node > Peers > Neutrino Peers**
+8. Delete all default Neutrino peers
+9. Add `127.0.0.1` as the only Neutrino peer
+10. Restart Zeus -- it connects to your local bitcoind and the wallet appears
+11. To confirm: **Settings > Embedded node > Peers > Neutrino Peers** should show `127.0.0.1` as the only peer
 
 ### Full Sovereign Stack
 ```
