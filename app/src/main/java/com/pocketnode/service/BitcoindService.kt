@@ -293,8 +293,11 @@ class BitcoindService : Service() {
      * Starts a coroutine that polls RPC every 30s and updates the
      * foreground notification with live node stats.
      */
+    private var bwtAutoStartedInService = false
+
     private fun startNotificationUpdater(rpc: BitcoinRpcClient) {
         notificationJob?.cancel()
+        bwtAutoStartedInService = false
         notificationJob = serviceScope.launch {
             while (isActive && _isRunning.value) {
                 try {
@@ -305,6 +308,17 @@ class BitcoindService : Service() {
                         val progress = info.optDouble("verificationprogress", 0.0)
                         val peers = rpc.getPeerCount()
                         val synced = progress > 0.9999
+
+                        // Auto-start BWT when synced (if it was previously running)
+                        if (synced && !bwtAutoStartedInService) {
+                            val prefs = getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
+                            if (prefs.getBoolean("bwt_was_running", false)) {
+                                bwtAutoStartedInService = true
+                                val bwt = BwtService(this@BitcoindService)
+                                bwt.start(saveState = false)
+                                Log.i(TAG, "Auto-started BWT from service (node synced)")
+                            }
+                        }
 
                         // Read cached oracle price
                         val oraclePrefs = getSharedPreferences("oracle_cache", MODE_PRIVATE)
