@@ -465,23 +465,43 @@ class BlockFilterManager(private val context: Context) {
 
     /**
      * Remove block filter config and delete filter files.
+     * Stops the node first so no files are held open or recreated.
      */
-    fun removeLocal(): Boolean {
-        // Remove config lines
+    suspend fun removeLocal(context: android.content.Context): Boolean {
+        // Step 1: Remove config lines FIRST
         val confFile = dataDir.resolve("bitcoin.conf")
         if (confFile.exists()) {
             val content = confFile.readText()
             val cleaned = content
-                .replace(Regex("# Lightning support \\(BIP 157/158 block filters\\)\n"), "")
+                .replace(Regex("# (Added by Pocket Node for )?Lightning support[^\n]*\n?"), "")
                 .replace(Regex("$CONFIG_KEY_INDEX=1\n?"), "")
                 .replace(Regex("$CONFIG_KEY_SERVE=1\n?"), "")
             confFile.writeText(cleaned)
         }
 
-        // Delete filter directory
-        val filterDir = dataDir.resolve("indexes/blockfilter")
-        if (filterDir.exists()) {
-            filterDir.deleteRecursively()
+        // Step 2: Stop the node so no files are held open
+        if (com.pocketnode.service.BitcoindService.isRunningFlow.value) {
+            context.stopService(android.content.Intent(context, com.pocketnode.service.BitcoindService::class.java))
+            // Wait for node to stop
+            for (i in 0 until 30) {
+                if (!com.pocketnode.service.BitcoindService.isRunningFlow.value) break
+                kotlinx.coroutines.delay(1000)
+            }
+            kotlinx.coroutines.delay(2000)
+        }
+
+        // Step 3: Delete entire indexes directory (clean slate)
+        val indexesDir = dataDir.resolve("indexes")
+        if (indexesDir.exists()) {
+            indexesDir.deleteRecursively()
+        }
+
+        // Step 4: Restart node without filters
+        val intent = android.content.Intent(context, com.pocketnode.service.BitcoindService::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
         }
 
         _state.value = _state.value.copy(localHasFilters = false)

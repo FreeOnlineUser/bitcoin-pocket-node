@@ -487,8 +487,10 @@ fun BlockFilterUpgradeScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showRemoveConfirm = false
-                    manager.removeLocal()
-                    onRestartNode()
+                    scope.launch {
+                        manager.removeLocal(context)
+                        onBack()
+                    }
                 }) {
                     Text("Remove", color = MaterialTheme.colorScheme.error)
                 }
