@@ -318,15 +318,34 @@ class BlockFilterManager(private val context: Context) {
 
             sftpSession.disconnect()
 
-            // Extract locally
+            // Extract locally using Apache Commons Compress (no system tar on Android)
             _state.value = _state.value.copy(step = Step.EXTRACTING,
                 progress = "Extracting block filters...")
 
-            val process = ProcessBuilder("tar", "xf", localArchive.absolutePath,
-                "-C", dataDir.absolutePath)
-                .redirectErrorStream(true)
-                .start()
-            process.waitFor()
+            var fileCount = 0
+            val tarInput = org.apache.commons.compress.archivers.tar.TarArchiveInputStream(
+                java.io.BufferedInputStream(localArchive.inputStream(), 256 * 1024)
+            )
+            var entry = tarInput.nextTarEntry
+            while (entry != null) {
+                val outFile = dataDir.resolve(entry.name)
+                if (entry.isDirectory) {
+                    outFile.mkdirs()
+                } else {
+                    outFile.parentFile?.mkdirs()
+                    outFile.outputStream().use { out ->
+                        tarInput.copyTo(out, 256 * 1024)
+                    }
+                    fileCount++
+                    if (fileCount % 50 == 0) {
+                        _state.value = _state.value.copy(
+                            progress = "Extracting: $fileCount files...")
+                    }
+                }
+                entry = tarInput.nextTarEntry
+            }
+            tarInput.close()
+            Log.i(TAG, "Extracted $fileCount filter files")
 
             // Clean up local archive
             localArchive.delete()
