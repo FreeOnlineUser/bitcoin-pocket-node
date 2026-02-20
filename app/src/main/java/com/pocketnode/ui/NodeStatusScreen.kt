@@ -964,13 +964,15 @@ private fun ActionButtons(
                 onDismissRequest = { showVersionPicker = false },
                 title = { Text("Choose Implementation") },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    ) {
                         Text(
-                            "Your node, your rules. Choose which Bitcoin implementation to run.",
+                            "Your node, your rules.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         allVersions.forEach { version ->
                             val isAvailable = version in availableVersions
                             val isSelected = version == selectedVersion
@@ -989,7 +991,7 @@ private fun ActionButtons(
                                 },
                                 enabled = isAvailable
                             ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
+                                Column(modifier = Modifier.padding(10.dp)) {
                                     Row(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         modifier = Modifier.fillMaxWidth()
@@ -1012,19 +1014,11 @@ private fun ActionButtons(
                                     }
                                     Text(
                                         version.policyStance,
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
                                         color = if (isAvailable)
                                             Color(0xFFFF9800).copy(alpha = 0.8f)
                                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        version.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (isAvailable)
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                                     )
                                 }
                             }
@@ -1084,15 +1078,27 @@ private fun ActionButtons(
                         if (isRunning) {
                             val intent = android.content.Intent(versionContext, com.pocketnode.service.BitcoindService::class.java)
                             versionContext.stopService(intent)
-                            // Brief delay then restart
-                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                val startIntent = android.content.Intent(versionContext, com.pocketnode.service.BitcoindService::class.java)
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                    versionContext.startForegroundService(startIntent)
-                                } else {
-                                    versionContext.startService(startIntent)
+                            // Poll until service stops, then restart
+                            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                            val ctx = versionContext
+                            val pollRestart = object : Runnable {
+                                var attempts = 0
+                                override fun run() {
+                                    attempts++
+                                    if (!BitcoindService.isRunningFlow.value || attempts > 30) {
+                                        // Service stopped (or timeout after 30s) — restart
+                                        val startIntent = android.content.Intent(ctx, com.pocketnode.service.BitcoindService::class.java)
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                            ctx.startForegroundService(startIntent)
+                                        } else {
+                                            ctx.startService(startIntent)
+                                        }
+                                    } else {
+                                        handler.postDelayed(this, 1000)
+                                    }
                                 }
-                            }, 3000)
+                            }
+                            handler.postDelayed(pollRestart, 2000)
                         }
                     }) {
                         Text("Switch", color = Color(0xFFFF9800))
