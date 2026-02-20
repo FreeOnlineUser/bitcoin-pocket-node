@@ -492,6 +492,8 @@ class BlockFilterManager(private val context: Context) {
                 .replace(Regex("# (Added by Pocket Node for )?Lightning support[^\n]*\n?"), "")
                 .replace(Regex("$CONFIG_KEY_INDEX=1\n?"), "")
                 .replace(Regex("$CONFIG_KEY_SERVE=1\n?"), "")
+                .replace("listen=1", "listen=0")
+                .replace(Regex("bind=127\\.0\\.0\\.1\n?"), "")
             confFile.writeText(cleaned)
         }
 
