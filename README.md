@@ -28,6 +28,12 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 |:---:|:---:|:---:|:---:|
 | ![Dashboard with Lightning Ready](docs/images/05-lightning-dashboard.jpg) | ![All three wallet services](docs/images/06-connect-wallet.jpg) | ![Zeus Node Info synced](docs/images/07-zeus-node-info.jpg) | ![Zeus connected to localhost](docs/images/08-zeus-neutrino-peers.jpg) |
 
+**Choose your implementation**
+
+| Version picker |
+|:---:|
+| ![Choose Bitcoin implementation](docs/images/09-version-picker.jpg) |
+
 ## How It Works
 
 Two bootstrap paths — choose speed or trustlessness:
