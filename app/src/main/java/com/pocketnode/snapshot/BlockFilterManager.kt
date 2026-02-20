@@ -244,14 +244,19 @@ class BlockFilterManager(private val context: Context) {
 
     /**
      * Copy block filter index from donor to local phone.
+     *
+     * Stops donor node first for consistent LevelDB state, then archives,
+     * restarts donor, downloads, extracts, and configures local node.
+     * Same pattern as ChainstateManager.copyChainstate().
      */
     suspend fun copyFromDonor(
         sshHost: String, sshPort: Int, sshUser: String, sshPassword: String,
         sftpUser: String, sftpPassword: String
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            _state.value = _state.value.copy(step = Step.ARCHIVING,
-                progress = "Archiving block filters on source node...")
+            // --- Step 1: Connect and find data dir ---
+            _state.value = _state.value.copy(step = Step.CONNECTING,
+                progress = "Connecting to source node...")
 
             val session = SshUtils.connectSsh(sshHost, sshPort, sshUser, sshPassword)
             val bitcoinDir = SshUtils.findBitcoinDataDir(session, sshPassword)
@@ -261,11 +266,37 @@ class BlockFilterManager(private val context: Context) {
                 return@withContext false
             }
 
-            // Create tar archive of filter index in pocketnode's home (SFTP-accessible)
+            // --- Step 2: Stop donor node for consistent LevelDB ---
+            _state.value = _state.value.copy(step = Step.ARCHIVING,
+                progress = "Stopping source node for consistent copy...")
+
+            val containerName = SshUtils.detectDockerContainer(session, sshPassword)
+            if (containerName != null) {
+                SshUtils.execSudo(session, sshPassword, "docker stop $containerName",
+                    timeoutMs = 120_000)
+            } else {
+                SshUtils.execSudo(session, sshPassword,
+                    "bitcoin-cli stop 2>/dev/null || systemctl stop bitcoind 2>/dev/null || true")
+                delay(5000)
+            }
+
+            // --- Step 3: Archive filter index ---
+            _state.value = _state.value.copy(progress = "Archiving block filters...")
+
             val destDir = "/home/pocketnode/snapshots"
             val archivePath = "$destDir/$FILTER_ARCHIVE"
             val tarCmd = "mkdir -p '$destDir' && cd '$bitcoinDir' && tar cf '$archivePath' '$FILTER_DIR/' 2>&1 && chown pocketnode:pocketnode '$archivePath' 2>/dev/null; chmod 644 '$archivePath' 2>/dev/null; ls -l '$archivePath'"
             SshUtils.execSudo(session, sshPassword, tarCmd, timeoutMs = 600_000)
+
+            // --- Step 4: Restart donor node immediately ---
+            _state.value = _state.value.copy(progress = "Restarting source node...")
+            if (containerName != null) {
+                SshUtils.execSudo(session, sshPassword, "docker start $containerName")
+            } else {
+                SshUtils.execSudo(session, sshPassword,
+                    "bitcoin-cli -daemon 2>/dev/null || systemctl start bitcoind 2>/dev/null || true")
+            }
+            Log.i(TAG, "Donor node restarted")
 
             // Get archive size
             val sizeStr = SshUtils.execSudo(session, sshPassword,
