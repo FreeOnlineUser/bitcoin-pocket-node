@@ -5,11 +5,10 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import java.io.File
-import com.jcraft.jsch.ChannelExec
-import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
 import com.pocketnode.rpc.BitcoinRpcClient
 import com.pocketnode.service.BitcoindService
+import com.pocketnode.ssh.SshUtils
 import com.pocketnode.util.ConfigGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,8 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-
 /**
  * Manages the "Fast sync from my node" flow via direct chainstate copy.
  *
@@ -176,10 +173,10 @@ class ChainstateManager private constructor(private val context: Context) {
                 _state.value = ChainstateState(step = Step.STOPPING_REMOTE,
                     progress = "Connecting to remote node...")
 
-                val setupSession = connectSsh(sshHost, sshPort, sshUser, sshPassword)
+                val setupSession = SshUtils.connectSsh(sshHost, sshPort, sshUser, sshPassword)
                 _state.value = _state.value.copy(progress = "Finding Bitcoin data directory...")
 
-                val bitcoinDataDir = findBitcoinDataDir(setupSession, sshPassword)
+                val bitcoinDataDir = SshUtils.findBitcoinDataDir(setupSession, sshPassword)
                 setupSession.disconnect()
 
                 if (bitcoinDataDir.isEmpty()) {
@@ -193,18 +190,18 @@ class ChainstateManager private constructor(private val context: Context) {
                 _state.value = _state.value.copy(step = Step.STOPPING_REMOTE,
                     progress = "Stopping remote node for consistent snapshot...")
 
-                val archiveSession = connectSsh(sshHost, sshPort, sshUser, sshPassword)
+                val archiveSession = SshUtils.connectSsh(sshHost, sshPort, sshUser, sshPassword)
 
                 // Detect if Docker
-                val containerName = detectDockerContainer(archiveSession, sshPassword)
+                val containerName = SshUtils.detectDockerContainer(archiveSession, sshPassword)
 
                 // Stop the remote node
                 if (containerName != null) {
                     _state.value = _state.value.copy(progress = "Stopping $containerName...")
-                    execSudo(archiveSession, sshPassword, "docker stop $containerName")
+                    SshUtils.execSudo(archiveSession, sshPassword, "docker stop $containerName")
                 } else {
                     _state.value = _state.value.copy(progress = "Stopping bitcoind...")
-                    execSudo(archiveSession, sshPassword, "bitcoin-cli stop 2>/dev/null || systemctl stop bitcoind 2>/dev/null || true")
+                    SshUtils.execSudo(archiveSession, sshPassword, "bitcoin-cli stop 2>/dev/null || systemctl stop bitcoind 2>/dev/null || true")
                     delay(5000) // Give it time to shut down
                 }
 
@@ -216,7 +213,7 @@ class ChainstateManager private constructor(private val context: Context) {
                 val archivePath = "$destDir/$ARCHIVE_NAME"
 
                 // Find the last blk file number from the index
-                val lastBlkNum = execSudo(archiveSession, sshPassword,
+                val lastBlkNum = SshUtils.execSudo(archiveSession, sshPassword,
                     "ls -1 $bitcoinDataDir/blocks/blk*.dat 2>/dev/null | sort -V | tail -1 | grep -oP '\\d+' | tail -1"
                 ).trim().lines().lastOrNull()?.trim() ?: ""
 
@@ -242,13 +239,13 @@ class ChainstateManager private constructor(private val context: Context) {
                 }
 
                 // Monitor archive creation in parallel
-                val monitorSession = connectSsh(sshHost, sshPort, sshUser, sshPassword)
+                val monitorSession = SshUtils.connectSsh(sshHost, sshPort, sshUser, sshPassword)
                 val monitorJob = CoroutineScope(Dispatchers.IO).launch {
                     val expectedSize = 12_000_000_000L // ~12 GB expected
                     while (true) {
                         delay(3_000)
                         try {
-                            val sizeStr = execSudo(monitorSession, sshPassword,
+                            val sizeStr = SshUtils.execSudo(monitorSession, sshPassword,
                                 "stat -c%s $archivePath 2>/dev/null || echo 0")
                                 .trim().lines().lastOrNull()?.trim() ?: "0"
                             val size = sizeStr.toLongOrNull() ?: 0
@@ -265,7 +262,7 @@ class ChainstateManager private constructor(private val context: Context) {
                     }
                 }
 
-                val archiveResult = execSudo(archiveSession, sshPassword, tarCmd, timeoutMs = 600_000)
+                val archiveResult = SshUtils.execSudo(archiveSession, sshPassword, tarCmd, timeoutMs = 600_000)
                 Log.i(TAG, "Archive result: $archiveResult")
 
                 monitorJob.cancel()
@@ -274,9 +271,9 @@ class ChainstateManager private constructor(private val context: Context) {
                 // Restart remote node immediately
                 _state.value = _state.value.copy(progress = "Restarting remote node...")
                 if (containerName != null) {
-                    execSudo(archiveSession, sshPassword, "docker start $containerName")
+                    SshUtils.execSudo(archiveSession, sshPassword, "docker start $containerName")
                 } else {
-                    execSudo(archiveSession, sshPassword, "bitcoin-cli -daemon 2>/dev/null || systemctl start bitcoind 2>/dev/null || true")
+                    SshUtils.execSudo(archiveSession, sshPassword, "bitcoin-cli -daemon 2>/dev/null || systemctl start bitcoind 2>/dev/null || true")
                 }
 
                 archiveSession.disconnect()
@@ -530,11 +527,7 @@ class ChainstateManager private constructor(private val context: Context) {
     suspend fun checkArchiveExists(host: String, port: Int, user: String, password: String): Boolean =
         withContext(Dispatchers.IO) {
             try {
-                val jsch = JSch()
-                val session = jsch.getSession(user, host, port)
-                session.setPassword(password)
-                session.setConfig("StrictHostKeyChecking", "no")
-                session.connect(10_000)
+                val session = SshUtils.connectSsh(host, port, user, password)
                 val channel = session.openChannel("sftp") as com.jcraft.jsch.ChannelSftp
                 channel.connect(10_000)
                 val attrs = channel.stat("/snapshots/$ARCHIVE_NAME")
@@ -578,79 +571,4 @@ class ChainstateManager private constructor(private val context: Context) {
         _state.value = _state.value.copy(step = Step.COMPLETE, progress = finalMessage)
     }
 
-    private fun connectSsh(host: String, port: Int, user: String, password: String): Session {
-        val jsch = JSch()
-        val session = jsch.getSession(user, host, port)
-        session.setPassword(password)
-        session.setConfig("StrictHostKeyChecking", "no")
-        session.connect(15_000)
-        return session
-    }
-
-    private fun execSudo(session: Session, sudoPass: String, command: String,
-                         timeoutMs: Long = 60_000): String {
-        val channel = session.openChannel("exec") as ChannelExec
-        val escaped = command.replace("'", "'\\''")
-        channel.setCommand("sudo -S bash -c '$escaped' 2>&1")
-        val output = ByteArrayOutputStream()
-        channel.outputStream = output
-        channel.setInputStream((sudoPass + "\n").toByteArray().inputStream())
-        channel.connect(30_000)
-        val start = System.currentTimeMillis()
-        while (!channel.isClosed && System.currentTimeMillis() - start < timeoutMs) {
-            Thread.sleep(500)
-        }
-        val result = output.toString("UTF-8")
-            .replace(Regex("\\[sudo\\][^\n]*?:\\s*"), "")
-        channel.disconnect()
-        return result
-    }
-
-    private fun findBitcoinDataDir(session: Session, sshPassword: String): String {
-        // Try Docker first
-        val isDocker = execSudo(session, sshPassword,
-            "docker ps 2>/dev/null | grep -qi bitcoin && echo 'DOCKER' || echo 'NATIVE'")
-            .trim().lines().lastOrNull()?.trim() == "DOCKER"
-
-        return if (isDocker) {
-            val containerName = execSudo(session, sshPassword,
-                "docker ps --format '{{.Names}}' | grep -i bitcoin | grep -vi 'proxy\\|tor\\|i2p\\|lnd\\|cln' | head -1")
-                .trim().lines().lastOrNull()?.trim() ?: "bitcoin"
-            // Try common mount patterns
-            val mountInfo = execSudo(session, sshPassword,
-                "docker inspect $containerName --format '{{range .Mounts}}{{if or (eq .Destination \"/data/.bitcoin\") (eq .Destination \"/data/bitcoin\") (eq .Destination \"/bitcoin/.bitcoin\")}}{{.Source}}{{end}}{{end}}' 2>/dev/null")
-                .trim().lines().lastOrNull()?.trim() ?: ""
-            if (mountInfo.isNotEmpty()) {
-                // Verify chainstate exists at this path
-                val hasChainstate = execSudo(session, sshPassword,
-                    "test -d '$mountInfo/chainstate' && echo 'YES' || echo 'NO'")
-                    .trim().lines().lastOrNull()?.trim()
-                if (hasChainstate == "YES") mountInfo
-                else {
-                    // Try appending common subdirs
-                    val withBitcoin = "$mountInfo/bitcoin"
-                    val check = execSudo(session, sshPassword,
-                        "test -d '$withBitcoin/chainstate' && echo 'YES' || echo 'NO'")
-                        .trim().lines().lastOrNull()?.trim()
-                    if (check == "YES") withBitcoin else ""
-                }
-            } else {
-                // Fallback: search filesystem
-                execSudo(session, sshPassword,
-                    "find / -name 'chainstate' -path '*/bitcoin/*' -type d 2>/dev/null | head -1 | xargs dirname 2>/dev/null")
-                    .trim().lines().lastOrNull()?.trim() ?: ""
-            }
-        } else {
-            execSudo(session, sshPassword,
-                "find / -name 'chainstate' -path '*/bitcoin/*' -type d 2>/dev/null | head -1 | xargs dirname 2>/dev/null")
-                .trim().lines().lastOrNull()?.trim() ?: ""
-        }
-    }
-
-    private fun detectDockerContainer(session: Session, sshPassword: String): String? {
-        val result = execSudo(session, sshPassword,
-            "docker ps --format '{{.Names}}' 2>/dev/null | grep -i bitcoin | grep -vi 'proxy\\|tor\\|i2p\\|lnd\\|cln' | head -1")
-            .trim().lines().lastOrNull()?.trim()
-        return if (result.isNullOrEmpty()) null else result
-    }
 }
