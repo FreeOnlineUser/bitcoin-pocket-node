@@ -24,7 +24,7 @@ object BinaryExtractor {
      * Available Bitcoin implementations.
      *
      * Each entry maps to a pre-compiled ARM64 binary in jniLibs/.
-     * Not all versions may be bundled yet — check isAvailable() before use.
+     * Not all versions may be bundled yet -- check isAvailable() before use.
      */
     enum class BitcoinVersion(
         val libraryName: String,
@@ -38,28 +38,28 @@ object BinaryExtractor {
             "Bitcoin Core",
             "28.1",
             "Stable release. Pre-OP_RETURN policy changes. Universal network acceptance.",
-            "Neutral — standard relay rules"
+            "Neutral -- standard relay rules"
         ),
         CORE_30(
             "libbitcoind_v30.so",
             "Bitcoin Core",
             "30.x",
             "Latest release. Relaxed OP_RETURN data size limits. New standardness rules.",
-            "Permissive — larger OP_RETURN data allowed"
+            "Permissive -- larger OP_RETURN data allowed"
         ),
         KNOTS(
             "libbitcoind_knots.so",
             "Bitcoin Knots",
-            "29.x",
-            "Alternative implementation by Luke Dashjr. Stricter transaction filtering.",
-            "Restrictive — filters non-standard transactions"
+            "29.3",
+            "Alternative implementation by Luke Dashjr. Stricter transaction filtering and relay policy.",
+            "Restrictive -- filters non-standard transactions"
         ),
         KNOTS_BIP110(
             "libbitcoind_knots_bip110.so",
             "Bitcoin Knots (BIP 110)",
             "29.x",
-            "Knots with BIP 110 signaling. Signal support for stricter relay policy enforcement.",
-            "Restrictive + signaling — BIP 110 policy enforcement"
+            "Knots with BIP 110 consensus enforcement. Temporarily limits arbitrary data at the consensus level. Signals version bit 4 for activation.",
+            "Enforcement -- consensus-level data restrictions + miner signaling"
         );
 
         companion object {

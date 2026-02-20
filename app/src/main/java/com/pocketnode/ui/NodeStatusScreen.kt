@@ -925,6 +925,7 @@ private fun ActionButtons(
         val versionContext = LocalContext.current
         var selectedVersion by remember { mutableStateOf(com.pocketnode.util.BinaryExtractor.getSelectedVersion(versionContext)) }
         var showVersionPicker by remember { mutableStateOf(false) }
+        var pendingVersion by remember { mutableStateOf<com.pocketnode.util.BinaryExtractor.BitcoinVersion?>(null) }
         val availableVersions = remember { com.pocketnode.util.BinaryExtractor.availableVersions(versionContext) }
         val allVersions = com.pocketnode.util.BinaryExtractor.BitcoinVersion.entries
 
@@ -982,10 +983,8 @@ private fun ActionButtons(
                                 ),
                                 onClick = {
                                     if (isAvailable && !isSelected) {
-                                        com.pocketnode.util.BinaryExtractor.setSelectedVersion(versionContext, version)
-                                        selectedVersion = version
+                                        pendingVersion = version
                                         showVersionPicker = false
-                                        // Node restart needed — user can tap Stop/Start
                                     }
                                 },
                                 enabled = isAvailable
@@ -1014,9 +1013,18 @@ private fun ActionButtons(
                                     Text(
                                         version.policyStance,
                                         style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
                                         color = if (isAvailable)
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                            Color(0xFFFF9800).copy(alpha = 0.8f)
                                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        version.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (isAvailable)
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                                     )
                                 }
                             }
@@ -1026,6 +1034,73 @@ private fun ActionButtons(
                 confirmButton = {
                     TextButton(onClick = { showVersionPicker = false }) {
                         Text("Close")
+                    }
+                }
+            )
+        }
+
+        // Restart confirmation after version change
+        pendingVersion?.let { newVersion ->
+            AlertDialog(
+                onDismissRequest = { pendingVersion = null },
+                title = { Text("Switch to ${newVersion.displayName}?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Switching from ${selectedVersion.displayName} ${selectedVersion.versionString} to ${newVersion.displayName} ${newVersion.versionString}.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            newVersion.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                        if (isRunning) {
+                            Text(
+                                "Your node will be stopped and restarted with the new implementation.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFF9800)
+                            )
+                        } else {
+                            Text(
+                                "The new implementation will be used next time you start the node.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                        Text(
+                            "Your blockchain data and settings are preserved. All implementations use the same chainstate format.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        com.pocketnode.util.BinaryExtractor.setSelectedVersion(versionContext, newVersion)
+                        selectedVersion = newVersion
+                        pendingVersion = null
+                        // If node is running, stop and restart with new binary
+                        if (isRunning) {
+                            val intent = android.content.Intent(versionContext, com.pocketnode.service.BitcoindService::class.java)
+                            versionContext.stopService(intent)
+                            // Brief delay then restart
+                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                val startIntent = android.content.Intent(versionContext, com.pocketnode.service.BitcoindService::class.java)
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    versionContext.startForegroundService(startIntent)
+                                } else {
+                                    versionContext.startService(startIntent)
+                                }
+                            }, 3000)
+                        }
+                    }) {
+                        Text("Switch", color = Color(0xFFFF9800))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingVersion = null }) {
+                        Text("Cancel")
                     }
                 }
             )

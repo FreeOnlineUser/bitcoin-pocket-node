@@ -20,10 +20,10 @@ We ship choice.
 |--------|---------|------|-------|
 | `libbitcoind_v28_1.so` | Bitcoin Core 28.1 | ~13 MB | Current default. Pre-OP_RETURN controversy. Universal acceptance. |
 | `libbitcoind_v30.so` | Bitcoin Core 30.x | ~13 MB | New OP_RETURN policy (larger data allowed). |
-| `libbitcoind_knots.so` | Bitcoin Knots 29.x | ~13 MB | Restrictive OP_RETURN policy. Luke Dashjr's fork. |
-| `libbitcoind_knots_bip110.so` | Bitcoin Knots (BIP 110) | ~13 MB | Knots with BIP 110 signaling enabled. |
+| `libbitcoind_knots.so` | Bitcoin Knots 29.3 | ~9 MB | Restrictive OP_RETURN relay policy. Luke Dashjr's fork. |
+| `libbitcoind_knots_bip110.so` | Bitcoin Knots (BIP 110) | ~9 MB | Consensus-level data restrictions. Signals version bit 4. |
 
-Total APK impact: ~40 MB for 3 binaries (current APK is ~74 MB, would grow to ~100 MB).
+Total APK impact: ~40 MB for 4 binaries (current APK is ~74 MB, would grow to ~104 MB).
 
 ## Architecture
 
