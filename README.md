@@ -155,6 +155,7 @@ The app can copy BIP 157/158 block filter indexes (~13 GB) from your home node, 
 7. Delete all default Neutrino peers
 8. Add `127.0.0.1:8333` as the only Neutrino peer
 9. Restart Zeus -- it connects to your local bitcoind and the wallet appears
+10. To confirm: **Settings > Embedded node > Peers > Neutrino Peers** should show `127.0.0.1` as the only peer
 
 ### Full Sovereign Stack
 ```
