@@ -204,19 +204,13 @@ fun BlockFilterUpgradeScreen(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold)
 
-                if (!hasSavedHost) {
-                    OutlinedTextField(
-                        value = inputHost,
-                        onValueChange = { inputHost = it },
-                        label = { Text("Host (IP or hostname)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                } else {
-                    Text("Host: $inputHost",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-                }
+                OutlinedTextField(
+                    value = inputHost,
+                    onValueChange = { inputHost = it },
+                    label = { Text("Host (IP or hostname)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
                 OutlinedTextField(
                     value = inputUser,
                     onValueChange = { inputUser = it },
