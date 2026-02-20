@@ -65,8 +65,17 @@ fun BlockFilterUpgradeScreen(
     var showRemoveConfirm by remember { mutableStateOf(false) }
     var showBuildConfirm by remember { mutableStateOf(false) }
 
+    val scrollState = rememberScrollState()
+
     LaunchedEffect(Unit) {
         manager.reset()
+    }
+
+    // Auto-scroll to bottom when status changes so progress stays visible
+    LaunchedEffect(state.step) {
+        if (state.step != BlockFilterManager.Step.IDLE) {
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
     }
 
     Scaffold(
@@ -89,7 +98,7 @@ fun BlockFilterUpgradeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header
@@ -239,7 +248,52 @@ fun BlockFilterUpgradeScreen(
                     }
                 )
 
-                // Progress display
+                // Action buttons (right after password, before status)
+                val isWorking = state.step != BlockFilterManager.Step.IDLE &&
+                        state.step != BlockFilterManager.Step.ERROR &&
+                        state.step != BlockFilterManager.Step.COMPLETE
+
+                if (state.donorHasFilters == null && !isWorking) {
+                    // Step 1: Check donor
+                    Button(
+                        onClick = {
+                            sshHost = inputHost
+                            sshUser = inputUser
+                            sshPassword = inputPassword
+                            scope.launch {
+                                manager.checkDonor(inputHost, sshPort, inputUser, inputPassword)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = inputHost.isNotEmpty() && inputUser.isNotEmpty() && inputPassword.isNotEmpty()
+                    ) {
+                        Text("Check Source Node")
+                    }
+                } else if (state.donorHasFilters == true && !isWorking) {
+                    // Step 2a: Filters exist — copy directly
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val success = manager.copyFromDonor(
+                                    sshHost, sshPort, sshUser, sshPassword, sftpUser, sftpPassword)
+                                if (success) onRestartNode()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Download Block Filters")
+                    }
+                } else if (state.donorHasFilters == false && !isWorking) {
+                    // Step 2b: No filters — offer to build
+                    Button(
+                        onClick = { showBuildConfirm = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Build on Source Node")
+                    }
+                }
+
+                // Progress display (below button so screen doesn't jump)
                 AnimatedVisibility(visible = state.step != BlockFilterManager.Step.IDLE &&
                         state.step != BlockFilterManager.Step.ERROR &&
                         state.step != BlockFilterManager.Step.COMPLETE) {
@@ -334,51 +388,6 @@ fun BlockFilterUpgradeScreen(
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                             }
                         }
-                    }
-                }
-
-                // Action buttons
-                val isWorking = state.step != BlockFilterManager.Step.IDLE &&
-                        state.step != BlockFilterManager.Step.ERROR &&
-                        state.step != BlockFilterManager.Step.COMPLETE
-
-                if (state.donorHasFilters == null && !isWorking) {
-                    // Step 1: Check donor
-                    Button(
-                        onClick = {
-                            sshHost = inputHost
-                            sshUser = inputUser
-                            sshPassword = inputPassword
-                            scope.launch {
-                                manager.checkDonor(inputHost, sshPort, inputUser, inputPassword)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = inputHost.isNotEmpty() && inputUser.isNotEmpty() && inputPassword.isNotEmpty()
-                    ) {
-                        Text("Check Source Node")
-                    }
-                } else if (state.donorHasFilters == true && !isWorking) {
-                    // Step 2a: Filters exist — copy directly
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                val success = manager.copyFromDonor(
-                                    sshHost, sshPort, sshUser, sshPassword, sftpUser, sftpPassword)
-                                if (success) onRestartNode()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Download Block Filters")
-                    }
-                } else if (state.donorHasFilters == false && !isWorking) {
-                    // Step 2b: No filters — offer to build
-                    Button(
-                        onClick = { showBuildConfirm = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Build on Source Node")
                     }
                 }
 
