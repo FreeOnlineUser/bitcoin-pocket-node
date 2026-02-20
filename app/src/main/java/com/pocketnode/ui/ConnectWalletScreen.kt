@@ -96,6 +96,34 @@ fun ConnectWalletScreen(onBack: () -> Unit) {
                 }
             }
 
+            // Lightning / Neutrino card (only when block filters installed)
+            val filterDir = context.filesDir.resolve("bitcoin/indexes/blockfilter/basic")
+            val hasFilters = filterDir.exists() && (filterDir.listFiles()?.any { it.name.startsWith("fltr") } == true)
+            if (hasFilters) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFB300).copy(alpha = 0.15f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("⚡ Lightning (Neutrino)", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        CopyableValue("Host", "127.0.0.1", connClip)
+                        CopyableValue("Port", "8333", connClip)
+                        Text("BIP 157/158 compact block filters",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Connect Zeus or any Neutrino-compatible Lightning wallet. Your node serves block filters for sovereign chain validation.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+
             // Electrum Server card
             Card(
                 modifier = Modifier.fillMaxWidth(),
