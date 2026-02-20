@@ -978,7 +978,7 @@ private fun ActionButtons(
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
         ) {
             Text(
-                if (hasFilters) "⚡ Lightning Settings" else "⚡ Add Lightning Support",
+                if (hasFilters) "⚡ Lightning Ready" else "⚡ Add Lightning Support",
                 style = MaterialTheme.typography.labelSmall
             )
         }
