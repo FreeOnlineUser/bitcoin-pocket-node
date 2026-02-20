@@ -96,14 +96,14 @@ fun NodeStatusScreen(
     // Delayed recheck — catches race where service starts before UI initializes
     // Also tries RPC directly in case _isRunning was reset (e.g. after app install)
     LaunchedEffect(Unit) {
-        delay(2000)
+        delay(500)
         if (BitcoindService.isRunningFlow.value && !isRunning) {
             isRunning = true
             nodeStatus = "Running"
         }
-        // If still not running after 5s, try RPC as last resort
+        // If still not running after 2s, try RPC as last resort
         if (!isRunning) {
-            delay(3000)
+            delay(1500)
             try {
                 val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
                 if (creds != null) {
