@@ -114,16 +114,6 @@ class ChainstateManager private constructor(private val context: Context) {
         sftpPassword: String
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            // Save SSH credentials for reuse by BlockFilterManager
-            context.getSharedPreferences("node_connection", Context.MODE_PRIVATE).edit()
-                .putString("ssh_host", sshHost)
-                .putInt("ssh_port", sshPort)
-                .putString("ssh_user", sshUser)
-                .putString("ssh_password", sshPassword)
-                .putString("sftp_user", sftpUser)
-                .putString("sftp_password", sftpPassword)
-                .apply()
-
             val dataDir = context.filesDir.resolve("bitcoin")
             dataDir.mkdirs()
             val chainstateDir = dataDir.resolve("chainstate")

@@ -39,23 +39,27 @@ fun BlockFilterUpgradeScreen(
     val manager = remember { BlockFilterManager(context) }
     val state by manager.state.collectAsState()
 
-    // Load saved SSH creds
-    val prefs = remember { context.getSharedPreferences("node_connection", android.content.Context.MODE_PRIVATE) }
-    var sshHost by remember { mutableStateOf(prefs.getString("ssh_host", "") ?: "") }
-    var sshPort by remember { mutableStateOf(prefs.getInt("ssh_port", 22)) }
-    var sshUser by remember { mutableStateOf(prefs.getString("ssh_user", "") ?: "") }
-    var sshPassword by remember { mutableStateOf(prefs.getString("ssh_password", "") ?: "") }
-    var sftpUser by remember { mutableStateOf(prefs.getString("sftp_user", "") ?: "") }
-    var sftpPassword by remember { mutableStateOf(prefs.getString("sftp_password", "") ?: "") }
+    // Load saved creds from pocketnode setup (NodeSetupManager saves these)
+    val setupPrefs = remember { context.getSharedPreferences("pocketnode_sftp", android.content.Context.MODE_PRIVATE) }
+    val savedHost = remember { setupPrefs.getString("sftp_host", "") ?: "" }
+    val savedAdminUser = remember { setupPrefs.getString("admin_user", "") ?: "" }
+    val savedSftpUser = remember { setupPrefs.getString("sftp_user", "") ?: "" }
+    val savedSftpPass = remember { setupPrefs.getString("sftp_pass", "") ?: "" }
 
-    val hasSavedCreds = sshHost.isNotEmpty() && sshUser.isNotEmpty()
+    var sshHost by remember { mutableStateOf(savedHost) }
+    var sshPort by remember { mutableStateOf(22) }
+    var sshUser by remember { mutableStateOf(savedAdminUser) }
+    var sshPassword by remember { mutableStateOf("") }
+    var sftpUser by remember { mutableStateOf(savedSftpUser.ifEmpty { "pocketnode" }) }
+    var sftpPassword by remember { mutableStateOf(savedSftpPass) }
+
+    val hasSavedHost = savedHost.isNotEmpty()
     val isInstalled = manager.isInstalledLocally()
 
-    // Credential input state (shown when no saved creds)
-    var showCredInput by remember { mutableStateOf(!hasSavedCreds) }
-    var inputHost by remember { mutableStateOf(sshHost) }
-    var inputUser by remember { mutableStateOf(sshUser) }
-    var inputPassword by remember { mutableStateOf(sshPassword) }
+    // Only need password input (host and user pre-filled from setup)
+    var inputHost by remember { mutableStateOf(savedHost) }
+    var inputUser by remember { mutableStateOf(savedAdminUser) }
+    var inputPassword by remember { mutableStateOf("") }
 
     var showRemoveConfirm by remember { mutableStateOf(false) }
     var showBuildConfirm by remember { mutableStateOf(false) }
@@ -195,11 +199,20 @@ fun BlockFilterUpgradeScreen(
                 }
 
                 // Credential input
-                if (showCredInput) {
-                    Text("Source Node Connection",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold)
+                Text("Source Node Connection",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold)
 
+                if (hasSavedHost) {
+                    // Pre-filled from setup — just show info and ask for password
+                    Text("Host: $inputHost",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    Text("User: $inputUser",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                } else {
+                    // No saved creds — full input
                     OutlinedTextField(
                         value = inputHost,
                         onValueChange = { inputHost = it },
@@ -214,15 +227,15 @@ fun BlockFilterUpgradeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-                    OutlinedTextField(
-                        value = inputPassword,
-                        onValueChange = { inputPassword = it },
-                        label = { Text("SSH Password") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
-                    )
                 }
+                OutlinedTextField(
+                    value = inputPassword,
+                    onValueChange = { inputPassword = it },
+                    label = { Text("Admin Password") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
 
                 // Progress display
                 AnimatedVisibility(visible = state.step != BlockFilterManager.Step.IDLE &&
@@ -331,20 +344,15 @@ fun BlockFilterUpgradeScreen(
                     // Step 1: Check donor
                     Button(
                         onClick = {
-                            val host = if (showCredInput) inputHost else sshHost
-                            val user = if (showCredInput) inputUser else sshUser
-                            val pass = if (showCredInput) inputPassword else sshPassword
-                            if (showCredInput) {
-                                sshHost = host; sshUser = user; sshPassword = pass
-                                sftpUser = user; sftpPassword = pass
-                            }
+                            sshHost = inputHost
+                            sshUser = inputUser
+                            sshPassword = inputPassword
                             scope.launch {
-                                manager.checkDonor(host, sshPort, user, pass)
+                                manager.checkDonor(inputHost, sshPort, inputUser, inputPassword)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = if (showCredInput) inputHost.isNotEmpty() && inputUser.isNotEmpty() && inputPassword.isNotEmpty()
-                                  else hasSavedCreds
+                        enabled = inputHost.isNotEmpty() && inputUser.isNotEmpty() && inputPassword.isNotEmpty()
                     ) {
                         Text("Check Source Node")
                     }
