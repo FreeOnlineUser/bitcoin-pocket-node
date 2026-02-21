@@ -119,6 +119,9 @@ class SyncController(
         }
     }
 
+    // Pausing via setnetworkactive(false) disconnects all peers and prevents new connections.
+    // This is preferable to just lowering maxconnections because bitcoind would still
+    // accept inbound connections and consume mobile data in the background.
     private suspend fun pauseSync() {
         try {
             val params = JSONArray().apply { put(false) }

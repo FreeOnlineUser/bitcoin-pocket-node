@@ -197,7 +197,9 @@ class ChainstateManager private constructor(private val context: Context) {
                 // Detect if Docker
                 val containerName = SshUtils.detectDockerContainer(archiveSession, sshPassword)
 
-                // Stop the remote node
+                // LevelDB (used by chainstate and block index) is not safe to copy while
+                // the process holds it open -- partial writes produce a corrupted snapshot.
+                // Stopping the node first guarantees a consistent on-disk state.
                 if (containerName != null) {
                     _state.value = _state.value.copy(progress = "Stopping $containerName...")
                     SshUtils.execSudo(archiveSession, sshPassword, "docker stop $containerName")
@@ -234,6 +236,8 @@ class ChainstateManager private constructor(private val context: Context) {
 
                 val blkFile = if (lastBlkNum.isNotEmpty()) "blocks/blk$lastBlkNum.dat" else ""
                 val revFile = if (lastBlkNum.isNotEmpty()) "blocks/rev$lastBlkNum.dat" else ""
+                // xor.dat holds the obfuscation key used by Core 28+ to XOR block data on disk.
+                // Without it, bitcoind can't read the tip blk/rev files we're copying.
                 val xorFile = "blocks/xor.dat"
 
                 // Build tar command with all required components
@@ -368,7 +372,8 @@ class ChainstateManager private constructor(private val context: Context) {
                 delay(2000)
             }
 
-            // Clean ALL existing node data — fresh start from archive only
+            // Clean ALL existing node data so the block index and chainstate are internally
+            // consistent. Mixing old index entries with a new chainstate causes assertion failures.
             _state.value = _state.value.copy(progress = "Clearing old node data...")
             if (chainstateDir.exists()) {
                 Log.i(TAG, "Deleting existing chainstate")
@@ -439,7 +444,10 @@ class ChainstateManager private constructor(private val context: Context) {
                 return@withContext false
             }
 
-            // Create stub blk/rev files for all files referenced in the block index
+            // The block index references every blk/rev file by number. If a file is missing,
+            // bitcoind aborts on startup. We only ship the tip blk/rev (needed for validation)
+            // and create empty stubs for all earlier files. Bitcoind opens them but never reads
+            // historical data during normal operation -- it only needs the UTXO set and tip block.
             _state.value = _state.value.copy(progress = "Creating block file stubs...")
             blocksDir.mkdirs()
             var stubCount = 0
@@ -448,7 +456,7 @@ class ChainstateManager private constructor(private val context: Context) {
                 val revName = "rev%05d.dat".format(i)
                 val blkFile = blocksDir.resolve(blkName)
                 val revFile = blocksDir.resolve(revName)
-                // Don't overwrite real files (the tip blk/rev from the archive)
+                // Don't overwrite the real tip files included in the archive
                 if (!blkFile.exists()) {
                     blkFile.createNewFile()
                     stubCount++

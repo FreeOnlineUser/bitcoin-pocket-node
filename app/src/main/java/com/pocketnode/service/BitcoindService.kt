@@ -119,10 +119,12 @@ class BitcoindService : Service() {
             val dataDir = ConfigGenerator.ensureConfig(this)
             Log.i(TAG, "Data dir: $dataDir")
 
-            // Step 2.5: Check if bitcoind is already running (lock file held by previous instance)
+            // Step 2.5: Detect orphan bitcoind from a previous app crash or service restart.
+            // Android may kill our service without killing the child process, leaving
+            // bitcoind running with a held lock file but no managing service.
             val lockFile = dataDir.resolve(".lock")
             if (lockFile.exists()) {
-                // Try RPC to see if a bitcoind is actually responding
+                // RPC check distinguishes a live orphan from a stale lock file left after a crash
                 val creds = ConfigGenerator.readCredentials(this@BitcoindService)
                 if (creds != null) {
                     val testRpc = BitcoinRpcClient(creds.first, creds.second)
@@ -314,6 +316,8 @@ class BitcoindService : Service() {
                             val prefs = getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
                             if (prefs.getBoolean("bwt_was_running", false)) {
                                 bwtAutoStartedInService = true
+                                // BWT (Bitcoin Wallet Tracker) needs a synced node to index wallet history.
+                                // Re-launch it automatically so the user's wallet is ready without manual action.
                                 val bwt = BwtService(this@BitcoindService)
                                 bwt.start(saveState = false)
                                 Log.i(TAG, "Auto-started BWT from service (node synced)")
@@ -351,6 +355,7 @@ class BitcoindService : Service() {
                 } catch (e: Exception) {
                     Log.d(TAG, "Notification updater: ${e.message}")
                 }
+                // 30s balances freshness with RPC overhead; faster polling wastes CPU on a phone
                 delay(30_000)
             }
         }

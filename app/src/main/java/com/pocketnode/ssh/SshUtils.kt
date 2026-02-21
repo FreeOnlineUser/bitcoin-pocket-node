@@ -20,8 +20,13 @@ object SshUtils {
         return session
     }
 
+    // Uses sudo -S (read password from stdin) because SSH pseudo-terminal allocation
+    // is unreliable with JSch. Piping the password via stdin avoids TTY requirements
+    // and works on all server configurations (Umbrel, Start9, vanilla Linux).
     fun execSudo(session: Session, sudoPass: String, command: String,
                  timeoutMs: Long = 60_000): String {
+        // Each call opens a fresh exec channel because JSch exec channels are single-use --
+        // they cannot be reused after the remote command exits.
         val channel = session.openChannel("exec") as ChannelExec
         val escaped = command.replace("'", "'\\''")
         channel.setCommand("sudo -S bash -c '$escaped' 2>&1")

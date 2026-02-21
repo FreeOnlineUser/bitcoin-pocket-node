@@ -10,9 +10,10 @@ import java.io.File
  * Supports multiple Bitcoin Core/Knots versions bundled as native libraries.
  * User selects which version to run; the selected binary is used by BitcoindService.
  *
- * Binaries are packaged as lib*.so in jniLibs/arm64-v8a/ and Android extracts
- * them to nativeLibraryDir, where execution is permitted (even on GrapheneOS
- * with W^X enforcement).
+ * Binaries are packaged as lib*.so in jniLibs/arm64-v8a/. This naming is required
+ * because Android only extracts files matching lib*.so from the APK to nativeLibraryDir.
+ * That directory has the execute permission needed to run binaries -- other app directories
+ * (filesDir, cacheDir) are mounted noexec on modern Android and GrapheneOS.
  */
 object BinaryExtractor {
 
@@ -105,6 +106,8 @@ object BinaryExtractor {
     /**
      * Set the user's selected Bitcoin version.
      */
+    // Persisted in SharedPreferences so the choice survives app restarts and service re-launches.
+    // The service reads this on every start, allowing version switches without reinstalling.
     fun setSelectedVersion(context: Context, version: BitcoinVersion) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()

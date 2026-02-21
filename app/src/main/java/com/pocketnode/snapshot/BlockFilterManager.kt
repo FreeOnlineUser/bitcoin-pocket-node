@@ -266,7 +266,9 @@ class BlockFilterManager(private val context: Context) {
                 return@withContext false
             }
 
-            // --- Step 2: Stop donor node for consistent LevelDB ---
+            // Filter index uses LevelDB, same as chainstate -- must stop the node to get
+            // a consistent snapshot. The filter DB references block index entries, so a
+            // partial copy would leave dangling references.
             _state.value = _state.value.copy(step = Step.ARCHIVING,
                 progress = "Stopping source node for consistent copy...")
 
@@ -456,7 +458,9 @@ class BlockFilterManager(private val context: Context) {
 
         var content = confFile.readText()
 
-        // Enable listening on localhost so Zeus/Neutrino can connect via P2P
+        // Lightning wallets (Zeus/Neutrino) connect via Bitcoin's P2P protocol to fetch
+        // compact block filters (BIP 157). This requires listen=1, but we bind to localhost
+        // only so the node isn't exposed to the internet -- only local apps can connect.
         if (content.contains("listen=0")) {
             content = content.replace("listen=0", "listen=1")
             if (!content.contains("bind=")) {

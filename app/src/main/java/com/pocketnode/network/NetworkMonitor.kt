@@ -35,6 +35,8 @@ class NetworkMonitor(private val context: Context) {
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
+    // Default OFFLINE so the first real connectivity callback always triggers a state transition.
+    // Starting as WIFI would silently skip the initial evaluateNetworkState on WiFi networks.
     private val _networkState = MutableStateFlow(NetworkState.OFFLINE)
     val networkState: StateFlow<NetworkState> = _networkState.asStateFlow()
 
@@ -43,7 +45,8 @@ class NetworkMonitor(private val context: Context) {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Tracking baseline for delta calculation
+    // TrafficStats gives cumulative bytes since boot. We track deltas between samples
+    // and attribute them to the current network type (WiFi vs cellular) for budget tracking.
     private var lastRxBytes: Long = TrafficStats.getTotalRxBytes()
     private var lastTxBytes: Long = TrafficStats.getTotalTxBytes()
     private var lastNetworkState: NetworkState = NetworkState.OFFLINE
@@ -106,8 +109,9 @@ class NetworkMonitor(private val context: Context) {
         val caps = connectivityManager.getNetworkCapabilities(activeNetwork)
             ?: return NetworkState.OFFLINE
 
-        // Check metered status — metered connections are treated as cellular
-        // This correctly handles VPN-over-cellular (metered) vs VPN-over-WiFi (unmetered)
+        // Android's TRANSPORT_VPN masks the underlying transport, so we can't tell if a VPN
+        // runs over WiFi or cellular by checking transports alone. Instead, we use the metered
+        // capability: carriers mark cellular as metered, so metered VPN = cellular underneath.
         val isMetered = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
 
         return when {
