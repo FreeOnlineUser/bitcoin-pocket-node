@@ -134,26 +134,17 @@ disablewallet=1
 - [ ] Non-technical setup documentation for everyday users
 - [ ] Expanded device testing beyond Pixel line
 
-### Bitcoin Core Version Selection
-- [ ] Bundle multiple Bitcoin Core versions in the APK (v28.1, v29, etc.)
-- [ ] User-selectable in settings: pick which version to run
-- [ ] Restart node with selected binary, no download needed
-- [ ] ~20MB per binary, 3-4 versions keeps APK under 100MB
-- [ ] User controls which consensus rules they run: never auto-update
-- [ ] Note policy differences (e.g. v30 OP_RETURN changes)
-- [ ] **Version compatibility matrix**: built-in table showing which versions can safely switch between each other
-  - Green: safe to swap both directions (e.g. 28.0 <-> 28.1)
-  - Yellow: forward OK but downgrade needs reindex (e.g. 28 -> 29 OK, 29 -> 28 risky)
-  - Red: incompatible, requires full reindex or re-copy from donor
-  - Matrix displayed before confirming version change
-- [ ] **v28.1 baseline chainstate**: keep a frozen copy of the 28.1 chainstate as backup (~11 GB)
-  - Two chainstates max on disk: active + 28.1 backup (~24 GB total)
-  - Forward upgrades always safe (28.1 -> any newer version)
-  - Downgrade = restore 28.1 backup, then fast-forward on target version (minutes, not reindex)
-  - No reindex ever needed: just restore and catch up
-  - Created from initial donor copy, never modified
-- [ ] **Downgrade warning**: "This will restore v28.1 chainstate and catch up to chain tip. Continue?"
-- [ ] Populate matrix from Bitcoin Core release notes (chainstate format changes are documented)
+### Bitcoin Core Version Selection ✅
+- [x] Bundle 4 implementations: Core 28.1 (13 MB), Core 30 (8.6 MB), Knots 29.3 (9 MB), Knots BIP 110 (9 MB)
+- [x] User-selectable from dashboard with one-tap switching
+- [x] Restart node with selected binary, no download needed
+- [x] APK 81 MB with all 4 binaries
+- [x] User controls which consensus rules they run: never auto-update
+- [x] Policy differences shown in picker (neutral/permissive/restrictive/enforcement)
+- [x] All 4 verified on phone: chainstate compatible across all versions, no reindex needed
+- [x] Confirmation dialog with auto-restart when switching
+- [ ] **Version compatibility matrix** in UI (all current versions are compatible, future versions may diverge)
+- [ ] **Chainstate backup** before version switch (safety net for future incompatible versions)
 
 ### Lightning: Sovereign Mobile Lightning Node
 
