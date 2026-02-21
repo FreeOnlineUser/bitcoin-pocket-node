@@ -112,7 +112,9 @@ Total transfer ~13 GB over LAN (~5 min). Node operational in ~20 minutes includi
 The app tries saved `pocketnode` SFTP credentials first. If a snapshot already exists on the server, no admin credentials are needed.
 
 ### From Internet
-Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset` flow, just a different download source.
+Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset` flow, just a different download source. The snapshot is cryptographically verified against the block hash compiled into Bitcoin Core before loading.
+
+**Note:** This path provides an on-chain node only. Lightning support requires block filters (~13 GB) which can be added later by copying from a home node via SSH.
 
 ## Architecture
 
