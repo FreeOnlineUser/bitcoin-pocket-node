@@ -25,7 +25,6 @@
 - [x] Early completion detection (skip re-download if already loaded)
 - [x] "Try pocketnode first": check for existing snapshot with saved SFTP creds
 - [x] Download from HTTPS URL (utxo.download)
-- ~~Load from local file (USB/SD/Downloads)~~ *Removed: SSH and HTTPS cover all practical use cases*
 
 ## Phase 3: Smart Syncing ✅
 
