@@ -113,20 +113,34 @@ As network matures, users open channels to arbitrary peers beyond Olympus. No ne
 - [ ] LAN exposure toggle for Zeus on separate device (same network)
 - [ ] Documentation for opening peer channels
 
-### Lightning Phase 3: Peer Watchtower Mesh + LDK
-Replace Zeus embedded LND with LDK (Lightning Dev Kit by Block/Square): modular Lightning library with native Android bindings. Designed specifically for mobile: constrained storage, intermittent connectivity.
+### Lightning Phase 3: Watchtower Mesh
+Phones watch each other's Lightning channels. Uses LND's built-in watchtower (server + client), which ships today. The only new code is auto-discovery and app integration.
 
-**Peer Watchtower Mesh:**
-- Watchtower duty distributed across the user base cryptographically
-- Phones watch each other: no trusted service, no always-on server, no single point of failure
-- Counterparties learn nothing about channel details from watchtower data they hold
-- Someone in the network is statistically always online
-- Nodes earn fees for successfully broadcasting justice transactions
+See [Watchtower Mesh Design](docs/WATCHTOWER-MESH.md) for the full design document.
 
-**Development path:**
-- [ ] LDK integration with native Android bindings (replaces Zeus embedded LND)
-- [ ] LDK uses our local bitcoind RPC as chain source (already available)
-- [ ] Peer watchtower protocol: encrypted channel state backup distribution
+**Core idea:** Every Pocket Node phone runs as both watchtower server and client. A lightweight discovery service (Nostr relay) lets phones find each other. Zero configuration for the user.
+
+**What's already built (LND):**
+- `watchtower.active=1` enables server mode
+- `wtclient.active=1` enables client mode
+- `lncli wtclient add <pubkey@host>` adds peers
+- Encrypted blob storage (server learns nothing about channel details)
+- ~256 bytes per channel state update per peer
+
+**What we build:**
+- [ ] Zeus watchtower config support (feature request or direct config injection)
+- [ ] Nostr-based peer discovery (publish/fetch watchtower URIs via relay)
+- [ ] WatchtowerManager.kt: auto-enable, auto-discover, auto-add peers
+- [ ] Dashboard card: "Watching N peers / Watched by N peers"
+- [ ] Client-only mode without Tor (full mesh requires Tor for reachability)
+
+**Estimated effort:** 2-3 weeks for MVP (client-only, Nostr discovery, dashboard card).
+
+### Lightning Phase 4: LDK Migration
+Replace Zeus embedded LND with LDK (Lightning Dev Kit): modular Lightning library with native Android bindings. Designed for mobile (constrained storage, intermittent connectivity).
+
+- [ ] LDK integration with native Android bindings
+- [ ] LDK uses local bitcoind RPC as chain source (already available)
 - [ ] Justice transaction fee incentives
 - [ ] VLS (Validating Lightning Signer): phone holds signing keys, remote server runs always-online node
 
