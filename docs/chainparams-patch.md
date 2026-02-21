@@ -1,4 +1,4 @@
-# Chainparams Patch — AssumeUTXO Entries
+# Chainparams Patch. AssumeUTXO Entries
 
 ## Overview
 Added AssumeUTXO snapshots at heights 880,000 and 910,000 to Bitcoin Core's mainnet chainparams (in addition to the existing 840,000 entry from upstream v28.1).
@@ -6,7 +6,7 @@ Added AssumeUTXO snapshots at heights 880,000 and 910,000 to Bitcoin Core's main
 This enables faster initial sync for Pocket Node users via UTXO snapshot loading.
 
 ## Patched File
-`src/kernel/chainparams.cpp` — mainnet `m_assumeutxo_data` section.
+`src/kernel/chainparams.cpp`. mainnet `m_assumeutxo_data` section.
 
 **Note:** The `src/` directory is gitignored (it's a full Bitcoin Core checkout). This document records the patch for reproducibility.
 

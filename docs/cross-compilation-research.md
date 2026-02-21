@@ -13,7 +13,7 @@
 - **Last known activity:** ~2020-2021, targeting Bitcoin Core 0.21.x era
 
 **Key lessons from ABCore:**
-- The `depends` system is the correct path — it handles all dependencies (boost, libevent, openssl→wolfssl, etc.)
+- The `depends` system is the correct path. it handles all dependencies (boost, libevent, openssl→wolfssl, etc.)
 - Android's Bionic libc differences require careful handling (no `getifaddrs` on older API levels, different threading)
 - The app ran bitcoind as a foreground service to avoid Android killing it
 - Storage was the main UX challenge (chain data on internal storage)
@@ -34,9 +34,9 @@ Bitcoin Core's `depends/` directory contains a self-contained cross-compilation 
 - **Android is an officially supported cross-compilation target** in the depends system
 
 ### Key files:
-- `depends/hosts/android.mk` — Android-specific host configuration
-- `depends/toolchain.cmake.in` — CMake toolchain template for cross-builds
-- `depends/packages/` — Package recipes for all dependencies
+- `depends/hosts/android.mk`. Android-specific host configuration
+- `depends/toolchain.cmake.in`. CMake toolchain template for cross-builds
+- `depends/packages/`. Package recipes for all dependencies
 
 ## 3. Cross-Compilation Steps (Theoretical)
 

@@ -26,7 +26,7 @@ Unable to load UTXO snapshot: assumeutxo block hash in snapshot metadata not rec
 
 ## Test 3: loadtxoutset on Pixel 7 Pro ✅ (2026-02-14)
 
-**Result:** SUCCESS — 167,821,142 UTXOs loaded
+**Result:** SUCCESS. 167,821,142 UTXOs loaded
 ```json
 {
   "coins_loaded": 167821142,
@@ -55,26 +55,26 @@ Unable to load UTXO snapshot: assumeutxo block hash in snapshot metadata not rec
 
 **Fix:**
 1. Renamed files on Umbrel so correct snapshot is at expected path
-2. Added snapshot block hash validation to app — reads header, compares against expected hash
+2. Added snapshot block hash validation to app. reads header, compares against expected hash
 3. Auto-deletes and re-downloads if hash doesn't match
 
 ## Test 5: End-to-end from app with validation ✅ (2026-02-15)
 
 **Flow:** App → SFTP download (9 GB, ~5 min LAN) → loadtxoutset → success
 **Snapshot validated** before loading (block hash matches expected)
-**loadtxoutset completed** — `chainstate_snapshot` directory created, background validation running
+**loadtxoutset completed**. `chainstate_snapshot` directory created, background validation running
 
 ## Key Learnings
 
-1. **Always use `"rollback"` mode** for dumptxoutset — `"latest"` produces snapshots at arbitrary heights
-2. **Validate snapshot block hash** before loading — read bytes 11-42 of snapshot file header
-3. **The file name is meaningless** — it's the embedded metadata that matters
+1. **Always use `"rollback"` mode** for dumptxoutset. `"latest"` produces snapshots at arbitrary heights
+2. **Validate snapshot block hash** before loading. read bytes 11-42 of snapshot file header
+3. **The file name is meaningless**. it's the embedded metadata that matters
 4. **Transfer times:** 9 GB over LAN SFTP ~5 min, USB ADB ~5 min
-5. **loadtxoutset blocks for ~25 min** — must be non-blocking in app (fire and poll)
+5. **loadtxoutset blocks for ~25 min**. must be non-blocking in app (fire and poll)
 6. **`chainstate_snapshot` dir** appearing = loadtxoutset completed
-7. **Don't aggressively delete `chainstate_snapshot`** — wait for RPC confirmation before treating as stale
-8. **Android blocks cleartext HTTP** — need `network_security_config.xml` for localhost RPC
-9. **Knots and Core produce identical block hashes** — same consensus, same chain
+7. **Don't aggressively delete `chainstate_snapshot`**. wait for RPC confirmation before treating as stale
+8. **Android blocks cleartext HTTP**. need `network_security_config.xml` for localhost RPC
+9. **Knots and Core produce identical block hashes**. same consensus, same chain
 
 ## Snapshot Header Format
 
@@ -84,7 +84,7 @@ Offset  Size  Description
 4       1     CompactSize marker: 0xff
 5       2     Version (LE): 0x0002
 7       4     Network magic: 0xf9beb4d9 (mainnet)
-11      32    Block hash (LE — reverse for display)
+11      32    Block hash (LE. reverse for display)
 43+     ...   Coin count, UTXO data
 ```
 
@@ -92,7 +92,7 @@ Read block hash: `file[11:43]` reversed to hex = block hash string.
 
 ## Test 6: Direct Chainstate Copy ✅ (2026-02-16)
 
-**The big one.** Bypass AssumeUTXO entirely — copy the chainstate database directly from Umbrel to the phone.
+**The big one.** Bypass AssumeUTXO entirely. copy the chainstate database directly from Umbrel to the phone.
 
 ### Process
 
@@ -106,13 +106,13 @@ Read block hash: `file[11:43]` reversed to hex = block hash string.
    ```bash
    BITCOIN_DIR="/home/umbrel/umbrel/app-data/bitcoin-knots/data/bitcoin"
    
-   # Chainstate — the UTXO set (~12 GB)
+   # Chainstate. the UTXO set (~12 GB)
    tar -cf /tmp/chainstate.tar -C "$BITCOIN_DIR" chainstate/
    
-   # Block index — block metadata (~2 GB)
+   # Block index. block metadata (~2 GB)
    tar -cf /tmp/blocks-index.tar -C "$BITCOIN_DIR/blocks" index/
    
-   # XOR key — block file obfuscation (8 bytes)
+   # XOR key. block file obfuscation (8 bytes)
    cp "$BITCOIN_DIR/blocks/xor.dat" /tmp/xor.dat
    
    # Tip block + undo files (latest blk/rev pair)
@@ -139,18 +139,18 @@ Bitcoin Knots 29.2 obfuscates block files with an 8-byte XOR key in `blocks/xor.
 Key: 74fa298a07b80e7b
 ```
 
-Without this file, block data is unreadable. Bitcoin Core v28.1 supports reading `xor.dat` natively (PR #28052), so no special handling needed — just copy the file.
+Without this file, block data is unreadable. Bitcoin Core v28.1 supports reading `xor.dat` natively (PR #28052), so no special handling needed. just copy the file.
 
 ### Stub File Requirement
 
-The block index references ~5000+ blk/rev files. On startup, bitcoind checks: "Are all referenced blk files present?" They don't need real data — empty files satisfy the check. But ~5000 stub files means the initial prune pass takes ~15 minutes.
+The block index references ~5000+ blk/rev files. On startup, bitcoind checks: "Are all referenced blk files present?" They don't need real data. empty files satisfy the check. But ~5000 stub files means the initial prune pass takes ~15 minutes.
 
 ### Result
 
-🟠 **SUCCESS** — Height 936,822, 4 peers connected, at chain tip instantly.
+🟠 **SUCCESS**. Height 936,822, 4 peers connected, at chain tip instantly.
 
 - No AssumeUTXO, no background validation
-- No `chainstate_snapshot` directory — this IS the primary chainstate
+- No `chainstate_snapshot` directory. this IS the primary chainstate
 - Full node operational in ~20 minutes (archive + transfer + startup + pruning)
 - Pruning completed after ~15 minutes (removing 5000+ stub files)
 - Node continued syncing new blocks normally after pruning
@@ -159,7 +159,7 @@ The block index references ~5000+ blk/rev files. On startup, bitcoind checks: "A
 
 This is fundamentally different from AssumeUTXO. With direct copy:
 - The phone has a **fully validated chainstate** from the source node
-- There is **no background IBD** — nothing to catch up on
+- There is **no background IBD**. nothing to catch up on
 - The node is a **real full node at tip** from the moment it starts
 
 See [docs/direct-chainstate-copy.md](direct-chainstate-copy.md) for the full technical writeup.

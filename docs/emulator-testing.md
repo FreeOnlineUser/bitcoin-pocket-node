@@ -5,13 +5,13 @@
 
 ## Summary
 
-**Emulator testing blocked** — cannot run ARM64 Android emulator on x86_64 macOS.
+**Emulator testing blocked**. cannot run ARM64 Android emulator on x86_64 macOS.
 
 ## What We Tried
 
-1. **Android Emulator 36.4.9** (latest via sdkmanager) — crashes on Big Sur due to libc++ ABI incompatibility (`__ZTVNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE` symbol not found). Requires macOS 12+.
+1. **Android Emulator 36.4.9** (latest via sdkmanager). crashes on Big Sur due to libc++ ABI incompatibility (`__ZTVNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE` symbol not found). Requires macOS 12+.
 
-2. **Android Emulator 33.1.24** (older, compatible with Big Sur) — launches but refuses to run ARM64 AVD: `PANIC: Avd's CPU Architecture 'arm64' is not supported by the QEMU2 emulator on x86_64 host.`
+2. **Android Emulator 33.1.24** (older, compatible with Big Sur). launches but refuses to run ARM64 AVD: `PANIC: Avd's CPU Architecture 'arm64' is not supported by the QEMU2 emulator on x86_64 host.`
 
 3. Only ARM64 system image is installed (`system-images/android-34/google_apis/arm64-v8a`). An x86_64 system image wouldn't help since our binary is ARM64.
 

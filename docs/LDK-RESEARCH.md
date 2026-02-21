@@ -21,24 +21,24 @@
 
 ## 1. What is LDK
 
-LDK (Lightning Development Kit) is an **open-source Lightning Network implementation written in Rust**, maintained by Spiral (a Block/Square initiative). Unlike CLN or LND which are standalone daemons you run as separate programs, LDK is a **library** — it compiles directly into your app.
+LDK (Lightning Development Kit) is an **open-source Lightning Network implementation written in Rust**, maintained by Spiral (a Block/Square initiative). Unlike CLN or LND which are standalone daemons you run as separate programs, LDK is a **library**. it compiles directly into your app.
 
 ### What LDK Provides (you get this for free)
-- **Lightning protocol state machine** — all the complex rules for opening/closing channels, routing payments, handling HTLCs (the building blocks of Lightning payments)
-- **On-chain punishment logic** — if a channel partner tries to cheat by broadcasting an old state, LDK handles the response
-- **Routing/pathfinding** — finding a path through the Lightning network to reach the recipient
-- **Invoice creation and parsing** — BOLT11 (classic) and BOLT12 (offers, the newer format)
-- **Channel management** — the full lifecycle from open → operate → close
-- **Peer-to-peer messaging** — the Lightning gossip protocol
+- **Lightning protocol state machine**. all the complex rules for opening/closing channels, routing payments, handling HTLCs (the building blocks of Lightning payments)
+- **On-chain punishment logic**. if a channel partner tries to cheat by broadcasting an old state, LDK handles the response
+- **Routing/pathfinding**. finding a path through the Lightning network to reach the recipient
+- **Invoice creation and parsing**. BOLT11 (classic) and BOLT12 (offers, the newer format)
+- **Channel management**. the full lifecycle from open → operate → close
+- **Peer-to-peer messaging**. the Lightning gossip protocol
 
 ### What YOU Must Provide (the integrator's job)
-- **Blockchain data source** — LDK needs to know what's happening on-chain (new blocks, confirmed transactions)
-- **Transaction broadcaster** — when LDK needs to put a transaction on-chain, it calls your code to do it
-- **Key management** — where private keys live and how signing happens
-- **Persistence/storage** — channel state must be saved reliably (losing this = losing funds)
-- **Fee estimation** — what fee rate to use for on-chain transactions
-- **Network graph storage** — the map of the Lightning network for routing
-- **Logger** — where log messages go
+- **Blockchain data source**. LDK needs to know what's happening on-chain (new blocks, confirmed transactions)
+- **Transaction broadcaster**. when LDK needs to put a transaction on-chain, it calls your code to do it
+- **Key management**. where private keys live and how signing happens
+- **Persistence/storage**. channel state must be saved reliably (losing this = losing funds)
+- **Fee estimation**. what fee rate to use for on-chain transactions
+- **Network graph storage**. the map of the Lightning network for routing
+- **Logger**. where log messages go
 
 This modular design is LDK's superpower: you plug in your own implementations of each piece, or use the defaults they provide.
 
@@ -51,16 +51,16 @@ Here's each interface LDK needs, in plain terms:
 ### Chain Data Provider (`chain::Listen` or `chain::Confirm`)
 - **What it does:** Feeds LDK information about new blocks and transactions
 - **Two modes:**
-  - `Listen` — you give it full blocks as they arrive (works great with a local bitcoind)
-  - `Confirm` — you tell it about specific confirmed/unconfirmed transactions (works with Electrum/Esplora)
-- **Our case:** We have local bitcoind AND BWT Electrum — we can use either approach
+  - `Listen`. you give it full blocks as they arrive (works great with a local bitcoind)
+  - `Confirm`. you tell it about specific confirmed/unconfirmed transactions (works with Electrum/Esplora)
+- **Our case:** We have local bitcoind AND BWT Electrum. we can use either approach
 
 ### Transaction Broadcaster (`BroadcasterInterface`)
 - **What it does:** When LDK creates a transaction (channel open, close, justice tx), it hands it to your broadcaster to send to the network
 - **Implementation:** Call bitcoind's `sendrawtransaction` RPC
 
 ### Key Manager (`SignerProvider` / `NodeSigner` / `EntropySource`)
-- **What it does:** Manages all cryptographic keys — node identity, channel keys, on-chain keys
+- **What it does:** Manages all cryptographic keys. node identity, channel keys, on-chain keys
 - **Default available:** LDK provides `KeysManager` which derives everything from a single 32-byte seed
 - **Custom option:** You could use a hardware security module or Android Keystore for extra security
 
@@ -76,8 +76,8 @@ Here's each interface LDK needs, in plain terms:
 ### Network Graph (`NetworkGraph`)
 - **What it does:** Stores the map of all Lightning channels and nodes for routing
 - **Two sync methods:**
-  - **P2P gossip** — learn about the network from peers (bandwidth-heavy, slow on mobile)
-  - **Rapid Gossip Sync (RGS)** — download a compressed snapshot from a server (much better for mobile)
+  - **P2P gossip**. learn about the network from peers (bandwidth-heavy, slow on mobile)
+  - **Rapid Gossip Sync (RGS)**. download a compressed snapshot from a server (much better for mobile)
 - **Our case:** RGS is the clear winner for a phone
 
 ### Logger (`Logger`)
@@ -88,24 +88,24 @@ Here's each interface LDK needs, in plain terms:
 
 ## 3. How Our Existing Stack Helps
 
-This is where Pocket Node has a **massive advantage** over typical mobile Lightning wallets. Most mobile wallets must rely on external servers — we have everything locally.
+This is where Pocket Node has a **massive advantage** over typical mobile Lightning wallets. Most mobile wallets must rely on external servers. we have everything locally.
 
 | LDK Need | Our Stack | How It Helps |
 |---|---|---|
 | **Chain data** | Bitcoin Core v28.1 (local) | Direct RPC calls: `getblock`, `getbestblockhash`, `getblockchaininfo`. No trust in third parties. |
-| **Tx broadcasting** | Bitcoin Core (local) | `sendrawtransaction` RPC — instant, private, no external server needed |
-| **Fee estimation** | Bitcoin Core (local) | `estimatesmartfee` RPC — based on our own mempool, not someone else's guess |
+| **Tx broadcasting** | Bitcoin Core (local) | `sendrawtransaction` RPC. instant, private, no external server needed |
+| **Fee estimation** | Bitcoin Core (local) | `estimatesmartfee` RPC. based on our own mempool, not someone else's guess |
 | **Block notifications** | Bitcoin Core ZMQ or polling | ZMQ `hashblock`/`rawtx` notifications, or poll `getbestblockhash` |
 | **Electrum data** | BWT Electrum server | Could use Electrum protocol for `Confirm`-style chain monitoring (transaction-level rather than block-level) |
 
 ### What We Still Need to Build
-- **Persistence layer** — SQLite database on Android for channel state
-- **Key management** — generate and securely store a Lightning seed (could derive from existing wallet seed)
-- **Networking** — TCP connections to Lightning peers (Android can do this, but needs careful handling of background execution)
-- **Gossip/routing** — Rapid Gossip Sync is recommended even though we have bandwidth for P2P, because it's dramatically faster to bootstrap
+- **Persistence layer**. SQLite database on Android for channel state
+- **Key management**. generate and securely store a Lightning seed (could derive from existing wallet seed)
+- **Networking**. TCP connections to Lightning peers (Android can do this, but needs careful handling of background execution)
+- **Gossip/routing**. Rapid Gossip Sync is recommended even though we have bandwidth for P2P, because it's dramatically faster to bootstrap
 
 ### The Big Win
-Most LDK mobile apps use Esplora (a remote block explorer API) as their chain source because they don't have a local node. We skip that entirely — **our chain data is local, private, and trust-minimised**. This is the gold standard for a Lightning node.
+Most LDK mobile apps use Esplora (a remote block explorer API) as their chain source because they don't have a local node. We skip that entirely. **our chain data is local, private, and trust-minimised**. This is the gold standard for a Lightning node.
 
 ---
 
@@ -154,7 +154,7 @@ This is the key architectural decision.
 - Built-in persistence (SQLite or filesystem)
 - Built-in key management
 - Handles background tasks automatically (channel monitoring, peer reconnection)
-- **Supports Bitcoin Core RPC as a chain source** — perfect for us
+- **Supports Bitcoin Core RPC as a chain source**. perfect for us
 - Supports Electrum and Esplora as chain sources too
 - Official Kotlin/Android bindings published to Maven Central
 - Rapid Gossip Sync built in
@@ -163,7 +163,7 @@ This is the key architectural decision.
 
 **Cons:**
 - Less control over individual components
-- Comes with its own on-chain wallet (BDK) — we already have wallet functionality, so there's potential overlap
+- Comes with its own on-chain wallet (BDK). we already have wallet functionality, so there's potential overlap
 - Some design choices are opinionated (storage format, key derivation)
 
 **Example code (Kotlin):**
@@ -200,7 +200,7 @@ node.bolt11Payment().send(invoice, null)
 - Smaller binary if you only include what you need
 
 **Cons:**
-- **Dramatically more code** — the ldk-sample (reference implementation) is thousands of lines just for basic functionality
+- **Dramatically more code**. the ldk-sample (reference implementation) is thousands of lines just for basic functionality
 - Must implement and maintain: chain monitoring, peer management, background processing, channel persistence, routing, event handling
 - Must handle all the edge cases yourself
 - Higher risk of bugs in integration code (and bugs = lost funds in Lightning)
@@ -210,9 +210,9 @@ node.bolt11Payment().send(invoice, null)
 For Pocket Node, **ldk-node is the right choice**. Here's why:
 
 1. **We're adding Lightning to an existing app, not building a Lightning company.** We want it to work, not to be a research project.
-2. **ldk-node already supports bitcoind RPC** — our main advantage (local node) works out of the box.
-3. **The Kotlin bindings are production-ready** — no JNI wrangling needed.
-4. **The BDK wallet overlap is manageable** — ldk-node's wallet handles Lightning-specific funds (channel opens/closes), while our existing wallet handles regular on-chain transactions. They can share the same seed.
+2. **ldk-node already supports bitcoind RPC**. our main advantage (local node) works out of the box.
+3. **The Kotlin bindings are production-ready**. no JNI wrangling needed.
+4. **The BDK wallet overlap is manageable**. ldk-node's wallet handles Lightning-specific funds (channel opens/closes), while our existing wallet handles regular on-chain transactions. They can share the same seed.
 5. **Development time:** weeks with ldk-node vs months with raw LDK.
 
 ---
@@ -225,20 +225,20 @@ For Pocket Node, **ldk-node is the right choice**. Here's why:
 |---|---|
 | **Channel management** | Open, close (cooperative & force), and manage Lightning channels |
 | **BOLT11 payments** | Send and receive standard Lightning invoices (the QR codes everyone uses today) |
-| **BOLT12 offers** | The next-gen invoice format — reusable payment codes, no expiry, better privacy |
+| **BOLT12 offers** | The next-gen invoice format. reusable payment codes, no expiry, better privacy |
 | **Spontaneous payments** | Send payments without an invoice (keysend) |
 | **Multi-path payments** | Split a payment across multiple channels for larger amounts |
 | **On-chain wallet** | Integrated Bitcoin wallet for funding channels and receiving channel closes |
 | **HODL invoices** | Hold incoming payments until you decide to accept or reject them |
 
 ### Routing & Network
-- **Rapid Gossip Sync** — download the network graph quickly instead of learning it from peers over hours
-- **Probabilistic routing** — LDK uses a "scorer" that learns which routes work well over time
-- **Private channels** — channels that aren't announced to the network (better privacy)
+- **Rapid Gossip Sync**. download the network graph quickly instead of learning it from peers over hours
+- **Probabilistic routing**. LDK uses a "scorer" that learns which routes work well over time
+- **Private channels**. channels that aren't announced to the network (better privacy)
 
 ### Liquidity Features
-- **LSPS2 (JIT channels)** — request inbound liquidity from a Lightning Service Provider. When someone tries to pay you and you don't have enough inbound capacity, an LSP can open a channel to you on-the-fly.
-- **Dual-funded channels** — both sides contribute funds when opening a channel (if the peer supports it)
+- **LSPS2 (JIT channels)**. request inbound liquidity from a Lightning Service Provider. When someone tries to pay you and you don't have enough inbound capacity, an LSP can open a channel to you on-the-fly.
+- **Dual-funded channels**. both sides contribute funds when opening a channel (if the peer supports it)
 
 ### What This Means Practically
 Brad could:
@@ -267,14 +267,14 @@ Brad could:
 
 ### CPU
 - **Startup:** Brief spike loading graph + syncing chain state
-- **Steady state:** Minimal — Lightning operations are cryptographic but lightweight
+- **Steady state:** Minimal. Lightning operations are cryptographic but lightweight
 - **Pathfinding:** Brief spike when computing payment routes (milliseconds)
-- **No mining or heavy computation** — Lightning is lightweight by design
+- **No mining or heavy computation**. Lightning is lightweight by design
 
 ### Network/Bandwidth
 - **Rapid Gossip Sync:** ~5-10 MB download periodically (compressed graph updates)
 - **Peer connections:** Minimal bandwidth for channel operations
-- **P2P gossip (if used):** Can be 50-100+ MB/month — this is why we'd use RGS instead
+- **P2P gossip (if used):** Can be 50-100+ MB/month. this is why we'd use RGS instead
 
 ### Compared to What We Already Run
 Bitcoin Core v28.1 on the Pixel already uses:
@@ -301,12 +301,12 @@ Bitcoin Core v28.1 on the Pixel already uses:
 
 ### Key Repositories
 
-- **[ldk-node](https://github.com/lightningdevkit/ldk-node)** — the library we'd use, includes Kotlin bindings
-- **[ldk-sample](https://github.com/lightningdevkit/ldk-sample)** — reference Rust implementation showing raw LDK usage with bitcoind
-- **[rust-lightning](https://github.com/lightningdevkit/rust-lightning)** — the core protocol library underneath ldk-node
+- **[ldk-node](https://github.com/lightningdevkit/ldk-node)**. the library we'd use, includes Kotlin bindings
+- **[ldk-sample](https://github.com/lightningdevkit/ldk-sample)**. reference Rust implementation showing raw LDK usage with bitcoind
+- **[rust-lightning](https://github.com/lightningdevkit/rust-lightning)**. the core protocol library underneath ldk-node
 
 ### Relevant to Our Use Case
-The ldk-sample project is especially interesting because it **uses Bitcoin Core RPC** for chain data — exactly like we would. It demonstrates the `bitcoind_rpc` chain source that ldk-node also supports.
+The ldk-sample project is especially interesting because it **uses Bitcoin Core RPC** for chain data. exactly like we would. It demonstrates the `bitcoind_rpc` chain source that ldk-node also supports.
 
 ---
 
@@ -329,14 +329,14 @@ The ldk-sample project is especially interesting because it **uses Bitcoin Core 
 - [ ] Implement basic event handling (channel opened, payment received, etc.)
 
 ### Phase 2: Channel Management UI (2-3 weeks)
-- [ ] "Open Channel" screen — enter peer node ID, amount, confirm
-- [ ] Channel list view — show open channels, capacity, balance
+- [ ] "Open Channel" screen. enter peer node ID, amount, confirm
+- [ ] Channel list view. show open channels, capacity, balance
 - [ ] "Close Channel" button (cooperative close)
 - [ ] Channel backup/export functionality
 
 ### Phase 3: Payments (2-3 weeks)
-- [ ] "Pay Invoice" — scan/paste a BOLT11 invoice, confirm, send
-- [ ] "Receive Payment" — generate BOLT11 invoice with amount, show QR code
+- [ ] "Pay Invoice". scan/paste a BOLT11 invoice, confirm, send
+- [ ] "Receive Payment". generate BOLT11 invoice with amount, show QR code
 - [ ] Payment history view
 - [ ] BOLT12 offers support (static payment codes)
 
@@ -390,7 +390,7 @@ The ldk-sample project is especially interesting because it **uses Bitcoin Core 
 #### Channel State Loss = Lost Funds
 - If the app data is wiped or the database corrupts and you lose channel state, your channel funds are at risk
 - **Mitigation:** Regular encrypted backups of channel state to external storage. ldk-node uses SQLite which is robust, but we need backup procedures.
-- **Static Channel Backups (SCB):** LDK supports these — they allow recovery by force-closing all channels, getting funds back on-chain. Not ideal but prevents total loss.
+- **Static Channel Backups (SCB):** LDK supports these. they allow recovery by force-closing all channels, getting funds back on-chain. Not ideal but prevents total loss.
 
 #### Mobile Uptime & Background Execution
 - Lightning nodes ideally run 24/7. A phone doesn't.
@@ -405,7 +405,7 @@ The ldk-sample project is especially interesting because it **uses Bitcoin Core 
 - A watchtower is a service that watches the blockchain on your behalf while you're offline
 - If your channel partner broadcasts an old state, the watchtower can submit the punishment transaction for you
 - **Options:** Run your own (on a server), use a third-party watchtower service
-- **ldk-node status:** Watchtower support is not built into ldk-node yet — this would need external tooling
+- **ldk-node status:** Watchtower support is not built into ldk-node yet. this would need external tooling
 
 ### 🟡 Significant Challenges
 
@@ -413,7 +413,7 @@ The ldk-sample project is especially interesting because it **uses Bitcoin Core 
 - To **receive** Lightning payments, someone else needs to have funds in a channel pointed at you
 - Simply opening a channel only gives you **outbound** capacity (you can send but not receive)
 - **Solutions:**
-  - Use an LSP (Lightning Service Provider) that opens channels to you — ldk-node supports LSPS2 for this
+  - Use an LSP (Lightning Service Provider) that opens channels to you. ldk-node supports LSPS2 for this
   - Open channels with well-connected nodes
   - Submarine swaps (on-chain → Lightning)
   - Loop In services
@@ -446,7 +446,7 @@ The ldk-sample project is especially interesting because it **uses Bitcoin Core 
 #### Testing
 - Lightning has complex edge cases (force closes during payments, concurrent HTLCs, etc.)
 - Start on signet/testnet, graduate to small mainnet amounts
-- LDK is production-tested (Cash App, etc.) so the library itself is solid — our integration is the risk
+- LDK is production-tested (Cash App, etc.) so the library itself is solid. our integration is the risk
 
 ---
 
@@ -455,11 +455,11 @@ The ldk-sample project is especially interesting because it **uses Bitcoin Core 
 ### Use ldk-node with bitcoind RPC chain source
 
 **Why:**
-1. **Simplest path to Lightning** — high-level Kotlin API, published on Maven Central
-2. **Leverages our unique advantage** — local bitcoind RPC = no external trust, private, fast
-3. **Production-proven** — LDK powers Cash App's Lightning at scale
-4. **Active development** — ldk-node is Spiral's priority project, actively maintained
-5. **Good mobile story** — Rapid Gossip Sync, LSPS2 liquidity, designed for resource-constrained environments
+1. **Simplest path to Lightning**. high-level Kotlin API, published on Maven Central
+2. **Leverages our unique advantage**. local bitcoind RPC = no external trust, private, fast
+3. **Production-proven**. LDK powers Cash App's Lightning at scale
+4. **Active development**. ldk-node is Spiral's priority project, actively maintained
+5. **Good mobile story**. Rapid Gossip Sync, LSPS2 liquidity, designed for resource-constrained environments
 
 **Key config for our app:**
 ```kotlin

@@ -1,12 +1,12 @@
 # Umbrel Integration Notes
 
 ## Node Details
-- **Host:** 10.0.1.127 (Umbrel VM on Mac Mini — NOT a Raspberry Pi)
+- **Host:** 10.0.1.127 (Umbrel VM on Mac Mini. NOT a Raspberry Pi)
 - **RPC Port:** 9332
 - **Software:** Bitcoin Knots 29.2.0 (based on Core 29.x)
 - **Chain:** mainnet, fully synced, unpruned (~820 GB)
 - **Docker container:** `bitcoin-knots_app_1` (ghcr.io/retropex/umbrel-bitcoin-knots:1.2.5)
-- **App proxy container:** `bitcoin-knots_app_proxy_1` — crashes if only bitcoind container restarted
+- **App proxy container:** `bitcoin-knots_app_proxy_1`. crashes if only bitcoind container restarted
 
 ## SFTP Account
 
@@ -32,9 +32,9 @@ docker exec bitcoin-knots_app_1 bitcoin-cli \
 ```
 
 **Important:**
-- Use `"rollback"` not `"latest"` — latest dumps at chain tip, not AssumeUTXO height
-- `-rpcclienttimeout=0` required — rollback + dump takes ~55 minutes
-- Use `docker stop/start` not `docker compose` — compose requires env vars not available via SSH
+- Use `"rollback"` not `"latest"`. latest dumps at chain tip, not AssumeUTXO height
+- `-rpcclienttimeout=0` required. rollback + dump takes ~55 minutes
+- Use `docker stop/start` not `docker compose`. compose requires env vars not available via SSH
 - If only bitcoind container is restarted, also restart `bitcoin-knots_app_proxy_1`
 
 ## Snapshot Files on Umbrel
@@ -43,17 +43,17 @@ docker exec bitcoin-knots_app_1 bitcoin-cli \
 /home/pocketnode/snapshots/
 ├── utxo-910000.dat         # Correct snapshot (9.0 GB, height 910,000) ✅
 ├── utxo-910000-v2.dat      # Also correct (duplicate)
-└── utxo-910000-wrong.dat   # OLD — from chain tip, not height 910k ❌
+└── utxo-910000-wrong.dat   # OLD. from chain tip, not height 910k ❌
 ```
 
 ## App Flow: "Sync from Your Node"
 
-1. **Try pocketnode first** — SFTP connect with saved credentials, check if `utxo-910000.dat` exists
-2. **If snapshot exists** — skip to download (no admin creds needed)
-3. **If not** — prompt for admin SSH credentials, generate snapshot via `dumptxoutset rollback`
-4. **Download** — SFTP ~9 GB over LAN (~5 min at ~30 MB/s)
-5. **Validate** — read snapshot header, verify block hash matches expected
-6. **Load** — `loadtxoutset` RPC (~25 min, non-blocking with progress polling)
+1. **Try pocketnode first**. SFTP connect with saved credentials, check if `utxo-910000.dat` exists
+2. **If snapshot exists**. skip to download (no admin creds needed)
+3. **If not**. prompt for admin SSH credentials, generate snapshot via `dumptxoutset rollback`
+4. **Download**. SFTP ~9 GB over LAN (~5 min at ~30 MB/s)
+5. **Validate**. read snapshot header, verify block hash matches expected
+6. **Load**. `loadtxoutset` RPC (~25 min, non-blocking with progress polling)
 
 ## Security Model
 
@@ -65,7 +65,7 @@ docker exec bitcoin-knots_app_1 bitcoin-cli \
 
 ## Direct Chainstate Copy
 
-The fastest bootstrap method — copy the node's database directly instead of using AssumeUTXO. This works with **any Bitcoin node** (Core or Knots, Umbrel or standalone), not just the Umbrel setup described here.
+The fastest bootstrap method. copy the node's database directly instead of using AssumeUTXO. This works with **any Bitcoin node** (Core or Knots, Umbrel or standalone), not just the Umbrel setup described here.
 
 ### Required Files
 
@@ -90,7 +90,7 @@ Core v28.1 reads this key natively. Without it, block data is garbled.
 
 ### Process
 
-**Must stop bitcoind** for a consistent chainstate archive — LevelDB can't be safely copied while running.
+**Must stop bitcoind** for a consistent chainstate archive. LevelDB can't be safely copied while running.
 
 ```bash
 # 1. Stop bitcoind (Umbrel Docker)

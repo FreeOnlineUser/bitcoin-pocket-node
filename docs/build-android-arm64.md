@@ -55,10 +55,10 @@ llvm-strip src/bitcoind src/bitcoin-cli src/bitcoin-tx src/bitcoin-wallet
 ```
 
 ## Output
-- `bitcoind` — 13MB stripped, ELF 64-bit ARM aarch64
-- `bitcoin-cli` — 919KB stripped
-- `bitcoin-tx` — 2.7MB stripped
-- `bitcoin-wallet` — 7.7MB stripped
+- `bitcoind`. 13MB stripped, ELF 64-bit ARM aarch64
+- `bitcoin-cli`. 919KB stripped
+- `bitcoin-tx`. 2.7MB stripped
+- `bitcoin-wallet`. 7.7MB stripped
 
 ## Build Configuration
 - Bitcoin Core v28.1
