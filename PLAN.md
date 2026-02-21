@@ -130,7 +130,7 @@ disablewallet=1
 - [ ] Tor integration for private peer connections
 
 ### UX
-- [ ] **Foldable dual-pane mode**: detect unfolded state via `WindowInfoTracker`/`FoldingFeature`. When unfolded, show dashboard on the left and live mempool screen on the right. Bitcoin command center mode.
+- [x] **Foldable/landscape dual-pane mode**: BoxWithConstraints 550dp threshold, dashboard left + mempool right
 - [ ] Non-technical setup documentation for everyday users
 - [ ] Expanded device testing beyond Pixel line
 
