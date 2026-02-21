@@ -2,15 +2,16 @@
 
 **Bitcoin node in your pocket in under 20 minutes.**
 
-Turn any Android phone into a fully-validating Bitcoin full node. No server dependency, no ongoing tethering — your phone becomes a sovereign Bitcoin node.
+Turn any Android phone into a fully-validating Bitcoin full node. No server dependency, no ongoing tethering -- your phone becomes a sovereign Bitcoin node.
 
 ## ✅ Proven
 
-- **Direct chainstate copy** — full node at chain tip in ~20 minutes, 167 million UTXOs (height 936,822, 4 peers, instant)
-- **AssumeUTXO alternative** — full node in ~3 hours via cryptographically verified UTXO snapshot
+- **Direct chainstate copy** -- full node at chain tip in ~20 minutes, 167 million UTXOs (height 936,822, 4 peers, instant)
+- **AssumeUTXO alternative** -- full node in ~3 hours via cryptographically verified UTXO snapshot
+- **4 Bitcoin implementations** -- Core 28.1, Core 30, Knots 29.3, Knots BIP 110. Switch with one tap, same chainstate
 - Phone stays cool, runs overnight without issues
 - ~26 GB total disk with Lightning (11 GB chainstate + 2 GB pruned blocks + 13 GB block filters), ~13 GB without
-- **BWT Electrum server** — BlueWallet connects to local node for private transaction queries
+- **BWT Electrum server** -- BlueWallet connects to local node for private transaction queries
 
 ## Screenshots
 
@@ -36,39 +37,60 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 
 ## How It Works
 
-Two bootstrap paths — choose speed or trustlessness:
+Two bootstrap paths -- choose speed or trustlessness:
 
-### ⚡ Path 1: Sync from Your Node (Direct Chainstate Copy) — ~20 min
+### ⚡ Path 1: Sync from Your Node (Direct Chainstate Copy) -- ~20 min
 1. App connects to your home node (Umbrel, Start9, any Bitcoin node) via SSH
 2. Briefly stops bitcoind, copies chainstate + block index + xor.dat + tip blocks
 3. Creates stub files for historical blocks, starts bitcoind with `checklevel=0`
-4. **Instant full node at chain tip** — no background validation, no catch-up
+4. **Instant full node at chain tip** -- no background validation, no catch-up
 
-### 🔒 Path 2: Download from Internet (AssumeUTXO) — ~3 hours
+### 🔒 Path 2: Download from Internet (AssumeUTXO) -- ~3 hours
 1. Download a UTXO snapshot (~9 GB) from your home node over LAN or the internet
-2. App loads it via `loadtxoutset` — cryptographically verified by Bitcoin Core
+2. App loads it via `loadtxoutset` -- cryptographically verified by Bitcoin Core
 3. Phone syncs forward from the snapshot height (~25 min to load, ~2 hours to reach tip)
 4. Background validation confirms everything independently from genesis
 
 See [Direct Chainstate Copy](docs/direct-chainstate-copy.md) for a detailed comparison.
 
+## Version Selection
+
+Your node, your rules. Choose which Bitcoin implementation runs on your phone:
+
+| Implementation | Size | Policy |
+|---|---|---|
+| **Bitcoin Core 28.1** | 13 MB | Neutral -- standard relay rules |
+| **Bitcoin Core 30** | 8.6 MB | Permissive -- larger OP_RETURN data allowed |
+| **Bitcoin Knots 29.3** | 9 MB | Restrictive -- filters non-standard transactions |
+| **Bitcoin Knots (BIP 110)** | 9 MB | Enforcement -- consensus-level data restrictions + bit 4 signaling |
+
+All four share the same chainstate format. Switch without re-syncing -- tap "Change" on the dashboard, confirm, and the node restarts with the new binary.
+
+**BIP 110** ([bip110.dev](https://bip110.dev/)) temporarily limits arbitrary data embedding at the consensus level. Built from Dathon Ohm's [reference implementation](https://github.com/bitcoinknots/bitcoin/compare/29.x-knots...dathonohm:bitcoin:uasf-modified-bip9), signaling version bit 4 with a 55% activation threshold.
+
+See [Version Selection Design](docs/VERSION-SELECTION.md) and [BIP 110 Research](docs/BIP110-RESEARCH.md) for details.
+
 ## Features
 
-- **Two bootstrap paths** — direct chainstate copy (~20 min) or AssumeUTXO (~3 hours)
-- **BWT Electrum server** — run a local Electrum server so BlueWallet can query your own node
-- **Lightning support** — one-tap block filter copy from your home node, enabling Zeus Lightning wallet via Neutrino on localhost
-- **Wallet integration** — ConnectWalletScreen guides BlueWallet and Zeus connection setup
-- **AssumeUTXO fast sync** — full node in under 3 hours, not days
-- **Snapshot validation** — verifies block hash before loading, auto-redownloads if invalid
-- **Non-blocking snapshot load** — progress tracking during the ~25 min load process
-- **Network-aware sync** — auto-pauses on cellular, resumes on WiFi
-- **VPN support** — WireGuard/VPN connections treated as WiFi (connected)
-- **Data budgets** — separate WiFi and cellular monthly limits
-- **Secure node pairing** — restricted SFTP account with zero access to your bitcoin data
-- **Setup checklist** — Config mode with auto-detection of completed steps
-- **Dashboard** — block height, sync progress with ETA, peers, mempool, disk usage
-- **Auto-start** — resumes on app launch if node was previously running
-- **Privacy** — partial mempool (50 MB) for fee estimation and cover traffic
+- **4 Bitcoin implementations** -- Core 28.1, Core 30, Knots 29.3, Knots BIP 110 with one-tap switching
+- **Two bootstrap paths** -- direct chainstate copy (~20 min) or AssumeUTXO (~3 hours)
+- **BWT Electrum server** -- run a local Electrum server so BlueWallet can query your own node
+- **Lightning support** -- one-tap block filter copy from your home node, enabling Zeus Lightning wallet via Neutrino on localhost
+- **Sovereign price discovery** -- UTXOracle calculates BTC/USD from on-chain data alone, no exchange APIs
+- **Mempool viewer** -- fee estimates, projected blocks, transaction search from your own mempool
+- **Wallet integration** -- ConnectWalletScreen guides BlueWallet and Zeus connection setup
+- **AssumeUTXO fast sync** -- full node in under 3 hours, not days
+- **Snapshot validation** -- verifies block hash before loading, auto-redownloads if invalid
+- **Non-blocking snapshot load** -- progress tracking during the ~25 min load process
+- **Network-aware sync** -- auto-pauses on cellular, resumes on WiFi
+- **VPN support** -- WireGuard/VPN connections treated as WiFi (connected)
+- **Data budgets** -- separate WiFi and cellular monthly limits
+- **Battery saver** -- pauses sync when unplugged below 50%
+- **Auto-start on boot** -- node resumes automatically after phone restart
+- **Secure node pairing** -- restricted SFTP account with zero access to your bitcoin data
+- **Setup checklist** -- Config mode with auto-detection of completed steps
+- **Dashboard** -- block height, sync progress with ETA, peers, mempool, disk usage, live notification
+- **Privacy** -- partial mempool (50 MB) for fee estimation and cover traffic
 
 ## Snapshot Sources
 
@@ -76,10 +98,10 @@ See [Direct Chainstate Copy](docs/direct-chainstate-copy.md) for a detailed comp
 
 #### Direct Chainstate Copy (fastest)
 The app connects to your home node via SSH, briefly stops bitcoind, and copies:
-- `chainstate/` — the UTXO set (~11 GB)
-- `blocks/index/` — block metadata (~2 GB)
-- `blocks/xor.dat` — block file obfuscation key
-- Tip block/rev files — latest block data
+- `chainstate/` -- the UTXO set (~11 GB)
+- `blocks/index/` -- block metadata (~2 GB)
+- `blocks/xor.dat` -- block file obfuscation key
+- Tip block/rev files -- latest block data
 
 Total transfer ~13 GB over LAN (~5 min). Node operational in ~20 minutes including setup.
 
@@ -88,7 +110,7 @@ Total transfer ~13 GB over LAN (~5 min). Node operational in ~20 minutes includi
 2. Downloads via SFTP over LAN (~5 min for 9 GB)
 3. Loads via `loadtxoutset`
 
-The app tries saved `pocketnode` SFTP credentials first — if a snapshot already exists on the server, no admin credentials needed.
+The app tries saved `pocketnode` SFTP credentials first -- if a snapshot already exists on the server, no admin credentials needed.
 
 ### From Internet
 Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset` flow, just a different download source.
@@ -105,8 +127,9 @@ Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset
 │  └────┬─────┘ └─────┬─────┘ └─────┬─────┘  │
 │       │             │             │         │
 │  ┌────┴─────────────┴─────────────┴──────┐  │
-│  │     bitcoind v28.1 (ARM64)            │  │
-│  │     Foreground service, local RPC     │  │
+│  │  bitcoind (ARM64) -- user selects:    │  │
+│  │  Core 28.1 | Core 30 | Knots | BIP110│  │
+│  │  Foreground service, local RPC        │  │
 │  └──────────────┬────────────────────────┘  │
 │                 │                           │
 │  ┌──────────────┴──────────────────┐        │
@@ -127,10 +150,10 @@ Bitcoin P2P   BlueWallet   Electrum
 ### Node Pairing (SSH Setup)
 When you pair with your home node, the app creates a restricted `pocketnode` user:
 
-- **SFTP-only** — cannot run commands, no shell access
-- **Chroot jailed** — can only see `/home/pocketnode/`, nothing else
-- **Zero data access** — cannot read your bitcoin data directory, wallet, configs, or logs
-- **Root-owned copy scripts** bridge the gap — they copy only snapshot files to the SFTP location
+- **SFTP-only** -- cannot run commands, no shell access
+- **Chroot jailed** -- can only see `/home/pocketnode/`, nothing else
+- **Zero data access** -- cannot read your bitcoin data directory, wallet, configs, or logs
+- **Root-owned copy scripts** bridge the gap -- they copy only snapshot files to the SFTP location
 
 Admin SSH credentials are **never saved** (username is saved for pre-fill convenience). Always prompted, used once, discarded.
 
@@ -145,7 +168,7 @@ You can view the pocketnode credentials and **fully remove access** from the app
 ### Android Security
 - `network_security_config.xml` allows cleartext HTTP only to `127.0.0.1` (local RPC)
 - bitcoind runs as `libbitcoind.so` in `jniLibs/` for GrapheneOS W^X compliance
-- No internet-facing ports — RPC is localhost only, BWT Electrum is localhost only
+- No internet-facing ports -- RPC is localhost only, BWT Electrum is localhost only
 
 ## Lightning Support (Zeus)
 
@@ -181,8 +204,8 @@ bitcoind (phone) --> block filters --> Zeus Neutrino --> Lightning wallet
 
 - **OS:** GrapheneOS (or any Android 10+)
 - **Hardware:** Google Pixel devices (ARM64)
-- **Bitcoin Core:** v28.1 (patched with additional AssumeUTXO heights)
-- **Why v28.1:** Non-controversial, universal acceptance (avoids Core 30 OP_RETURN policy changes)
+- **Default:** Bitcoin Core v28.1 (non-controversial baseline)
+- **Also bundled:** Core 30, Knots 29.3, Knots BIP 110 -- user selects from dashboard
 - **AssumeUTXO heights:** 840k (upstream) + 880k, 910k (backported from Core 30)
 
 ## Building
@@ -242,9 +265,11 @@ app/src/main/java/com/pocketnode/
 │   └── components/
 │       ├── NetworkStatusBar.kt      # Sync status banner
 │       └── AdminCredentialsDialog.kt # SSH creds prompt
+├── oracle/
+│   └── UTXOracle.kt            # Sovereign price discovery from on-chain data
 └── util/
     ├── ConfigGenerator.kt      # Mobile-optimized bitcoin.conf
-    ├── BinaryExtractor.kt      # Extract bitcoind from nativeLibraryDir
+    ├── BinaryExtractor.kt      # Version selection -- 4 bundled bitcoind binaries
     └── SetupChecker.kt         # Auto-detect completed setup steps
 ```
 
@@ -257,6 +282,8 @@ app/src/main/java/com/pocketnode/
 - [Umbrel Integration](docs/umbrel-integration.md)
 - [Block Filter Design](docs/BLOCK-FILTER-DESIGN.md)
 - [Block Index Consistency](docs/BLOCK-INDEX-CONSISTENCY.md)
+- [Version Selection Design](docs/VERSION-SELECTION.md)
+- [BIP 110 Research](docs/BIP110-RESEARCH.md)
 - [LDK Research](docs/LDK-RESEARCH.md)
 
 ## Tested On
@@ -267,9 +294,9 @@ app/src/main/java/com/pocketnode/
 
 ## Known Issues
 
-- 16KB page alignment warning on GrapheneOS — cosmetic only
+- 16KB page alignment warning on GrapheneOS -- cosmetic only
 - `getblockchaininfo` reports background validation progress, not snapshot chain tip (AssumeUTXO path only)
-- ARM64 Android emulator cannot run on x86 Mac — all testing requires real device
+- ARM64 Android emulator cannot run on x86 Mac -- all testing requires real device
 - Direct chainstate copy: pruning ~5000 stub files takes ~15 minutes on first startup (optimizable)
 
 ## License
