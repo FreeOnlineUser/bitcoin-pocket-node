@@ -144,27 +144,43 @@ Replace Zeus embedded LND with LDK (Lightning Dev Kit): modular Lightning librar
 - [ ] Justice transaction fee incentives
 - [ ] VLS (Validating Lightning Signer): phone holds signing keys, remote server runs always-online node
 
-### Desktop Port
-The fast-standup approach (chainstate copy + version selection) works on any platform. A desktop companion tool would bring the same zero-to-full-node experience to Linux, macOS, and Windows.
+### Desktop Port (Compose Multiplatform)
+Same app, same experience, phone or desktop. Using Jetpack Compose Multiplatform to share UI code between Android and desktop (Linux, macOS, Windows).
 
-**What carries over directly:**
-- Chainstate + block index copy via SSH/SFTP
-- Version selection (Core 28.1, Core 30, Knots, Knots BIP 110)
-- UTXOracle sovereign price discovery
-- BWT Electrum server for wallet connectivity
-- Block filter index for Lightning/Neutrino support
+See [Desktop Port Design](docs/DESKTOP-PORT.md) for the full design document.
 
-**What changes:**
-- x86_64 binaries instead of ARM64
-- No Android service layer, simple process management
-- CLI-first: `pocket-node setup --donor umbrel.local --version knots-bip110`
-- Optional lightweight GUI (Electron, Tauri, or native)
-- No battery/cellular constraints
+**Shared code (no changes needed):**
+- All Compose UI screens (dashboard, setup checklist, version picker, mempool, etc.)
+- BitcoinRpcClient.kt (JSON-RPC over localhost)
+- SshUtils.kt (SFTP/SSH operations)
+- UTXOracle.kt (price discovery)
+- ChainstateManager.kt / BlockFilterManager.kt (copy logic)
+- BinaryExtractor.kt (version selection)
+- ConfigGenerator.kt (bitcoin.conf generation)
+
+**Platform-specific replacements:**
+- BitcoindService.kt (Android foreground service) → simple process manager
+- BatteryMonitor.kt → removed (no battery constraints)
+- NetworkMonitor.kt → simplified (no cellular/metered detection)
+- BootReceiver.kt → OS-specific autostart (systemd, launchd, startup folder)
+- Notification system → desktop notifications or tray icon
+
+**Desktop advantages:**
+- `dbcache=2048`+ (vs 256 MB on phone)
+- Full 300 MB mempool (vs 50 MB cap)
+- Higher `maxconnections` (serve the network)
+- No thermal throttling, no battery saver
+- NVMe storage for fast validation
+- Sustained CPU for IBD if needed
 
 **Approach:**
-1. CLI tool (Kotlin or Rust) with SFTP copy + bitcoind management
-2. Version selection + UTXOracle + BWT bundled
-3. Lightweight GUI wrapper
+1. Add Compose Multiplatform to existing project (shared `commonMain` module)
+2. Move UI + business logic to shared module
+3. Android and desktop targets with platform-specific service layers
+4. Bundle x86_64 bitcoind binaries (same version selection: Core 28.1, Core 30, Knots, BIP 110)
+5. Single codebase, two platforms
+
+**Estimated effort:** 2-3 weeks for a working desktop build with dashboard + chainstate copy + version selection.
 
 ### Nice to Haves
 - [ ] Detect corrupted block index after long offline period, offer re-bootstrap
