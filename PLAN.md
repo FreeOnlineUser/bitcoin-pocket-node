@@ -47,11 +47,11 @@
 - [x] `network_security_config.xml`: cleartext HTTP to localhost only
 - [x] GrapheneOS W^X compliance: bitcoind in `jniLibs/` → `nativeLibraryDir`
 
-## Phase 5: Wallet RPC Interface
+## Phase 5: Wallet RPC Interface ✅
 
-- [ ] Localhost RPC endpoint for external wallet apps
-- [ ] Connection instructions / QR code for supported wallets
-- [ ] Electrum server integration (optional, stretch goal)
+- [x] Localhost RPC endpoint for external wallet apps
+- [x] Connection instructions / QR code for supported wallets (ConnectWalletScreen with copy buttons)
+- [x] Electrum server integration (BWT runs alongside bitcoind, BlueWallet connects locally)
 
 ## Phase 6: Polish & Release
 
