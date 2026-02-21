@@ -111,7 +111,7 @@ fun InternetDownloadScreen(
             val hash = ChainstateManager.readSnapshotBlockHash(file)
             if (hash != ChainstateManager.EXPECTED_BLOCK_HASH) {
                 currentStep = DownloadStep.ERROR
-                errorMessage = "Invalid snapshot — block hash doesn't match height 910,000"
+                errorMessage = "Invalid snapshot. block hash doesn't match height 910,000"
                 file.delete()
                 isRunning = false
                 return@launch
@@ -179,7 +179,7 @@ fun InternetDownloadScreen(
             }
             if (!rpcReady) {
                 currentStep = DownloadStep.ERROR
-                errorMessage = "Node didn't respond — check logs"
+                errorMessage = "Node didn't respond. check logs"
                 isRunning = false
                 return@launch
             }
@@ -297,6 +297,14 @@ fun InternetDownloadScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Note: This path sets up an on-chain node only. Lightning support " +
+                                "requires block filters (~13 GB) which can be added later by copying " +
+                                "from your home node via SSH.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFF9800).copy(alpha = 0.8f)
+                            )
                         }
                     }
 
@@ -331,7 +339,7 @@ fun InternetDownloadScreen(
                             if (safetyExpanded) {
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    "This download is trustless — you don't need to trust the server.",
+                                    "This download is trustless. you don't need to trust the server.",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Medium,
                                     color = Color(0xFF4CAF50)
@@ -361,7 +369,7 @@ fun InternetDownloadScreen(
                                     "The source (utxo.download) is a well-known public snapshot " +
                                     "host used by the Bitcoin community. But even if you downloaded " +
                                     "from an untrusted source, the cryptographic verification means " +
-                                    "you'd get the same result — bad data is always rejected.",
+                                    "you'd get the same result. bad data is always rejected.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
@@ -493,7 +501,7 @@ fun InternetDownloadScreen(
                         Text("Retry")
                     }
                 }
-                else -> {} // In progress — no button
+                else -> {} // In progress. no button
             }
         }
     }
