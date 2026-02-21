@@ -55,14 +55,14 @@
 
 ## Phase 6: Polish & Release
 
-- [ ] Onboarding flow
+- [x] Onboarding flow (SetupChecklistScreen with auto-detection)
 - [ ] Storage management (prune depth configuration)
 - [ ] Peer management UI
-- [ ] Mempool viewer
-- [ ] Config mode / Run mode UX refinement
+- [x] Mempool viewer (fee estimates, projected blocks, transaction search)
+- [x] Config mode / Run mode UX refinement (setup checklist vs dashboard)
 - [ ] Beta testing on multiple Pixel devices
 - [ ] F-Droid / APK distribution (no Google Play)
-- [ ] Auto-restart detection in foreground service
+- [x] Auto-restart detection in foreground service (orphan bitcoind attach via RPC)
 - [ ] Clean up old snapshot files on Umbrel
 
 ## Technical Risks (Resolved)
