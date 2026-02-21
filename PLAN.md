@@ -67,13 +67,13 @@
 
 ## Technical Risks (Resolved)
 
-1. ~~**bitcoind ARM64 compilation**~~ ✅ Works with NDK r27 clang wrappers
-2. ~~**Android background process limits**~~ ✅ Foreground service handles it
-3. ~~**Storage**~~ ✅ 9 GB snapshot + 2 GB pruned chain: clear UX about requirements
-4. ~~**RAM**~~ ✅ `dbcache=256` fine on Pixel 7 Pro (12 GB RAM)
-5. ~~**Thermal throttling**~~ ✅ Phone stays cool during loadtxoutset and sync
-6. ~~**GrapheneOS W^X**~~ ✅ `nativeLibraryDir` is the only executable path
-7. ~~**Cleartext HTTP on Android**~~ ✅ `network_security_config.xml` for localhost RPC
+- [x] **bitcoind ARM64 compilation**: Works with NDK r27 clang wrappers
+- [x] **Android background process limits**: Foreground service handles it
+- [x] **Storage**: 9 GB snapshot + 2 GB pruned chain, clear UX about requirements
+- [x] **RAM**: `dbcache=256` fine on Pixel 7 Pro (12 GB RAM)
+- [x] **Thermal throttling**: Phone stays cool during loadtxoutset and sync
+- [x] **GrapheneOS W^X**: `nativeLibraryDir` is the only executable path
+- [x] **Cleartext HTTP on Android**: `network_security_config.xml` for localhost RPC
 
 ## Infrastructure
 
