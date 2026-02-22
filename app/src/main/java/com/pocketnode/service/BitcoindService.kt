@@ -188,10 +188,13 @@ class BitcoindService : Service() {
             )
 
             // BIP 110 signaling: pass flag when enabled and running Knots
+            // Also bump maxconnections to 8 (reference implementation default) because
+            // peer filtering caps non-BIP110 peers at 2, which starves a 4-connection node
             val selectedVersion = BinaryExtractor.getSelectedVersion(this)
             if (selectedVersion == BinaryExtractor.BitcoinVersion.KNOTS &&
                 BinaryExtractor.isSignalBip110(this)) {
                 args.add("-signalbip110=1")
+                args.add("-maxconnections=8")
             }
 
             val pb = ProcessBuilder(args)
