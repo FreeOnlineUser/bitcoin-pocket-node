@@ -1,129 +1,94 @@
-# Watchtower Mesh Design
+# Watchtower: Home Node Protection
 
 ## Concept
 
-A backend watchtower service that works transparently behind Zeus or any Lightning wallet. Not a wallet replacement. The goal is to make existing technology accessible without requiring users to understand it or other developers to change their code.
+Your home node watches your phone's Lightning channels. When the phone is offline (sleeping, traveling, no signal), the home node detects breach attempts and broadcasts justice transactions on your behalf.
 
-Watchtowers are infrastructure, not UX. They run silently and protect channels regardless of what wallet the user prefers.
+No mesh. No discovery protocol. No new infrastructure. Just your existing home node doing one more job.
 
-## The Gap Being Filled
+## What Exists Today
 
-Reliable, decentralized watchtower discovery and peering. Right now watchtower setup is manual and requires technical knowledge. No good solution exists for automatic discovery of trustworthy towers without a central registry.
+LND ships with a complete watchtower implementation:
 
-## What Exists Today (No Code Changes Required)
+- **Server** (`watchtower.active=1`): watches channels for other nodes
+- **Client** (`wtclient.active=1`): sends channel state to a watchtower
 
-LND already has a fully functional wtserver and wtclient built in. The wtclient connects to towers via URI: `pubkey@host:port`. No wallet or node software changes needed. The technology exists, it just needs a discovery and automation layer.
+The phone already pairs with the home node via SSH during setup. The watchtower feature piggybacks on that existing relationship.
 
-LND RPC calls available today:
+## How It Works
 
-- `WatchtowerClient.AddTower`
-- `WatchtowerClient.GetTowerInfo`
-- `WatchtowerClient.ListTowers`
-- `WatchtowerClient.DeactivateTower`
+During the existing admin SSH setup (NodeSetupManager), one additional step:
 
-## Why Not a Central Registry
+1. Add `watchtower.active=1` to the home node's `lnd.conf`
+2. Restart LND on the home node
+3. Read the tower URI from `lncli tower info` (pubkey + .onion address)
+4. On the phone, call `wtclient add <tower-uri>`
 
-Central registries create single points of failure and control. The mesh should grow organically with no entity able to censor or control tower discovery.
+Done. Home node watches the phone's channels. No ongoing configuration needed.
 
-## Discovery Layer: Nostr
+## Reachability
 
-Nostr provides decentralized publish/subscribe with no infrastructure to run. Relays are free and abundant. Every event is signed by the publisher, giving basic authenticity for free.
+The home node's watchtower listens on port 9911. The phone needs to reach it:
 
-Tower announcement event structure:
+| Location | How it works |
+|---|---|
+| Home WiFi | Direct LAN connection (e.g. 10.0.1.127:9911) |
+| Away from home | Tor .onion address (Umbrel already runs Tor) |
 
-```json
-{
-  "kind": 38333,
-  "content": "",
-  "tags": [
-    ["d", "<tower-pubkey>"],
-    ["uri", "pubkey@host:9911"],
-    ["network", "mainnet"],
-    ["app", "bitcoin-pocket-node"],
-    ["role", "server"]
-  ]
-}
+Umbrel nodes already expose LND services via Tor hidden services. The tower's .onion address is typically available without additional configuration.
+
+## Implementation
+
+### Changes to Existing Code
+
+**NodeSetupManager.kt** (during admin SSH setup):
+- Detect if home node runs LND
+- Add `watchtower.active=1` to lnd.conf if not already present
+- Restart LND
+- Read tower info and save URI to SharedPreferences
+
+**New: WatchtowerManager.kt** (in `snapshot/` package):
+- On Lightning setup completion, add home node tower via LND wtclient API
+- Store tower URI in SharedPreferences
+- Dashboard status: "Protected by home node" or "No watchtower configured"
+
+**NodeStatusScreen.kt** (dashboard):
+- Watchtower status row showing protection state
+
+**ConnectWalletScreen.kt** (Zeus setup guide):
+- Note that watchtower protection is automatic when Lightning is set up via home node
+
+### LND API Calls
+
+All available via LND REST API on the home node:
+
 ```
+# Get tower info (server side, during setup)
+GET /v2/tower/info
+→ { "pubkey": "02f1...", "uris": ["02f1...@abc.onion:9911"] }
 
-Phones query for `role=server` events and add those towers via `wtclient add`. Desktop/home nodes publish `role=server` and optionally also act as clients.
+# Add tower (client side, on phone)
+POST /v2/watchtower/client
+{ "pubkey": "02f1...", "address": "abc.onion:9911" }
 
-Stale events (no refresh in 24h) are treated as dead. NIP-40 expiration tags handle this cleanly.
-
-## The Ephemeral Address Problem
-
-Phone IPs change on every reconnect. Even Tor .onion addresses are ephemeral unless the private key is persisted. This is why phones should not be watchtower servers.
-
-## Role Separation (Honest MVP)
-
-| Device | Role | Rationale |
-|---|---|---|
-| Phone | wtclient only | I need watching |
-| Home node | wtserver | I will watch you |
-| Desktop | wtserver | I will watch you (future) |
-
-This matches the actual reliability profile. A phone that is asleep or offline cannot respond to a breach. Always-on nodes can.
-
-The mesh becomes phones protected by desktops and home nodes, which is exactly the right reliability model.
-
-Persistent .onion addresses (`--tor.privatekeypath` in LND) are appropriate for always-on nodes that publish tower URIs. Phones do not need persistent addresses because they are clients only.
-
-## Peer Selection Criteria
-
-Borrow directly from Bitcoin Core's peer selection logic:
-
-- Diverse IP ranges (avoid multiple towers on same /16 subnet)
-- Geographic distribution inferred from IP
-- Uptime scoring (analogous to Core's peer eviction logic)
-- Ban scoring for repeatedly failing towers
-- Rotate stale/dead towers out periodically
-
-Apply this scoring at the discovery layer. Clients receive a diverse set of tower URIs, not just the first ones found.
-
-Health check is simple: attempt a session handshake on port 9911. If it responds correctly the tower is alive. No custom protocol needed.
-
-## MVP Flow
-
-1. Phone pairs with home node (SSH, already exists in app)
-2. During pairing, wtserver enabled on home node (one config line via ConfigGenerator)
-3. Home node publishes its tower URI to Nostr
-4. WatchtowerManager.kt adds home node as primary tower automatically
-5. Phone also queries Nostr for other `role=server` nodes as backup towers
-6. Desktop port later becomes first-class tower server publishing to same mesh
-
-Real watchtower protection on day one using infrastructure the user already owns. Mesh provides organic redundancy on top.
-
-## Android Architecture
-
-`WatchtowerManager.kt` sits alongside `BlockFilterManager.kt` in the `snapshot/` package.
-
-Responsibilities:
-- Query Nostr relays for `role=server` tower announcements
-- Apply diversity/health scoring to candidate towers
-- Call LND wtclient gRPC to add/remove towers
-- Periodic background health checks via WorkManager
-- Rotate dead towers out automatically
-
-`ConfigGenerator.kt` already handles bitcoin.conf generation. Same pattern adds wtserver config lines to lnd.conf on the home node during pairing.
-
-`BitcoinRpcClient.kt` pattern is reused for LND gRPC calls to wtclient endpoints.
-
-## Future: Desktop Port
-
-Desktop/home nodes running Pocket Node become first-class watchtower servers. They publish to the same Nostr mesh. The phone app discovers them the same way it discovers any other tower. No protocol changes needed.
-
-The desktop port is the natural next milestone after MVP. It densifies the mesh and gives always-on reliability to users who run home nodes.
+# List towers (for dashboard status)
+GET /v2/watchtower/client
+→ { "towers": [...] }
+```
 
 ## What Is NOT Being Built
 
-- Wallet UI
-- Payment flows
-- Channel management
-- Central registry or server
-- Custom P2P protocol
-- Any changes to Zeus, LND, or Bitcoin Core
+- Mesh discovery
+- Nostr integration
+- Go daemon
+- WireGuard provisioning
+- CLN support
+- Custom protocol
 
-This is glue, not a new protocol. The technology exists. The missing piece is making it work without user intervention.
+This is one config line on the home node and one API call on the phone.
 
-## Peer Selection Analogy
+## Future
 
-This is to watchtowers what DNS is to IP addresses. The underlying technology existed. Someone made it not require a computer science degree to use.
+If the user base grows and there's demand for mesh redundancy (multiple watchtowers from other users), Nostr-based discovery can be added later as a separate feature. The home node watchtower remains the primary, mesh peers become optional backups.
+
+But that's a future decision, not a current one.

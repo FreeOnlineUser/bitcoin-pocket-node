@@ -113,28 +113,18 @@ As network matures, users open channels to arbitrary peers beyond Olympus. No ne
 - [ ] LAN exposure toggle for Zeus on separate device (same network)
 - [ ] Documentation for opening peer channels
 
-### Lightning Phase 3: Watchtower Mesh
-Phones watch each other's Lightning channels. Uses LND's built-in watchtower (server + client), which ships today. The only new code is auto-discovery and app integration.
+### Lightning Phase 3: Home Node Watchtower
+Your home node watches your phone's Lightning channels when the phone is offline. Uses LND's built-in watchtower, enabled during the existing SSH setup step.
 
-See [Watchtower Mesh Design](docs/WATCHTOWER-MESH.md) for the full design document.
-
-**Core idea:** Every Pocket Node phone runs as both watchtower server and client. A lightweight discovery service (Nostr relay) lets phones find each other. Zero configuration for the user.
-
-**What's already built (LND):**
-- `watchtower.active=1` enables server mode
-- `wtclient.active=1` enables client mode
-- `lncli wtclient add <pubkey@host>` adds peers
-- Encrypted blob storage (server learns nothing about channel details)
-- ~256 bytes per channel state update per peer
+See [Watchtower Design](docs/WATCHTOWER-MESH.md) for details.
 
 **What we build:**
-- [ ] Zeus watchtower config support (feature request or direct config injection)
-- [ ] Nostr-based peer discovery (publish/fetch watchtower URIs via relay)
-- [ ] WatchtowerManager.kt: auto-enable, auto-discover, auto-add peers
-- [ ] Dashboard card: "Watching N peers / Watched by N peers"
-- [ ] Client-only mode without Tor (full mesh requires Tor for reachability)
+- [ ] Enable `watchtower.active=1` on home node during admin SSH setup
+- [ ] Read tower URI and save to SharedPreferences
+- [ ] Add home node as wtclient tower on phone after Lightning setup
+- [ ] Dashboard status row: "Protected by home node"
 
-**Estimated effort:** 2-3 weeks for MVP (client-only, Nostr discovery, dashboard card).
+**Estimated effort:** 1 week. One config line on the home node, one API call on the phone.
 
 ### Lightning Phase 4: LDK Migration
 Replace Zeus embedded LND with LDK (Lightning Dev Kit): modular Lightning library with native Android bindings. Designed for mobile (constrained storage, intermittent connectivity).

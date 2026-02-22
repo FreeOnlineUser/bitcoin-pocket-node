@@ -292,7 +292,7 @@ app/src/main/java/com/pocketnode/
 ## Roadmap
 
 - **Desktop port:** Same app on Linux, macOS, Windows via Compose Multiplatform. Same UI, same chainstate copy, same version selection. See [design doc](docs/DESKTOP-PORT.md).
-- **Watchtower mesh:** Phones automatically watch each other's Lightning channels using LND's built-in watchtower with Nostr-based discovery. See [design doc](docs/WATCHTOWER-MESH.md).
+- **Home node watchtower:** Your home node watches your phone's Lightning channels when you're away. Enabled automatically during setup. See [design doc](docs/WATCHTOWER-MESH.md).
 - **Policy settings:** Expose Knots datacarrier flags as toggleable settings.
 - **LDK migration:** Replace Zeus embedded LND with LDK for native Lightning.
 
