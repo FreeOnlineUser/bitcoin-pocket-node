@@ -31,9 +31,9 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 
 **Choose your implementation**
 
-| Version picker |
-|:---:|
-| ![Choose Bitcoin implementation](docs/images/09-version-picker.jpg) |
+| Version picker | Zeus setup guide |
+|:---:|:---:|
+| ![Choose Bitcoin implementation](docs/images/09-version-picker.jpg) | ![Zeus setup guide with version warning](docs/images/10-zeus-setup-guide.jpg) |
 
 ## How It Works
 
