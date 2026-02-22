@@ -20,12 +20,16 @@ object BinaryExtractor {
     private const val TAG = "BinaryExtractor"
     private const val PREFS_NAME = "pocketnode_prefs"
     private const val KEY_BITCOIN_VERSION = "bitcoin_version"
+    private const val KEY_SIGNAL_BIP110 = "signal_bip110"
 
     /**
      * Available Bitcoin implementations.
      *
      * Each entry maps to a pre-compiled ARM64 binary in jniLibs/.
      * Not all versions may be bundled yet -- check isAvailable() before use.
+     *
+     * Knots includes BIP 110 consensus code (always compiled in, BIP9-gated).
+     * Signaling is controlled separately via the signalbip110 toggle.
      */
     enum class BitcoinVersion(
         val libraryName: String,
@@ -52,15 +56,8 @@ object BinaryExtractor {
             "libbitcoind_knots.so",
             "Bitcoin Knots",
             "29.3",
-            "Alternative implementation by Luke Dashjr. Stricter transaction filtering and relay policy.",
+            "Alternative implementation by Luke Dashjr. Stricter transaction filtering and relay policy. Includes BIP 110 consensus code (enable signaling in settings).",
             "Restrictive -- filters non-standard transactions"
-        ),
-        KNOTS_BIP110(
-            "libbitcoind_knots_bip110.so",
-            "Bitcoin Knots (BIP 110)",
-            "29.x",
-            "Knots with BIP 110 consensus enforcement. Temporarily limits arbitrary data at the consensus level. Signals version bit 4 for activation.",
-            "Enforcement -- consensus-level data restrictions + miner signaling"
         );
 
         companion object {
@@ -68,6 +65,8 @@ object BinaryExtractor {
 
             fun fromName(name: String): BitcoinVersion {
                 return try {
+                    // Handle legacy KNOTS_BIP110 selection: map to KNOTS
+                    if (name == "KNOTS_BIP110") return KNOTS
                     valueOf(name)
                 } catch (_: IllegalArgumentException) {
                     DEFAULT
@@ -114,6 +113,26 @@ object BinaryExtractor {
             .putString(KEY_BITCOIN_VERSION, version.name)
             .apply()
         Log.i(TAG, "Selected Bitcoin version: ${version.displayName} ${version.versionString}")
+    }
+
+    /**
+     * Get BIP 110 signaling preference.
+     * Only relevant when running Knots (the consensus code is always compiled in).
+     */
+    fun isSignalBip110(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_SIGNAL_BIP110, false)
+    }
+
+    /**
+     * Set BIP 110 signaling preference.
+     */
+    fun setSignalBip110(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_SIGNAL_BIP110, enabled)
+            .apply()
+        Log.i(TAG, "BIP 110 signaling: ${if (enabled) "enabled" else "disabled"}")
     }
 
     /**

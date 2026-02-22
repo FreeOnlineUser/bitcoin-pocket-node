@@ -6,6 +6,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -945,8 +947,10 @@ private fun ActionButtons(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                val isBip110Active = selectedVersion == com.pocketnode.util.BinaryExtractor.BitcoinVersion.KNOTS &&
+                    com.pocketnode.util.BinaryExtractor.isSignalBip110(versionContext)
                 Text(
-                    "${selectedVersion.displayName} ${selectedVersion.versionString}",
+                    "${selectedVersion.displayName} ${selectedVersion.versionString}${if (isBip110Active) " + BIP 110" else ""}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFFF9800)
                 )
@@ -960,6 +964,7 @@ private fun ActionButtons(
         }
 
         if (showVersionPicker) {
+            var signalBip110 by remember { mutableStateOf(com.pocketnode.util.BinaryExtractor.isSignalBip110(versionContext)) }
             AlertDialog(
                 onDismissRequest = { showVersionPicker = false },
                 title = { Text("Choose Implementation") },
@@ -1020,6 +1025,42 @@ private fun ActionButtons(
                                             Color(0xFFFF9800).copy(alpha = 0.8f)
                                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                     )
+                                    // BIP 110 toggle: only visible when Knots is selected
+                                    if (version == com.pocketnode.util.BinaryExtractor.BitcoinVersion.KNOTS && isSelected) {
+                                        Spacer(Modifier.height(6.dp))
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    "Signal BIP 110",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    "Version bit 4 signaling + peer preference for reduced data carriers. Requires restart.",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                )
+                                            }
+                                            Switch(
+                                                checked = signalBip110,
+                                                onCheckedChange = { enabled ->
+                                                    signalBip110 = enabled
+                                                    com.pocketnode.util.BinaryExtractor.setSignalBip110(versionContext, enabled)
+                                                },
+                                                colors = SwitchDefaults.colors(
+                                                    checkedThumbColor = Color(0xFFF7931A),
+                                                    checkedTrackColor = Color(0xFFF7931A).copy(alpha = 0.3f)
+                                                )
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

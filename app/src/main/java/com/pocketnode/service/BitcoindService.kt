@@ -187,6 +187,13 @@ class BitcoindService : Service() {
                 "-conf=${dataDir.resolve("bitcoin.conf").absolutePath}"
             )
 
+            // BIP 110 signaling: pass flag when enabled and running Knots
+            val selectedVersion = BinaryExtractor.getSelectedVersion(this)
+            if (selectedVersion == BinaryExtractor.BitcoinVersion.KNOTS &&
+                BinaryExtractor.isSignalBip110(this)) {
+                args.add("-signalbip110=1")
+            }
+
             val pb = ProcessBuilder(args)
             pb.directory(dataDir)
             pb.environment()["LD_LIBRARY_PATH"] = nativeLibDir
