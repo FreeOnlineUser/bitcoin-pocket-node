@@ -1025,8 +1025,8 @@ private fun ActionButtons(
                                             Color(0xFFFF9800).copy(alpha = 0.8f)
                                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                     )
-                                    // BIP 110 toggle: only visible when Knots is selected
-                                    if (version == com.pocketnode.util.BinaryExtractor.BitcoinVersion.KNOTS && isSelected) {
+                                    // BIP 110 toggle: visible on Knots card, greyed out unless selected
+                                    if (version == com.pocketnode.util.BinaryExtractor.BitcoinVersion.KNOTS) {
                                         Spacer(Modifier.height(6.dp))
                                         HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                                         Row(
@@ -1053,6 +1053,7 @@ private fun ActionButtons(
                                                 onCheckedChange = { enabled ->
                                                     pendingBip110Toggle = enabled
                                                 },
+                                                enabled = isSelected,
                                                 colors = SwitchDefaults.colors(
                                                     checkedThumbColor = Color(0xFFF7931A),
                                                     checkedTrackColor = Color(0xFFF7931A).copy(alpha = 0.3f)
