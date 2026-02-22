@@ -1,5 +1,8 @@
 package com.pocketnode.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,7 +12,10 @@ import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Tag
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -122,6 +128,11 @@ fun ConnectWalletScreen(onBack: () -> Unit) {
                         )
                     }
                 }
+            }
+
+            // Zeus setup guide (only when Lightning is available)
+            if (hasFilters) {
+                ZeusSetupGuideCard()
             }
 
             // Electrum Server card
@@ -423,6 +434,165 @@ fun ConnectWalletScreen(onBack: () -> Unit) {
                 TextButton(onClick = { showAddAddress = false }) { Text("Cancel") }
             }
         )
+    }
+}
+
+/**
+ * Expandable card walking users through Zeus setup step by step.
+ * Includes version warning (v0.12.3+ has a SQLite bug that stalls sync)
+ * and the non-obvious restart/wait/settings dance required by Zeus.
+ */
+@Composable
+private fun ZeusSetupGuideCard() {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFB300).copy(alpha = 0.10f)
+        ),
+        onClick = { expanded = !expanded }
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "⚡ Zeus Setup Guide",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
+
+            if (!expanded) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Tap for step-by-step Lightning wallet setup",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Version warning
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                Icons.Outlined.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    "Install Zeus v0.12.2 only",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Text(
+                                    "v0.12.3 and newer have a SQLite bug that stalls chain sync at block 123,000. Download v0.12.2 from Zeus GitHub releases.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+
+                    // Setup steps
+                    ZeusStep(1, "Install Zeus v0.12.2",
+                        "Download from GitHub releases: github.com/ZeusLN/zeus/releases/tag/v0.12.2")
+                    ZeusStep(2, "Create embedded LND",
+                        "Open Zeus and select \"Create embedded LND\" to set up a new Lightning wallet.")
+                    ZeusStep(3, "Wait for initial sync",
+                        "Zeus shows a boot animation for about 15 minutes while it syncs block headers. This is normal. Do not change any settings yet.")
+                    ZeusStep(4, "Restart Zeus",
+                        "Close and reopen the app after the boot animation finishes.")
+                    ZeusStep(5, "Wait for warning icon",
+                        "A warning icon (⚠️) appears at the top of the screen. This means Zeus is ready to configure.")
+                    ZeusStep(6, "Open node settings",
+                        "Tap the warning icon to open node settings.")
+                    ZeusStep(7, "Find Neutrino Peers",
+                        "Navigate to: Embedded node → Peers → Neutrino Peers")
+                    ZeusStep(8, "Remove default peers",
+                        "Delete ALL default Neutrino peers from the list.")
+                    ZeusStep(9, "Add localhost",
+                        "Add 127.0.0.1 as the only Neutrino peer. This connects Zeus to your local Bitcoin node.")
+                    ZeusStep(10, "Restart Zeus again",
+                        "Close and reopen Zeus. It connects to your local node and the wallet appears.")
+                    ZeusStep(11, "Verify connection",
+                        "Settings → Embedded node → Peers → Neutrino Peers should show 127.0.0.1 as the only peer.")
+
+                    // Success note
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Once connected, Zeus uses your node's block filters for fully sovereign chain validation. No external servers involved.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ZeusStep(number: Int, title: String, description: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Step number badge
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = Color(0xFFF7931A).copy(alpha = 0.2f),
+            modifier = Modifier.size(24.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    "$number",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFF7931A)
+                )
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
     }
 }
 
