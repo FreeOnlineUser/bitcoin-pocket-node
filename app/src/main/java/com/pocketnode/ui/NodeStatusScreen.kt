@@ -928,6 +928,8 @@ private fun ActionButtons(
         var selectedVersion by remember { mutableStateOf(com.pocketnode.util.BinaryExtractor.getSelectedVersion(versionContext)) }
         var showVersionPicker by remember { mutableStateOf(false) }
         var pendingVersion by remember { mutableStateOf<com.pocketnode.util.BinaryExtractor.BitcoinVersion?>(null) }
+        var pendingBip110Toggle by remember { mutableStateOf<Boolean?>(null) }
+        var signalBip110 by remember { mutableStateOf(com.pocketnode.util.BinaryExtractor.isSignalBip110(versionContext)) }
         val availableVersions = remember { com.pocketnode.util.BinaryExtractor.availableVersions(versionContext) }
         val allVersions = com.pocketnode.util.BinaryExtractor.BitcoinVersion.entries
 
@@ -947,8 +949,7 @@ private fun ActionButtons(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                val isBip110Active = selectedVersion == com.pocketnode.util.BinaryExtractor.BitcoinVersion.KNOTS &&
-                    com.pocketnode.util.BinaryExtractor.isSignalBip110(versionContext)
+                val isBip110Active = selectedVersion == com.pocketnode.util.BinaryExtractor.BitcoinVersion.KNOTS && signalBip110
                 Text(
                     "${selectedVersion.displayName} ${selectedVersion.versionString}${if (isBip110Active) " + BIP 110" else ""}",
                     style = MaterialTheme.typography.bodySmall,
@@ -964,7 +965,6 @@ private fun ActionButtons(
         }
 
         if (showVersionPicker) {
-            var signalBip110 by remember { mutableStateOf(com.pocketnode.util.BinaryExtractor.isSignalBip110(versionContext)) }
             AlertDialog(
                 onDismissRequest = { showVersionPicker = false },
                 title = { Text("Choose Implementation") },
@@ -1051,8 +1051,7 @@ private fun ActionButtons(
                                             Switch(
                                                 checked = signalBip110,
                                                 onCheckedChange = { enabled ->
-                                                    signalBip110 = enabled
-                                                    com.pocketnode.util.BinaryExtractor.setSignalBip110(versionContext, enabled)
+                                                    pendingBip110Toggle = enabled
                                                 },
                                                 colors = SwitchDefaults.colors(
                                                     checkedThumbColor = Color(0xFFF7931A),
@@ -1147,6 +1146,70 @@ private fun ActionButtons(
                 },
                 dismissButton = {
                     TextButton(onClick = { pendingVersion = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // BIP 110 toggle restart confirmation
+        pendingBip110Toggle?.let { enabled ->
+            AlertDialog(
+                onDismissRequest = { pendingBip110Toggle = null },
+                title = { Text(if (enabled) "Enable BIP 110 Signaling?" else "Disable BIP 110 Signaling?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            if (enabled)
+                                "Your node will signal support for BIP 110 (version bit 4) and prefer peers that also signal."
+                            else
+                                "Your node will stop signaling BIP 110 and connect to all peers equally.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        if (isRunning) {
+                            Text(
+                                "Your node will be stopped and restarted to apply this change.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFF9800)
+                            )
+                        } else {
+                            Text(
+                                "The change will take effect next time you start the node.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        com.pocketnode.util.BinaryExtractor.setSignalBip110(versionContext, enabled)
+                        signalBip110 = enabled
+                        pendingBip110Toggle = null
+                        showVersionPicker = false
+                        // Restart if running
+                        if (isRunning) {
+                            val intent = android.content.Intent(versionContext, com.pocketnode.service.BitcoindService::class.java)
+                            versionContext.stopService(intent)
+                            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                            val ctx = versionContext
+                            fun pollAndRestart() {
+                                handler.postDelayed({
+                                    if (!isRunning) {
+                                        ctx.startForegroundService(intent)
+                                    } else {
+                                        pollAndRestart()
+                                    }
+                                }, 1000)
+                            }
+                            pollAndRestart()
+                        }
+                    }) {
+                        Text(if (enabled) "Enable" else "Disable", color = Color(0xFFF7931A))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingBip110Toggle = null }) {
                         Text("Cancel")
                     }
                 }
