@@ -123,6 +123,7 @@ class PowerModeManager private constructor(private val context: Context) {
     private var walletHoldingNetwork = false
     // channelHoldingNetwork is on companion — see below
     private var walletIndicatorJob: Job? = null
+    private var networkHoldCount = 0
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     init {
@@ -542,42 +543,60 @@ class PowerModeManager private constructor(private val context: Context) {
      * Hold network active temporarily (e.g. for channel opens).
      * Pauses burst cycling. Call releaseNetworkHold() when done.
      */
+    /**
+     * Hold network active. Reference-counted: multiple callers can hold,
+     * network stays active until ALL release.
+     */
     fun holdNetwork() {
         val mode = _modeFlow.value
         if (mode == Mode.MAX) return  // Already connected
-        if (channelHoldingNetwork) return
 
-        channelHoldingNetwork = true
-        _channelHoldFlow.value = true
-        Log.i(TAG, "Channel open — holding network active")
+        synchronized(this) {
+            networkHoldCount++
+            Log.i(TAG, "Network hold acquired (count=$networkHoldCount)")
+            if (networkHoldCount == 1) {
+                // First hold — activate network
+                channelHoldingNetwork = true
+                _channelHoldFlow.value = true
 
-        burstJob?.cancel()
-        burstJob = null
-        _burstStateFlow.value = BurstState.IDLE
-        _nextBurstFlow.value = 0L
+                burstJob?.cancel()
+                burstJob = null
+                _burstStateFlow.value = BurstState.IDLE
+                _nextBurstFlow.value = 0L
 
-        val scope = activeScope ?: return
-        scope.launch(Dispatchers.IO) {
-            setNetworkActive(rpc ?: return@launch, true)
+                val scope = activeScope ?: return
+                scope.launch(Dispatchers.IO) {
+                    setNetworkActive(rpc ?: return@launch, true)
+                }
+            }
         }
     }
 
-    /** Release the network hold and resume burst cycling. */
+    /** Release one network hold. Network released only when all holds are released. */
     fun releaseNetworkHold() {
-        if (!channelHoldingNetwork) return
-        channelHoldingNetwork = false
-        _channelHoldFlow.value = false
+        synchronized(this) {
+            if (networkHoldCount <= 0) return
+            networkHoldCount--
+            Log.i(TAG, "Network hold released (count=$networkHoldCount)")
+            if (networkHoldCount > 0) return  // Other holders still active
+
+            channelHoldingNetwork = false
+            _channelHoldFlow.value = false
+        }
 
         val mode = _modeFlow.value
         if (mode == Mode.MAX) return
 
-        Log.i(TAG, "Channel open done — resuming burst cycle")
+        Log.i(TAG, "All network holds released — resuming burst cycle")
 
         val scope = activeScope ?: return
         scope.launch(Dispatchers.IO) {
             applyMode(mode)
         }
     }
+
+    /** Current network hold count (for testing) */
+    fun getNetworkHoldCount(): Int = synchronized(this) { networkHoldCount }
 
     /** Clean up when service stops */
     fun stop() {
