@@ -9,6 +9,7 @@ import org.junit.Test
  *
  * These test the pure logic without Android context by verifying
  * the companion object state flows directly.
+ * PowerModeManager uses singleton pattern via getInstance(context).
  */
 class PowerModeManagerTest {
 

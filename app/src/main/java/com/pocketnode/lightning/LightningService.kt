@@ -1138,7 +1138,7 @@ class LightningService(private val context: Context) {
         val n = node ?: return Result.failure(Exception("Node not running"))
 
         // Temporarily enable network if not in Max mode
-        val pmm = com.pocketnode.power.PowerModeManager(context)
+        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
         val needsNetworkHold = com.pocketnode.power.PowerModeManager.modeFlow.value != com.pocketnode.power.PowerModeManager.Mode.MAX
         if (needsNetworkHold) {
             pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(
@@ -1261,7 +1261,7 @@ class LightningService(private val context: Context) {
     fun payInvoice(invoiceStr: String): Result<String> {
         val n = node ?: return Result.failure(Exception("Node not running"))
         // Hold network for payment routing
-        val pmm = com.pocketnode.power.PowerModeManager(context)
+        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
         val needsHold = com.pocketnode.power.PowerModeManager.modeFlow.value != com.pocketnode.power.PowerModeManager.Mode.MAX
         if (needsHold) {
             val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
@@ -1353,7 +1353,7 @@ class LightningService(private val context: Context) {
 
     fun payOffer(offerStr: String, amountMsat: Long? = null): Result<String> {
         val n = node ?: return Result.failure(Exception("Node not running"))
-        val pmm = com.pocketnode.power.PowerModeManager(context)
+        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
         val needsHold = com.pocketnode.power.PowerModeManager.modeFlow.value != com.pocketnode.power.PowerModeManager.Mode.MAX
         if (needsHold) {
             val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)

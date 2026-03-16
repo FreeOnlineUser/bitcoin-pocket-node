@@ -53,7 +53,7 @@ fun ReceivePaymentScreen(
     // Hold network while waiting for payment, release on unmount
     DisposableEffect(waiting) {
         if (waiting && PowerModeManager.modeFlow.value != PowerModeManager.Mode.MAX) {
-            val pmm = PowerModeManager(context)
+            val pmm = PowerModeManager.getInstance(context)
             val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
             if (creds != null) pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))
             pmm.holdNetwork()

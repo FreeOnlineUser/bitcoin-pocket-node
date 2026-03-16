@@ -580,7 +580,7 @@ fun LightningScreen(
                                                     closing = true
                                                     closeError = null
                                                     scope.launch {
-                                                        val pmm = com.pocketnode.power.PowerModeManager(context)
+                                                        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
                                                         val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
                                                         if (creds != null) {
                                                             pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))

@@ -46,7 +46,7 @@ fun SendPaymentScreen(
     // Hold network open while on this screen (peer connects while user reviews invoice)
     val networkHeld = remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
-        val pmm = com.pocketnode.power.PowerModeManager(context)
+        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
         val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
         if (creds != null) {
             pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))

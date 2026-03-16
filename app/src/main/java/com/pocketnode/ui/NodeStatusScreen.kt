@@ -307,10 +307,10 @@ fun NodeStatusScreen(
 
                     // Force Max mode during initial block download
                     if (ibd && !PowerModeManager.initialSyncHoldFlow.value) {
-                        PowerModeManager(context).startInitialSyncHold(this, rpc)
+                        PowerModeManager.getInstance(context).startInitialSyncHold(this, rpc)
                     } else if (!ibd && PowerModeManager.initialSyncHoldFlow.value) {
                         android.util.Log.i("NodeStatusScreen", "IBD complete, restoring previous power mode")
-                        val pmm = PowerModeManager(context)
+                        val pmm = PowerModeManager.getInstance(context)
                         pmm.endInitialSyncHold(this)
                     }
 

@@ -26,7 +26,7 @@ fun FeeEstimatePanel() {
     DisposableEffect(Unit) {
         onDispose {
             if (syncingFees) {
-                com.pocketnode.power.PowerModeManager(context).releaseNetworkHold()
+                com.pocketnode.power.PowerModeManager.getInstance(context).releaseNetworkHold()
             }
         }
     }
@@ -48,7 +48,7 @@ fun FeeEstimatePanel() {
                 // Release network hold once we have fee data
                 if (syncingFees && (nextBlockFee != null || thirtyMinFee != null || oneHourFee != null)) {
                     syncingFees = false
-                    com.pocketnode.power.PowerModeManager(context).releaseNetworkHold()
+                    com.pocketnode.power.PowerModeManager.getInstance(context).releaseNetworkHold()
                 }
             } catch (_: Exception) {}
             delay(30_000)
@@ -77,7 +77,7 @@ fun FeeEstimatePanel() {
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
                         syncingFees = true
-                        val pmm = com.pocketnode.power.PowerModeManager(context)
+                        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
                         if (creds != null) {
                             pmm.setRpc(BitcoinRpcClient(creds.first, creds.second))
                         }

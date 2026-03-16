@@ -86,7 +86,7 @@ fun OpenChannelScreen(
     DisposableEffect(Unit) {
         onDispose {
             if (syncingFees) {
-                PowerModeManager(context).releaseNetworkHold()
+                PowerModeManager.getInstance(context).releaseNetworkHold()
             }
         }
     }
@@ -301,7 +301,7 @@ fun OpenChannelScreen(
                     OutlinedButton(
                         onClick = {
                             syncingFees = true
-                            val pmm = PowerModeManager(context)
+                            val pmm = PowerModeManager.getInstance(context)
                             val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
                             if (creds != null) {
                                 pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))

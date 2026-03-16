@@ -165,7 +165,7 @@ class BitcoindService : Service() {
                             batteryMonitor = bm
                             activeBatteryMonitor = bm
                             startNotificationUpdater(testRpc)
-                            val pmm = PowerModeManager(this@BitcoindService)
+                            val pmm = PowerModeManager.getInstance(this@BitcoindService)
                             pmm.setRpc(testRpc)
                             pmm.setMode(PowerModeManager.modeFlow.value, serviceScope)
                             pmm.startAutoIfEnabled(monitor.networkState, bm.state, serviceScope)
@@ -247,7 +247,7 @@ class BitcoindService : Service() {
                 batteryMonitor = bm
                 activeBatteryMonitor = bm
                 startNotificationUpdater(rpc)
-                val pmm = PowerModeManager(this@BitcoindService)
+                val pmm = PowerModeManager.getInstance(this@BitcoindService)
                 pmm.setRpc(rpc)
                 pmm.setMode(PowerModeManager.modeFlow.value, serviceScope)
                 pmm.startAutoIfEnabled(monitor.networkState, bm.state, serviceScope)

@@ -198,7 +198,7 @@ fun SendOnchainScreen(
                         // Hold network on Low/Away
                         val needsHold = PowerModeManager.modeFlow.value != PowerModeManager.Mode.MAX
                         if (needsHold) {
-                            val pmm = PowerModeManager(context)
+                            val pmm = PowerModeManager.getInstance(context)
                             val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
                             if (creds != null) pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))
                             pmm.holdNetwork()
@@ -216,7 +216,7 @@ fun SendOnchainScreen(
                         if (needsHold) {
                             // Brief delay for tx propagation then release
                             kotlinx.coroutines.delay(5000)
-                            val pmm = PowerModeManager(context)
+                            val pmm = PowerModeManager.getInstance(context)
                             val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
                             if (creds != null) pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))
                             pmm.releaseNetworkHold()

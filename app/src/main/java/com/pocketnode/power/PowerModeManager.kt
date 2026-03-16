@@ -19,7 +19,7 @@ import org.json.JSONArray
  * Low: reduced peers, normal sync, default for daily carry
  * Away: periodic burst sync with long idle periods, minimal resource use
  */
-class PowerModeManager(private val context: Context) {
+class PowerModeManager private constructor(private val context: Context) {
 
     companion object {
         private const val TAG = "PowerModeManager"
@@ -84,6 +84,20 @@ class PowerModeManager(private val context: Context) {
 
         /** Single mutex shared across all PowerModeManager instances */
         val burstMutex = kotlinx.coroutines.sync.Mutex()
+
+        @Volatile
+        private var instance: PowerModeManager? = null
+
+        fun getInstance(context: Context): PowerModeManager {
+            return instance ?: synchronized(this) {
+                instance ?: PowerModeManager(context.applicationContext).also { instance = it }
+            }
+        }
+
+        /** @deprecated Use getInstance(context) instead */
+        @Suppress("unused")
+        @JvmStatic
+        fun create(context: Context): PowerModeManager = getInstance(context)
     }
 
     enum class Mode(val label: String, val emoji: String, val notificationLabel: String) {
