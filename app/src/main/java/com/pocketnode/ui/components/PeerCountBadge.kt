@@ -3,31 +3,21 @@ package com.pocketnode.ui.components
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pocketnode.lightning.LightningService
-import kotlinx.coroutines.delay
 
 /**
  * Subtle peer count for Lightning screen top bars.
- * Polls every 2 seconds for near-real-time updates.
+ * Uses stateFlow which updates every 10s from updateState().
  */
 @Composable
 fun PeerCountBadge(modifier: Modifier = Modifier) {
-    var peers by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            try {
-                val node = LightningService.nodeRef
-                if (node != null) {
-                    peers = node.listPeers().size
-                }
-            } catch (_: Exception) {}
-            delay(2000)
-        }
-    }
+    val lnState by LightningService.stateFlow.collectAsState()
+    val peers = lnState.peerCount
 
     Text(
         text = "$peers peer${if (peers != 1) "s" else ""}",

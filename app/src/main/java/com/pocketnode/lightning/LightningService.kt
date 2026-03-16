@@ -34,9 +34,6 @@ class LightningService(private val context: Context) {
         private val _state = MutableStateFlow(LightningState())
         val stateFlow: StateFlow<LightningState> = _state.asStateFlow()
 
-        /** Read-only node reference for lightweight queries (e.g. peer count) */
-        val nodeRef: org.lightningdevkit.ldknode.Node? get() = instance?.node
-
         private var instance: LightningService? = null
 
         fun getInstance(context: Context): LightningService {
