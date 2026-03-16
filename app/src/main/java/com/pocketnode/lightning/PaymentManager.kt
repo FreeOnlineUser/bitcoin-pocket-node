@@ -160,8 +160,9 @@ class PaymentManager(private val context: Context) {
             val amountMsat = invoice.amountMilliSatoshis()?.toLong() ?: 0L
             val config = routeConfig ?: defaultRouteConfig(amountMsat)
 
-            // Wire up graph for alias lookups and clear previous paths
+            // Wire up graph for alias lookups and clear ALL previous state
             tracker.networkGraph = n.networkGraph()
+            tracker.clear()
             tracker.startPayment("pending", amountMsat)
             n.clearPaymentPaths()
             lastSeenPathCount = 0

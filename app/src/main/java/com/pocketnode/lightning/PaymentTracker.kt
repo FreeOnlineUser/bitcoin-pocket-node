@@ -104,9 +104,15 @@ class PaymentTracker {
         return emptyList() // Placeholder — log parsing is fragile, use event-based approach below
     }
 
-    /** Archive a completed (failed/succeeded) attempt into history */
+    /** Archive a completed (failed/succeeded) attempt into history (deduplicated by hop path) */
     fun archiveAttempt(attempt: PaymentAttempt) {
-        _attempts.value = _attempts.value + attempt
+        val pathKey = attempt.hops.joinToString("→") { it.nodeId }
+        val existing = _attempts.value.any { a ->
+            a.hops.joinToString("→") { it.nodeId } == pathKey
+        }
+        if (!existing) {
+            _attempts.value = _attempts.value + attempt
+        }
     }
 
     fun onPaymentSucceeded(paymentId: String) {
