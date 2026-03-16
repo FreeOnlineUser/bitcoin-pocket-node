@@ -104,6 +104,11 @@ class PaymentTracker {
         return emptyList() // Placeholder — log parsing is fragile, use event-based approach below
     }
 
+    /** Archive a completed (failed/succeeded) attempt into history */
+    fun archiveAttempt(attempt: PaymentAttempt) {
+        _attempts.value = _attempts.value + attempt
+    }
+
     fun onPaymentSucceeded(paymentId: String) {
         val current = _currentAttempt.value ?: return
         if (current.paymentId != paymentId) return

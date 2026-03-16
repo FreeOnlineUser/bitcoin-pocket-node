@@ -164,6 +164,7 @@ class PaymentManager(private val context: Context) {
             tracker.networkGraph = n.networkGraph()
             tracker.startPayment("pending", amountMsat)
             n.clearPaymentPaths()
+            lastSeenPathCount = 0
 
             val paymentId = n.bolt11Payment().send(invoice, config)
             Log.i(TAG, "Payment queued: $paymentId (maxFee=${config.maxTotalRoutingFeeMsat}msat)")
@@ -363,6 +364,9 @@ class PaymentManager(private val context: Context) {
         return false
     }
 
+    /** Track which path attempts we've already processed */
+    private var lastSeenPathCount = 0
+
     /** Check LDK for real path data and update tracker if found. */
     private fun pollRouteData(n: Node, paymentId: String) {
         try {
@@ -370,58 +374,78 @@ class PaymentManager(private val context: Context) {
             if (paths.isEmpty()) return
 
             val graph = n.networkGraph()
-            // Match by payment ID — LDK uses hex-encoded PaymentId
-            val latestPath = paths.lastOrNull { it.paymentId == paymentId }
-                ?: paths.lastOrNull() ?: return
+            // Get all paths for this payment
+            val myPaths = paths.filter { it.paymentId == paymentId }
+            if (myPaths.isEmpty()) return
 
-            val hops = latestPath.hops.map { hop ->
-                val alias = lookupAlias(graph, hop.nodeId)
-                PaymentTracker.Hop(
-                    nodeId = hop.nodeId,
-                    alias = alias ?: hop.nodeId.take(12) + "...",
-                    scid = hop.shortChannelId.toString(),
-                    feeMsat = hop.feeMsat.toLong(),
-                    status = when (latestPath.status) {
-                        PaymentPathStatus.SUCCEEDED -> PaymentTracker.HopStatus.SUCCESS
-                        PaymentPathStatus.FAILED -> PaymentTracker.HopStatus.PENDING
-                        else -> PaymentTracker.HopStatus.PENDING
-                    }
-                )
-            }
-
-            if (hops.isEmpty()) return
-
-            // Mark failed hop if applicable
-            val failedScid = latestPath.failedScid
-            val finalHops = if (failedScid != null && latestPath.status == PaymentPathStatus.FAILED) {
-                val failIdx = hops.indexOfFirst { it.scid == failedScid.toString() }
-                hops.mapIndexed { i, hop ->
-                    when {
-                        failIdx >= 0 && i < failIdx -> hop.copy(status = PaymentTracker.HopStatus.SUCCESS)
-                        failIdx >= 0 && i == failIdx -> hop.copy(status = PaymentTracker.HopStatus.FAILED)
-                        else -> hop
+            // Process any NEW paths we haven't seen yet
+            if (myPaths.size > lastSeenPathCount) {
+                for (i in lastSeenPathCount until myPaths.size) {
+                    val path = myPaths[i]
+                    val attempt = buildAttempt(graph, paymentId, path)
+                    if (attempt.status == PaymentTracker.AttemptStatus.FAILED) {
+                        // Archive this failed attempt
+                        tracker.archiveAttempt(attempt)
                     }
                 }
-            } else hops
-
-            val status = when (latestPath.status) {
-                PaymentPathStatus.SUCCEEDED -> PaymentTracker.AttemptStatus.SUCCEEDED
-                PaymentPathStatus.FAILED -> PaymentTracker.AttemptStatus.FAILED
-                else -> PaymentTracker.AttemptStatus.IN_FLIGHT
+                lastSeenPathCount = myPaths.size
             }
 
-            tracker._currentAttempt.value = PaymentTracker.PaymentAttempt(
-                paymentId = paymentId,
-                amountMsat = tracker._currentAttempt.value?.amountMsat ?: 0,
-                hops = finalHops,
-                status = status,
-                failureHopIndex = if (failedScid != null) finalHops.indexOfFirst { it.scid == failedScid.toString() } else -1,
-                failureReason = latestPath.failureReason
-            )
-            Log.i(TAG, "Route data: ${finalHops.size} hops, status=$status")
+            // Always show the latest path as current
+            val latestPath = myPaths.last()
+            val currentAttempt = buildAttempt(graph, paymentId, latestPath)
+            tracker._currentAttempt.value = currentAttempt
+            Log.i(TAG, "Route data: ${currentAttempt.hops.size} hops, status=${currentAttempt.status} (attempt ${myPaths.size})")
         } catch (e: Exception) {
             // Don't spam logs on every poll
         }
+    }
+
+    /** Build a PaymentAttempt from a path info */
+    private fun buildAttempt(graph: NetworkGraph, paymentId: String, path: PaymentPathInfo): PaymentTracker.PaymentAttempt {
+        val hops = path.hops.map { hop ->
+            val alias = lookupAlias(graph, hop.nodeId)
+            PaymentTracker.Hop(
+                nodeId = hop.nodeId,
+                alias = alias ?: hop.nodeId.take(12) + "...",
+                scid = hop.shortChannelId.toString(),
+                feeMsat = hop.feeMsat.toLong(),
+                status = PaymentTracker.HopStatus.PENDING
+            )
+        }
+        if (hops.isEmpty()) return PaymentTracker.PaymentAttempt(
+            paymentId = paymentId, amountMsat = tracker._currentAttempt.value?.amountMsat ?: 0,
+            hops = emptyList(), status = PaymentTracker.AttemptStatus.IN_FLIGHT
+        )
+
+        val failedScid = path.failedScid
+        val finalHops = if (failedScid != null && path.status == PaymentPathStatus.FAILED) {
+            val failIdx = hops.indexOfFirst { it.scid == failedScid.toString() }
+            hops.mapIndexed { i, hop ->
+                when {
+                    failIdx >= 0 && i < failIdx -> hop.copy(status = PaymentTracker.HopStatus.SUCCESS)
+                    failIdx >= 0 && i == failIdx -> hop.copy(status = PaymentTracker.HopStatus.FAILED)
+                    else -> hop
+                }
+            }
+        } else if (path.status == PaymentPathStatus.SUCCEEDED) {
+            hops.map { it.copy(status = PaymentTracker.HopStatus.SUCCESS) }
+        } else hops
+
+        val status = when (path.status) {
+            PaymentPathStatus.SUCCEEDED -> PaymentTracker.AttemptStatus.SUCCEEDED
+            PaymentPathStatus.FAILED -> PaymentTracker.AttemptStatus.FAILED
+            else -> PaymentTracker.AttemptStatus.IN_FLIGHT
+        }
+
+        return PaymentTracker.PaymentAttempt(
+            paymentId = paymentId,
+            amountMsat = tracker._currentAttempt.value?.amountMsat ?: 0,
+            hops = finalHops,
+            status = status,
+            failureHopIndex = if (failedScid != null) finalHops.indexOfFirst { it.scid == failedScid.toString() } else -1,
+            failureReason = path.failureReason
+        )
     }
 
     /**

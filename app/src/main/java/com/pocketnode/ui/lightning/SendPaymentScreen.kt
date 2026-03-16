@@ -352,9 +352,21 @@ fun SendPaymentScreen(
                 }
             }
 
-            // Payment path display
-            if (paymentAttempt != null && (sending || paymentAttempt!!.status != com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING)) {
-                PaymentPathCard(paymentAttempt!!)
+            // Payment path display — show all attempts (failed branches + current)
+            val allAttempts by lightning.payments.tracker.attempts.collectAsState()
+            val failedAttempts = allAttempts.filter { it.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.FAILED }
+
+            if (failedAttempts.isNotEmpty() || (paymentAttempt != null && paymentAttempt!!.status != com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING)) {
+                // Show failed branches first (compact)
+                failedAttempts.forEachIndexed { index, attempt ->
+                    PaymentPathCard(attempt, label = "Route ${index + 1} ✗", compact = true)
+                    Spacer(Modifier.height(4.dp))
+                }
+                // Show current/latest attempt
+                if (paymentAttempt != null && paymentAttempt!!.status != com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING) {
+                    val currentLabel = if (failedAttempts.isNotEmpty()) "Route ${failedAttempts.size + 1}" else null
+                    PaymentPathCard(paymentAttempt!!, label = currentLabel)
+                }
             }
 
             // Result / Error
@@ -464,19 +476,25 @@ fun SendPaymentScreen(
 }
 
 @Composable
-private fun PaymentPathCard(attempt: com.pocketnode.lightning.PaymentTracker.PaymentAttempt) {
+private fun PaymentPathCard(
+    attempt: com.pocketnode.lightning.PaymentTracker.PaymentAttempt,
+    label: String? = null,
+    compact: Boolean = false
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = if (compact && attempt.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.FAILED)
+                MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
+            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(if (compact) 8.dp else 12.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Route",
+                    label ?: "Route",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -497,15 +515,17 @@ private fun PaymentPathCard(attempt: com.pocketnode.lightning.PaymentTracker.Pay
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            if (!compact) Spacer(Modifier.height(8.dp))
 
-            // You (sender)
-            HopRow(
-                label = "You",
-                isFirst = true,
-                status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS,
-                feeMsat = null
-            )
+            // You (sender) — skip in compact mode
+            if (!compact) {
+                HopRow(
+                    label = "You",
+                    isFirst = true,
+                    status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS,
+                    feeMsat = null
+                )
+            }
 
             // Each hop
             attempt.hops.forEachIndexed { index, hop ->
@@ -528,7 +548,7 @@ private fun PaymentPathCard(attempt: com.pocketnode.lightning.PaymentTracker.Pay
             }
 
             // Failure reason (cleaned up from raw Rust debug format)
-            if (attempt.failureReason != null) {
+            if (attempt.failureReason != null && !compact) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     cleanFailureReason(attempt.failureReason!!),
