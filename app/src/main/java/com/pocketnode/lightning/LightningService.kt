@@ -73,8 +73,9 @@ class LightningService(private val context: Context) {
         val watchtowerReachable: Boolean? = null,  // null=unknown, true=connected, false=failed
         // Graph readiness for routing
         val graphNodes: Int = 0,
-        // Connected peer count
-        val peerCount: Int = 0
+        // Connected peer counts
+        val lnPeerCount: Int = 0,
+        val btcPeerCount: Int = 0
     ) {
         data class PendingChannel(
             val channelId: String,
@@ -832,13 +833,14 @@ class LightningService(private val context: Context) {
             }
             // Routing readiness: graph size, peers, sync timestamps
             var currentGraphNodes = 0
-            var currentPeerCount = 0
+            var currentLnPeerCount = 0
+            var currentBtcPeerCount = 0
             try {
                 val graph = n.networkGraph()
                 val graphChannels = graph.listChannels().size
                 currentGraphNodes = graph.listNodes().size
                 val peers = n.listPeers()
-                currentPeerCount = peers.size
+                currentLnPeerCount = peers.size
                 val status = n.status()
                 val walletSync = status.latestLightningWalletSyncTimestamp
                 val rgsSync = status.latestRgsSnapshotTimestamp
@@ -846,6 +848,13 @@ class LightningService(private val context: Context) {
             } catch (e: Exception) {
                 Log.w(TAG, "routing info unavailable: ${e.message}")
             }
+            // bitcoind peer count via RPC
+            try {
+                val rpc = rpcClient
+                if (rpc != null) {
+                    currentBtcPeerCount = kotlinx.coroutines.runBlocking { rpc.getPeerCount() }
+                }
+            } catch (_: Exception) {}
 
             val pending = channels.filter { it.isChannelReady == false }.map { ch ->
                 LightningState.PendingChannel(
@@ -962,7 +971,8 @@ class LightningService(private val context: Context) {
                 ldkHeight = ldkH,
                 chainSynced = synced,
                 graphNodes = currentGraphNodes,
-                peerCount = currentPeerCount
+                lnPeerCount = currentLnPeerCount,
+                btcPeerCount = currentBtcPeerCount
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update state", e)
