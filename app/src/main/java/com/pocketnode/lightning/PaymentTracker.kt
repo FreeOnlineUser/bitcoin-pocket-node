@@ -123,7 +123,6 @@ class PaymentTracker {
             hops = current.hops.map { it.copy(status = HopStatus.SUCCESS) }
         )
         _currentAttempt.value = updated
-        _attempts.value = _attempts.value + updated
     }
 
     fun onPaymentPending(paymentId: String) {
@@ -154,7 +153,6 @@ class PaymentTracker {
             }
         )
         _currentAttempt.value = updated
-        _attempts.value = _attempts.value + updated
     }
 
     fun clear() {
