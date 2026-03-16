@@ -109,7 +109,11 @@ class PaymentManager(private val context: Context) {
             } else {
                 // Check if this looks like a routing failure
                 val payment = n.listPayments().find { it.id == paymentId }
-                tracker.onPaymentFailed(paymentId, null, "RetriesExhausted")
+                // Get actual failure reason from path data if available
+                val pathAttempts = n.paymentPathAttempts()
+                val failedPath = pathAttempts.lastOrNull { it.status == PaymentPathStatus.FAILED }
+                val failReason = failedPath?.failureReason
+                tracker.onPaymentFailed(paymentId, failedPath?.failedScid?.toString(), failReason)
                 val isRoutingFailure = payment?.status == PaymentStatus.FAILED
                 if (isRoutingFailure && routeConfig == null) {
                     // Offer bumped retry
@@ -122,7 +126,20 @@ class PaymentManager(private val context: Context) {
                         bumpedMaxFeeMsat = bumped.maxTotalRoutingFeeMsat?.toLong() ?: 0
                     )
                 } else {
-                    PaymentResult.Failed("Payment failed or timed out")
+                    // Use cleaned failure reason from path data
+                    val cleanReason = when {
+                        failReason != null && failReason.contains("ChannelFailure") && failReason.contains("is_permanent: false") ->
+                            "Routing peer didn't have enough outgoing liquidity"
+                        failReason != null && failReason.contains("TemporaryChannelFailure") ->
+                            "Routing peer didn't have enough outgoing liquidity"
+                        failReason != null && failReason.contains("FeeInsufficient") ->
+                            "Fee too low for route"
+                        failReason != null && failReason.contains("IncorrectOrUnknownPaymentDetails") ->
+                            "Invoice expired or already paid"
+                        payment?.status == PaymentStatus.FAILED -> "Payment failed: no route found"
+                        else -> "Payment timed out"
+                    }
+                    PaymentResult.Failed(cleanReason)
                 }
             }
         } catch (e: Exception) {

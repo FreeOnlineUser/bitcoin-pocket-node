@@ -468,7 +468,11 @@ private fun PaymentPathCard(attempt: com.pocketnode.lightning.PaymentTracker.Pay
             attempt.hops.forEachIndexed { index, hop ->
                 val isLastHop = index == attempt.hops.lastIndex
                 val displayAlias = hop.alias ?: hop.nodeId.take(12) + "..."
-                val displayLabel = if (isLastHop) "⚡ $displayAlias" else displayAlias
+                val displayLabel = when {
+                    isLastHop && attempt.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED -> "⚡ $displayAlias"
+                    isLastHop -> displayAlias  // No bolt on failed/pending destination
+                    else -> displayAlias
+                }
                 // Last hop fee_msat is the payment amount, not a routing fee
                 val displayFee = if (isLastHop) null else if (hop.feeMsat > 0) hop.feeMsat else null
                 HopRow(
@@ -497,7 +501,7 @@ private fun PaymentPathCard(attempt: com.pocketnode.lightning.PaymentTracker.Pay
 private fun cleanFailureReason(raw: String): String {
     return when {
         raw.contains("ChannelFailure") && raw.contains("is_permanent: false") ->
-            "Channel temporarily unavailable (not enough liquidity)"
+            "Peer didn't have enough outgoing liquidity"
         raw.contains("ChannelFailure") && raw.contains("is_permanent: true") ->
             "Channel permanently failed"
         raw.contains("NodeFailure") && raw.contains("is_permanent: false") ->
@@ -505,14 +509,14 @@ private fun cleanFailureReason(raw: String): String {
         raw.contains("NodeFailure") && raw.contains("is_permanent: true") ->
             "Node permanently unreachable"
         raw.contains("TemporaryChannelFailure") ->
-            "Channel lacks liquidity for this amount"
+            "Peer didn't have enough outgoing liquidity"
         raw.contains("UnknownNextPeer") ->
             "Next hop not found"
         raw.contains("FeeInsufficient") ->
             "Fee too low for this route"
         raw.contains("IncorrectOrUnknownPaymentDetails") ->
             "Invoice expired or already paid"
-        else -> raw.take(80) // Truncate anything else
+        else -> raw.take(80)
     }
 }
 
