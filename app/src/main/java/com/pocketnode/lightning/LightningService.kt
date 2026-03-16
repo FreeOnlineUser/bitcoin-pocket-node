@@ -100,6 +100,11 @@ class LightningService(private val context: Context) {
     private var stateRefreshJob: kotlinx.coroutines.Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    // Extracted managers (delegate pattern — public API stays the same)
+    val payments = PaymentManager(context)
+    val channels = ChannelManager(context)
+    val onchain = OnchainWallet(context)
+
     // Signaled by handleEvents() when a channel event (Pending/Ready/Closed) occurs
     @Volatile private var channelEventLatch: java.util.concurrent.CountDownLatch? = null
 
@@ -346,6 +351,16 @@ class LightningService(private val context: Context) {
             if (lastError != null) throw lastError
 
             node = ldkNode
+
+            // Wire up extracted managers
+            payments.node = ldkNode
+            payments.handleEvents = { handleEvents() }
+            channels.node = ldkNode
+            channels.handleEvents = { handleEvents() }
+            channels.updateState = { updateState() }
+            channels.savePeerAnchorsCallback = { peerId, anchors -> savePeerAnchors(peerId, anchors) }
+            onchain.node = ldkNode
+            onchain.rpcClient = rpcClient
 
             // One-time: clear stale peer channel limits from pre-fix caching bug
             val limitsPrefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
@@ -809,6 +824,9 @@ class LightningService(private val context: Context) {
             Log.e(TAG, "Error stopping Lightning node", e)
         } finally {
             node = null
+            payments.node = null
+            channels.node = null
+            onchain.node = null
             _state.value = LightningState()
         }
     }
@@ -935,8 +953,8 @@ class LightningService(private val context: Context) {
             val prevBalance = _state.value.onchainBalanceSats
             val newBalance = balances.totalOnchainBalanceSats.toLong()
             if (newBalance > prevBalance && prevBalance >= 0) {
-                cachedDepositAddress?.let { markAddressUsed(it) }
-                cachedDepositAddress = null
+                onchain.getOnchainAddress() // trigger rotation check
+                onchain.clearDepositAddress()
             }
 
             _state.value = LightningState(
@@ -983,8 +1001,8 @@ class LightningService(private val context: Context) {
                 is Event.PaymentFailed     -> Log.w(TAG, "Payment failed: ${event.paymentId}")
                 is Event.PaymentReceived   -> {
                     Log.i(TAG, "Payment received: ${event.amountMsat} msat")
-                    cachedDepositAddress?.let { markAddressUsed(it) }
-                    cachedDepositAddress = null
+                    onchain.getOnchainAddress() // trigger rotation check
+                    onchain.clearDepositAddress()
                 }
                 is Event.ChannelPending    -> {
                     Log.i(TAG, "Channel pending: ${event.channelId} (funding txo: ${event.fundingTxo})")
@@ -1042,61 +1060,10 @@ class LightningService(private val context: Context) {
         }
     }
 
-    private fun savePeerMinChannel(peerId: PublicKey, minSats: Long) {
-        val prefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
-        prefs.edit()
-            .putLong(peerId.toString(), minSats)
-            .putBoolean("${peerId}_floor", false)  // exact value, not a floor
-            .apply()
-        Log.i(TAG, "Cached peer min channel: ${peerId.toString().take(16)}... = $minSats sats")
-    }
-
-    fun getPeerMinChannel(peerId: String): Long {
-        val prefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
-        return prefs.getLong(peerId, -1L)
-    }
-
-    /** true if the stored min is an exact value from a rejection message, false if it's a floor (amount+) */
-    fun isPeerMinExact(peerId: String): Boolean {
-        val prefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
-        return !prefs.getBoolean("${peerId}_floor", false)
-    }
-
-    private fun savePeerMinCeiling(peerId: String, acceptedSats: Long) {
-        val prefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
-        val existing = prefs.getLong(peerId, -1L)
-        val isExistingExact = !prefs.getBoolean("${peerId}_floor", false) && !prefs.getBoolean("${peerId}_ceiling", false)
-        // Don't overwrite an exact min. Only update ceiling if lower.
-        if (isExistingExact && existing > 0) return
-        if (existing < 0 || acceptedSats < existing) {
-            prefs.edit()
-                .putLong(peerId, acceptedSats)
-                .putBoolean("${peerId}_floor", false)
-                .putBoolean("${peerId}_ceiling", true)
-                .apply()
-            Log.i(TAG, "Cached peer min ceiling: ${peerId.take(16)}... <= $acceptedSats sats")
-        }
-    }
-
-    fun isPeerMinCeiling(peerId: String): Boolean {
-        val prefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
-        return prefs.getBoolean("${peerId}_ceiling", false)
-    }
-
-    private fun savePeerMinFloor(peerId: String, attemptedSats: Long) {
-        val prefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
-        val existing = prefs.getLong(peerId, -1L)
-        val isExistingExact = !prefs.getBoolean("${peerId}_floor", false)
-        // Don't overwrite an exact min with a floor. Only update floor if higher.
-        if (isExistingExact && existing > 0) return
-        if (attemptedSats > existing) {
-            prefs.edit()
-                .putLong(peerId, attemptedSats)
-                .putBoolean("${peerId}_floor", true)
-                .apply()
-            Log.i(TAG, "Cached peer min floor: ${peerId.take(16)}... > $attemptedSats sats")
-        }
-    }
+    // Peer channel limits — delegated to ChannelManager, kept as private bridges for handleEvents()
+    private fun savePeerMinChannel(peerId: PublicKey, minSats: Long) = channels.savePeerMinChannel(peerId, minSats)
+    private fun savePeerMinCeiling(peerId: String, acceptedSats: Long) = channels.savePeerMinCeiling(peerId, acceptedSats)
+    private fun savePeerMinFloor(peerId: String, attemptedSats: Long) = channels.savePeerMinFloor(peerId, attemptedSats)
 
     private fun drainWatchtowerBlobs() {
         val n = node ?: return
@@ -1111,424 +1078,43 @@ class LightningService(private val context: Context) {
         }.start()
     }
 
-    // === Channel operations ===
+    // === Payment operations (delegated to PaymentManager) ===
 
-    fun connectPeer(nodeId: String, address: String): Result<Unit> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            Log.i(TAG, "Connecting to peer $nodeId at $address")
-            n.connect(nodeId, address, true)
-            Log.i(TAG, "Connected to peer. Draining events...")
-            // Drain events — if peer tries to reestablish a channel we don't know about,
-            // they should force-close and we'll see the event here.
-            for (i in 1..10) {
-                Thread.sleep(500)
-                handleEvents()
-            }
-            updateState()
-            Log.i(TAG, "Peer connection complete")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to connect to peer: ${e.message}", e)
-            Result.failure(e)
-        }
-    }
+    fun payInvoice(invoiceStr: String): Result<String> = payments.payInvoice(invoiceStr)
+    fun payOffer(offerStr: String, amountMsat: Long? = null): Result<String> = payments.payOffer(offerStr, amountMsat)
+    fun createInvoice(amountMsat: Long, description: String, expirySecs: Int = 3600): Result<String> = payments.createInvoice(amountMsat, description, expirySecs)
+    fun createOffer(amountMsat: Long, description: String): Result<String> = payments.createOffer(amountMsat, description)
+    fun createVariableOffer(description: String): Result<String> = payments.createVariableOffer(description)
+    fun listPayments(): List<PaymentDetails> = payments.listPayments()
+    fun removePayment(id: String): Result<Unit> = payments.removePayment(id)
 
-    fun openChannel(nodeId: String, address: String, amountSats: Long): Result<String> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
+    // === Channel operations (delegated to ChannelManager) ===
 
-        // Temporarily enable network if not in Max mode
-        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
-        val needsNetworkHold = com.pocketnode.power.PowerModeManager.modeFlow.value != com.pocketnode.power.PowerModeManager.Mode.MAX
-        if (needsNetworkHold) {
-            pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(
-                context.getSharedPreferences("bitcoind_config", Context.MODE_PRIVATE).getString("rpc_user", "pocketnode") ?: "pocketnode",
-                context.getSharedPreferences("bitcoind_config", Context.MODE_PRIVATE).getString("rpc_password", "") ?: "",
-                port = context.getSharedPreferences("bitcoind_config", Context.MODE_PRIVATE).getInt("rpc_port", 8332)
-            ))
-            pmm.holdNetwork()
-            // Give bitcoind time to establish peers
-            Thread.sleep(5_000)
-        }
+    fun connectPeer(nodeId: String, address: String): Result<Unit> = channels.connectPeer(nodeId, address)
+    fun openChannel(nodeId: String, address: String, amountSats: Long): Result<String> = channels.openChannel(nodeId, address, amountSats)
+    fun closeChannel(userChannelId: String, counterpartyNodeId: String): Result<Unit> = channels.closeChannel(userChannelId, counterpartyNodeId)
+    fun forceCloseChannel(userChannelId: String, counterpartyNodeId: String, reason: String = "User requested"): Result<Unit> = channels.forceCloseChannel(userChannelId, counterpartyNodeId, reason)
+    fun listChannels(): List<ChannelDetails> = channels.listChannels()
+    fun getPeerMinChannel(peerId: String): Long = channels.getPeerMinChannel(peerId)
+    fun isPeerMinExact(peerId: String): Boolean = channels.isPeerMinExact(peerId)
+    fun isPeerMinCeiling(peerId: String): Boolean = channels.isPeerMinCeiling(peerId)
+    fun peerSupportsAnchors(nodeId: String): Boolean? = channels.peerSupportsAnchors(nodeId)
+    fun getCachedPeerAnchors(peerId: String): Boolean? = channels.getCachedPeerAnchors(peerId)
 
-        return try {
-            Log.i(TAG, "Connecting to peer $nodeId at $address")
-            n.connect(nodeId, address, true)
-            // Check and cache anchor support after connecting
-            val peer = n.listPeers().find { it.nodeId == nodeId }
-            val anchors = peer?.supportsAnchors ?: false
-            savePeerAnchors(nodeId, anchors)
-            Log.i(TAG, "Connected. Peer anchors=$anchors. Opening channel for $amountSats sats")
-            // Enforce anchor-only if enabled
-            val anchorOnly = context.getSharedPreferences("pocketnode_prefs", Context.MODE_PRIVATE)
-                .getBoolean("anchor_channels_only", true)
-            if (anchorOnly && !anchors) {
-                return Result.failure(Exception("Peer doesn't support anchor channels. Disable 'Anchor channels only' in settings to allow legacy channels."))
-            }
-            val userChannelId = n.openChannel(nodeId, address, amountSats.toULong(), null, null)
-            Log.i(TAG, "Channel open initiated: $userChannelId")
-            // Clear any previous channel error
-            _state.value = _state.value.copy(lastChannelError = null)
-            // Poll for peer response. LDK creates the channel locally before peer responds,
-            // so we must wait long enough for rejection to arrive (~1-2s typically).
-            // Drain events during the wait to catch ChannelClosed reason.
-            for (i in 1..6) { // 6 x 500ms = 3s
-                Thread.sleep(500)
-                handleEvents()
-            }
-            val channels = n.listChannels()
-            val hasNewChannel = channels.isNotEmpty()
-            updateState()
-            val reason = _state.value.lastChannelError
-            Log.i(TAG, "Post-open: channels=${channels.size} hasNew=$hasNewChannel reason=$reason")
-            if (!hasNewChannel) {
-                // If no explicit min from rejection, save attempted amount as floor
-                if (reason == null || (!reason.contains("min chan size") && !reason.contains("min="))) {
-                    savePeerMinFloor(nodeId, amountSats)
-                }
-                val msg = if (reason != null) reason else "Peer rejected channel open"
-                Result.failure(Exception(msg))
-            } else {
-                // Peer accepted: their minimum is at most this amount
-                savePeerMinCeiling(nodeId, amountSats)
+    // === On-chain wallet (delegated to OnchainWallet) ===
 
-                Result.success(userChannelId)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to open channel: ${e.message}", e)
-            // Save floor for connection failures (peer blocked us)
-            savePeerMinFloor(nodeId, amountSats)
-            Result.failure(e)
-        } finally {
-            if (needsNetworkHold) {
-                // Keep network up a bit longer to ensure funding tx propagates
-                // and peer acknowledges ChannelPending, then release.
-                Thread.sleep(10_000)
-                pmm.releaseNetworkHold()
-            }
-        }
-    }
-
-    fun closeChannel(userChannelId: String, counterpartyNodeId: String): Result<Unit> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            // Bump force-close avoidance fee to accept wider peer fee range
-            // Default is very low; 1000 sats avoids force-close over fee disagreement
-            try {
-                val channels = n.listChannels()
-                val ch = channels.find { it.userChannelId == userChannelId }
-                if (ch != null) {
-                    val cfg = ch.config
-                    val updated = cfg.copy(forceCloseAvoidanceMaxFeeSatoshis = 1000UL)
-                    n.updateChannelConfig(userChannelId, counterpartyNodeId, updated)
-                    Log.i(TAG, "Set forceCloseAvoidanceMaxFeeSatoshis=1000 before cooperative close")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not update channel config before close: ${e.message}")
-            }
-            // Use minimum relay feerate (253 sat/kw = ~1 sat/vB) to maximize
-            // cooperative close success. Mobile nodes have stale fee estimates;
-            // defer to the always-online peer's fee judgment rather than risk
-            // force-close over a few sats disagreement.
-            n.closeChannelWithTargetFeerate(userChannelId, counterpartyNodeId, 253u)
-            Log.i(TAG, "Cooperative close initiated with min feerate (253 sat/kw)")
-            updateState()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to close channel", e)
-            Result.failure(e)
-        }
-    }
-
-    fun forceCloseChannel(userChannelId: String, counterpartyNodeId: String, reason: String = "User requested"): Result<Unit> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            n.forceCloseChannel(userChannelId, counterpartyNodeId, reason)
-            updateState()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to force-close channel", e)
-            Result.failure(e)
-        }
-    }
-
-    fun listChannels(): List<ChannelDetails> = node?.listChannels() ?: emptyList()
+    fun getOnchainAddress(): Result<String> = onchain.getOnchainAddress()
+    fun markDepositAddressUsed(address: String) = onchain.markDepositAddressUsed(address)
+    fun sendOnchain(address: String, amountSats: Long, feeRate: FeeRate? = null): Result<String> = onchain.sendOnchain(address, amountSats, feeRate)
+    fun sendAllOnchain(address: String, feeRate: FeeRate? = null): Result<String> = onchain.sendAllOnchain(address, feeRate)
 
     fun getLdkHeight(): Int = try { node?.status()?.currentBestBlock?.height?.toInt() ?: 0 } catch (_: Exception) { 0 }
-
-    // === Payment operations ===
-
-    fun payInvoice(invoiceStr: String): Result<String> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        // Hold network for payment routing
-        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
-        val needsHold = com.pocketnode.power.PowerModeManager.modeFlow.value != com.pocketnode.power.PowerModeManager.Mode.MAX
-        if (needsHold) {
-            val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
-            if (creds != null) pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))
-            pmm.holdNetwork()
-        }
-        return try {
-            val invoice = Bolt11Invoice.fromStr(invoiceStr)
-            val paymentId = n.bolt11Payment().send(invoice, null)
-            Log.i(TAG, "Payment queued: $paymentId, waiting for result...")
-            // Poll payment status until it resolves
-            val result = waitForPayment(n, paymentId, 30)
-            if (result) {
-                Log.i(TAG, "Payment confirmed successful: $paymentId")
-                Result.success(paymentId)
-            } else {
-                Log.w(TAG, "Payment failed or timed out: $paymentId")
-                Result.failure(Exception("Payment failed or timed out"))
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to pay invoice", e)
-            Result.failure(e)
-        } finally {
-            if (needsHold) pmm.releaseNetworkHold()
-        }
-    }
-
-    /**
-     * Poll payment status until SUCCEEDED or FAILED (up to timeoutSecs).
-     * Returns true if succeeded, false if failed/timed out.
-     */
-    private fun waitForPayment(n: Node, paymentId: String, timeoutSecs: Int): Boolean {
-        val deadline = System.currentTimeMillis() + timeoutSecs * 1000L
-        while (System.currentTimeMillis() < deadline) {
-            // Process any pending events first
-            try { handleEvents() } catch (_: Exception) {}
-            val payment = n.listPayments().find { it.id == paymentId }
-            if (payment != null) {
-                when (payment.status) {
-                    PaymentStatus.SUCCEEDED -> return true
-                    PaymentStatus.FAILED -> return false
-                    else -> {} // PENDING, keep waiting
-                }
-            }
-            Thread.sleep(500)
-        }
-        return false // timed out
-    }
-
-    fun createInvoice(amountMsat: Long, description: String, expirySecs: Int = 3600): Result<String> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            val desc = Bolt11InvoiceDescription.Direct(description)
-            val invoice = n.bolt11Payment().receive(amountMsat.toULong(), desc, expirySecs.toUInt())
-            Result.success(invoice.toString())
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create invoice", e)
-            Result.failure(e)
-        }
-    }
-
-    fun createOffer(amountMsat: Long, description: String): Result<String> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            val offer = n.bolt12Payment().receive(amountMsat.toULong(), description, null, null)
-            Result.success(offer.toString())
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create offer", e)
-            val msg = if (e.javaClass.simpleName.contains("OfferCreationFailed"))
-                "BOLT12 offers are linked to channels. A channel is required to create an offer."
-            else e.message ?: "Failed to create offer"
-            Result.failure(Exception(msg))
-        }
-    }
-
-    fun createVariableOffer(description: String): Result<String> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            val offer = n.bolt12Payment().receiveVariableAmount(description, null)
-            Result.success(offer.toString())
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create variable offer", e)
-            val msg = if (e.javaClass.simpleName.contains("OfferCreationFailed"))
-                "BOLT12 offers are linked to channels. A channel is required to create an offer."
-            else e.message ?: "Failed to create offer"
-            Result.failure(Exception(msg))
-        }
-    }
-
-    fun payOffer(offerStr: String, amountMsat: Long? = null): Result<String> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
-        val needsHold = com.pocketnode.power.PowerModeManager.modeFlow.value != com.pocketnode.power.PowerModeManager.Mode.MAX
-        if (needsHold) {
-            val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
-            if (creds != null) pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))
-            pmm.holdNetwork()
-        }
-        return try {
-            val offer = Offer.fromStr(offerStr)
-            val paymentId = if (amountMsat != null)
-                n.bolt12Payment().sendUsingAmount(offer, amountMsat.toULong(), null, null, null)
-            else
-                n.bolt12Payment().send(offer, null, null, null)
-            val id = paymentId.toString()
-            Log.i(TAG, "BOLT12 payment queued: $id, waiting for result...")
-            val result = waitForPayment(n, id, 30)
-            if (result) {
-                Log.i(TAG, "BOLT12 payment confirmed successful: $id")
-                Result.success(id)
-            } else {
-                Log.w(TAG, "BOLT12 payment failed or timed out: $id")
-                Result.failure(Exception("Payment failed or timed out"))
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to pay offer", e)
-            Result.failure(e)
-        } finally {
-            if (needsHold) pmm.releaseNetworkHold()
-        }
-    }
-
-    fun listPayments(): List<PaymentDetails> = node?.listPayments() ?: emptyList()
-
-    fun removePayment(id: String): Result<Unit> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            n.removePayment(id)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to remove payment $id", e)
-            Result.failure(e)
-        }
-    }
-
-    // === On-chain wallet ===
-
-    private var cachedDepositAddress: String? = null
-    private val depositAddressPrefs by lazy {
-        context.getSharedPreferences("deposit_address", MODE_PRIVATE)
-    }
-
-    fun getOnchainAddress(): Result<String> {
-        // Restore from prefs if no in-memory cache (app restarted)
-        if (cachedDepositAddress == null) {
-            cachedDepositAddress = depositAddressPrefs.getString("current_address", null)
-        }
-
-        // Check if cached address has been used (has UTXOs on-chain)
-        val cached = cachedDepositAddress
-        if (cached != null) {
-            val used = isAddressUsed(cached)
-            if (!used) return Result.success(cached)
-            Log.i(TAG, "Deposit address used, rotating: $cached")
-        }
-
-        // Generate fresh unused address (skip any that already have UTXOs)
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            var addr: String
-            var attempts = 0
-            do {
-                addr = n.onchainPayment().newAddress()
-                attempts++
-                if (attempts > 20) break // safety limit
-            } while (isAddressUsed(addr))
-            cachedDepositAddress = addr
-            depositAddressPrefs.edit()
-                .putString("current_address", addr)
-                .apply()
-            Log.i(TAG, "New deposit address: $addr (after $attempts attempts)")
-            Result.success(addr)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get address", e)
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Check if address was ever used. Checks:
-     * 1. Local tracking set (fast, survives restarts)
-     * 2. On-chain via scantxoutset single-address check (catches usage missed by local tracking,
-     *    e.g. after seed restore clears local state)
-     */
-    private fun isAddressUsed(address: String): Boolean {
-        val usedSet = depositAddressPrefs.getStringSet("used_addresses", emptySet()) ?: emptySet()
-        if (address in usedSet) return true
-
-        // Also check on-chain: has this address ever received funds?
-        // Use scantxoutset for a single address — fast (only checks live UTXO set)
-        // and works on pruned nodes.
-        val rpc = rpcClient ?: return false
-        try {
-            val params = org.json.JSONArray().apply {
-                put("start")
-                put(org.json.JSONArray().apply { put("addr($address)") })
-            }
-            val result = rpc.callSync("scantxoutset", params, readTimeoutMs = 5_000)
-            val resultObj = result?.optJSONObject("result")
-            if (resultObj != null) {
-                val totalAmount = resultObj.optDouble("total_amount", 0.0)
-                val unspents = resultObj.optJSONArray("unspents")
-                if (totalAmount > 0 || (unspents != null && unspents.length() > 0)) {
-                    // Address has unspent outputs — mark locally too
-                    markAddressUsed(address)
-                    Log.i(TAG, "Address $address has on-chain UTXOs, marking as used")
-                    return true
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "scantxoutset check failed for address, falling back to local only: ${e.message}")
-        }
-        return false
-    }
-
-    /** Check if a connected peer supports anchor channels. Returns null if not connected and no cached value. */
-    fun peerSupportsAnchors(nodeId: String): Boolean? {
-        val n = node ?: return getCachedPeerAnchors(nodeId)
-        val peer = n.listPeers().find { it.nodeId == nodeId }
-        if (peer == null || !peer.isConnected) return getCachedPeerAnchors(nodeId)
-        // Cache the result persistently
-        savePeerAnchors(nodeId, peer.supportsAnchors)
-        return peer.supportsAnchors
-    }
-
-    private fun savePeerAnchors(peerId: String, supportsAnchors: Boolean) {
-        val prefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
-        prefs.edit().putBoolean("${peerId}_anchors", supportsAnchors).apply()
-    }
-
-    fun getCachedPeerAnchors(peerId: String): Boolean? {
-        val prefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
-        return if (prefs.contains("${peerId}_anchors")) prefs.getBoolean("${peerId}_anchors", false) else null
-    }
-
-    fun markDepositAddressUsed(address: String) = markAddressUsed(address)
-
-    private fun markAddressUsed(address: String) {
-        val usedSet = depositAddressPrefs.getStringSet("used_addresses", emptySet())?.toMutableSet() ?: mutableSetOf()
-        usedSet.add(address)
-        depositAddressPrefs.edit().putStringSet("used_addresses", usedSet).apply()
-        Log.i(TAG, "Marked deposit address as used: $address")
-    }
-
-    fun sendOnchain(address: String, amountSats: Long, feeRate: FeeRate? = null): Result<String> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            val rate = feeRate ?: FeeRate.fromSatPerVbUnchecked(4u.toULong())
-            Result.success(n.onchainPayment().sendToAddress(address, amountSats.toULong(), rate))
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to send on-chain", e)
-            Result.failure(e)
-        }
-    }
-
-    fun sendAllOnchain(address: String, feeRate: FeeRate? = null): Result<String> {
-        val n = node ?: return Result.failure(Exception("Node not running"))
-        return try {
-            val rate = feeRate ?: FeeRate.fromSatPerVbUnchecked(4u.toULong())
-            Result.success(n.onchainPayment().sendAllToAddress(address, false, rate))
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to send all on-chain", e)
-            Result.failure(e)
-        }
-    }
-
     fun isRunning(): Boolean = node != null
+
+    // Old implementations removed — now in PaymentManager, ChannelManager, OnchainWallet
+    // savePeerAnchors kept here for handleEvents callback
+    private fun savePeerAnchors(peerId: String, supportsAnchors: Boolean) = channels.savePeerAnchors(peerId, supportsAnchors)
+
 
     // === Seed Backup & Restore ===
 
@@ -1678,7 +1264,7 @@ class LightningService(private val context: Context) {
         // Clear deposit address cache (stale after restore)
         context.getSharedPreferences("deposit_address", MODE_PRIVATE)
             .edit().clear().apply()
-        cachedDepositAddress = null
+        onchain.clearDepositAddress()
         // Mark as restored wallet so we trigger recovery scan (not birthday save) on first start
         context.getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
             .edit().putBoolean("pending_recovery_scan", true).apply()
