@@ -304,36 +304,67 @@ app/src/main/java/com/pocketnode/
 ├── service/
 │   ├── BitcoindService.kt      # Foreground service managing bitcoind
 │   ├── ElectrumService.kt      # Electrum server lifecycle management
-│   └── SyncController.kt       # Network-aware sync pause/resume
+│   ├── SyncController.kt       # Network-aware sync pause/resume
+│   ├── BatteryMonitor.kt       # Battery level monitoring
+│   ├── BootReceiver.kt         # Auto-start on device boot
+│   └── WatchtowerManager.kt    # Watchtower service lifecycle
 ├── lightning/
-│   ├── LightningService.kt     # ldk-node wrapper (start/stop, channels, payments)
-│   └── LndHubServer.kt         # LNDHub-compatible API server on localhost:3000
+│   ├── LightningService.kt     # ldk-node singleton wrapper (start/stop, state)
+│   ├── PaymentManager.kt       # Send payments, routing fee budget, retry logic
+│   ├── PaymentTracker.kt       # Live route tracking, hop display, attempt history
+│   ├── ChannelManager.kt       # Channel open/close operations
+│   ├── OnchainWallet.kt        # On-chain send/sweep, address management
+│   ├── RecoveryManager.kt      # Seed backup/restore, recovery scan, chain state
+│   ├── NodeDirectory.kt        # Peer directory and node info
+│   ├── LndHubServer.kt         # LNDHub-compatible API server (:3000)
+│   ├── WatchtowerBridge.kt     # LDK-to-LND watchtower push via Brontide
+│   ├── WatchtowerNative.kt     # JNA bindings to native Rust watchtower client
+│   ├── WalletRecoveryService.kt # Background wallet recovery
+│   └── Bip39.kt                # Pure Kotlin BIP39 (mnemonic <-> entropy)
 ├── electrum/
-│   ├── ElectrumServer.kt       # Electrum protocol TCP server (batch JSON array responses)
-│   ├── ElectrumMethods.kt      # Electrum RPC method handlers (pruned-node tx fallbacks)
-│   ├── AddressIndex.kt         # Descriptor wallet, UTXO cache, tx hex cache, recovery
-│   ├── HistoryRecovery.kt      # mempool.space history recovery with gap limit + backoff
+│   ├── ElectrumServer.kt       # Electrum protocol TCP server
+│   ├── ElectrumMethods.kt      # RPC method handlers (pruned-node tx fallbacks)
+│   ├── AddressIndex.kt         # Descriptor wallet, UTXO cache, tx hex cache
+│   ├── HistoryRecovery.kt      # mempool.space history recovery with gap limit
 │   └── SubscriptionManager.kt  # Address/header subscription notifications
+├── mempool/
+│   ├── MempoolService.kt       # Local mempool monitoring
+│   ├── GbtGenerator.kt         # Block template generation
+│   ├── GbtResult.kt            # Block template result types
+│   ├── MempoolEntry.kt         # Mempool transaction entry
+│   ├── ProjectedBlockInfo.kt   # Projected block fee info
+│   ├── ThreadAcceleration.kt   # CPFP/RBF acceleration detection
+│   └── ThreadTransaction.kt    # Transaction thread grouping
 ├── power/
-│   └── PowerModeManager.kt     # Max/Low/Away power modes with burst sync
+│   └── PowerModeManager.kt     # Max/Low/Away modes, burst sync, network holds
 ├── network/
 │   └── NetworkMonitor.kt       # WiFi/cellular/VPN detection + data tracking
 ├── snapshot/
-│   ├── ChainstateManager.kt    # AssumeUTXO snapshot flow (generate/download/load)
+│   ├── ChainstateManager.kt    # AssumeUTXO snapshot flow
+│   ├── SnapshotManager.kt      # Snapshot state management
 │   ├── BlockFilterManager.kt   # Lightning block filter copy/remove
 │   ├── NodeSetupManager.kt     # SSH setup + teardown
+│   ├── NodeConnectionManager.kt # Remote node connection management
 │   └── SnapshotDownloader.kt   # SFTP download with progress
+├── share/
+│   ├── ShareServer.kt          # Phone-to-phone chainstate sharing (server)
+│   └── ShareClient.kt          # Phone-to-phone chainstate sharing (client)
 ├── ssh/
 │   └── SshUtils.kt             # Shared SSH/SFTP utilities
 ├── rpc/
-│   └── BitcoinRpcClient.kt     # Local bitcoind JSON-RPC (configurable timeouts)
+│   └── BitcoinRpcClient.kt     # Local bitcoind JSON-RPC
+├── notification/
+│   └── TransactionNotificationManager.kt # Transaction push notifications
+├── storage/
+│   └── WatchListManager.kt     # Address watch list persistence
 ├── ui/
 │   ├── PocketNodeApp.kt        # Navigation + top-level routing
 │   ├── NodeStatusScreen.kt     # Main dashboard
-│   ├── LightningScreen.kt      # Lightning node (balances, channels, watchtower status)
+│   ├── LightningScreen.kt      # Lightning management (channels, watchtower)
 │   ├── SetupChecklistScreen.kt # Config mode setup wizard
 │   ├── SnapshotSourceScreen.kt # Source picker
-│   ├── ChainstateCopyScreen.kt # Snapshot load progress (4-step flow)
+│   ├── SnapshotProgressScreen.kt # Snapshot load progress
+│   ├── ChainstateCopyScreen.kt # Chainstate copy progress (4-step flow)
 │   ├── ConnectWalletScreen.kt  # RPC / Electrum / LNDHub connection guide
 │   ├── BlockFilterUpgradeScreen.kt # Lightning block filter management
 │   ├── WatchtowerScreen.kt     # Home node watchtower setup
@@ -341,31 +372,39 @@ app/src/main/java/com/pocketnode/
 │   ├── NetworkSettingsScreen.kt # Cellular/WiFi budgets
 │   ├── NodeAccessScreen.kt     # View/remove node access
 │   ├── NodeConnectionScreen.kt # Remote node connection setup
+│   ├── NodeSetupScreen.kt      # Initial node setup
+│   ├── NearbyNodeScreen.kt     # Discover nearby nodes
+│   ├── ShareScreen.kt          # Phone-to-phone sharing UI
 │   ├── InternetDownloadScreen.kt # HTTPS snapshot download
+│   ├── PowerModeSelector.kt    # Three-segment power mode toggle + burst banner
 │   ├── lightning/
-│   │   ├── SendPaymentScreen.kt    # Pay BOLT11 invoices
+│   │   ├── LightningPayScreen.kt   # Lightning Pay home (send/receive)
+│   │   ├── SendPaymentScreen.kt    # Pay BOLT11/BOLT12, route tree display
+│   │   ├── SendOnchainScreen.kt    # On-chain send/sweep
 │   │   ├── ReceivePaymentScreen.kt # Generate invoices
 │   │   ├── PaymentHistoryScreen.kt # Payment list
 │   │   ├── OpenChannelScreen.kt    # Open channel to peer
 │   │   ├── PeerBrowserScreen.kt    # Browse/search Lightning peers
-│   │   ├── SeedBackupScreen.kt    # BIP39 seed view and restore
-│   │   ├── QrCode.kt             # QR code generation (ZXing)
-│   │   └── QrScannerScreen.kt    # Camera QR scanner (CameraX + ZXing)
-│   ├── PowerModeSelector.kt    # Three-segment power mode toggle + burst banner
+│   │   ├── SeedBackupScreen.kt     # BIP39 seed view and restore
+│   │   ├── QrCode.kt              # QR code generation (ZXing)
+│   │   └── QrScannerScreen.kt     # Camera QR scanner (CameraX + ZXing)
+│   ├── mempool/
+│   │   ├── MempoolScreen.kt            # Mempool viewer
+│   │   ├── MempoolViewModel.kt         # Mempool state management
+│   │   ├── FeeEstimatePanel.kt         # Fee rate visualization
+│   │   ├── TransactionSearchScreen.kt  # Transaction lookup
+│   │   └── TransactionSearchViewModel.kt # Search state management
 │   └── components/
 │       ├── NetworkStatusBar.kt      # Sync status banner
+│       ├── FairTradeCard.kt         # Fair trade info display
+│       ├── OracleCard.kt            # UTXOracle price display
 │       └── AdminCredentialsDialog.kt # SSH creds prompt
-├── lightning/
-│   ├── LightningService.kt     # ldk-node singleton wrapper
-│   ├── LndHubServer.kt         # LNDHub API server (:3000)
-│   ├── WatchtowerBridge.kt     # LDK-to-LND watchtower push via SSH + Brontide
-│   ├── WatchtowerNative.kt     # JNA bindings to native Rust watchtower client
-│   └── Bip39.kt                # Pure Kotlin BIP39 (mnemonic ↔ entropy)
 ├── oracle/
 │   └── UTXOracle.kt            # Sovereign price discovery from on-chain data
 └── util/
     ├── ConfigGenerator.kt      # Mobile-optimized bitcoin.conf
     ├── BinaryExtractor.kt      # Version selection, 3 bundled bitcoind binaries
+    ├── UpdateChecker.kt         # GitHub release update checker
     └── SetupChecker.kt         # Auto-detect completed setup steps
 ```
 
