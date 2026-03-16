@@ -117,7 +117,7 @@ See [Version Selection Design](docs/VERSION-SELECTION.md) and [BIP 110 Research]
 
 ## Features
 
-- **3 Bitcoin implementations** with one-tap switching: Core 30, Core 29.3, Knots 29.3. Universal BIP 110 signaling toggle (Core 29.3, Knots)
+- **3 Bitcoin implementations** with one-tap switching: Core 30, Core 29.3, Knots 29.3. BIP 110 signaling toggle on Core 29.3 and Knots
 - **Two proven bootstrap paths:** home node or internet download (phone-to-phone built, untested)
 - **Pure Kotlin Electrum server** purpose-built for pruned nodes: the only Electrum server that works with `prune=2048`. Balances from the UTXO set, transaction history persisted forever (survives pruning), unsolicited notifications push new transactions to BlueWallet in real time
 - **Built-in Lightning node** powered by LDK (send, receive, channels, peer browser, seed backup/restore with automatic fund recovery)
