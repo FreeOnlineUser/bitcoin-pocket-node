@@ -109,7 +109,7 @@ Your node, your rules. Choose which Bitcoin implementation runs on your phone:
 | **Bitcoin Core 30** | 8.6 MB | Permissive: larger OP_RETURN data allowed |
 | **Bitcoin Knots 29.3** | 12 MB | Restrictive: filters non-standard transactions |
 
-All implementations support the universal BIP-110 signaling toggle.
+BIP-110 signaling is supported on Core 29.3 and Knots 29.3.
 
 All three share the same chainstate format. Switch without re-syncing. Tap "Change" on the dashboard, confirm, and the node restarts with the new binary.
 
