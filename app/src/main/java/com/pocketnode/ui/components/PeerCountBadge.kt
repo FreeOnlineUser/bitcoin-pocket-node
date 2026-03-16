@@ -19,7 +19,7 @@ fun PeerCountBadge(modifier: Modifier = Modifier) {
     val peers = lnState.peerCount
 
     Text(
-        text = "${peers}p",
+        text = "$peers peer${if (peers != 1) "s" else ""}",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
         modifier = modifier.padding(end = 12.dp)

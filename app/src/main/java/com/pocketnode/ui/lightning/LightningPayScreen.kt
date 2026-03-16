@@ -134,15 +134,9 @@ fun LightningPayScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Burst sync / channel hold banner
-            val burstState by com.pocketnode.power.PowerModeManager.burstStateFlow.collectAsState()
-            val nextBurst by com.pocketnode.power.PowerModeManager.nextBurstFlow.collectAsState()
-            val walletConnected by com.pocketnode.power.PowerModeManager.walletConnectedFlow.collectAsState()
-            com.pocketnode.ui.BurstSyncBanner(burstState = burstState, nextBurstMs = nextBurst, walletConnected = walletConnected)
-
             // Peer count (top right)
             Row(
-                modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(end = 8.dp, top = 4.dp),
                 horizontalArrangement = Arrangement.End
             ) {
                 com.pocketnode.ui.components.PeerCountBadge()
