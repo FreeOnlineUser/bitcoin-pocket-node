@@ -352,21 +352,16 @@ fun SendPaymentScreen(
                 }
             }
 
-            // Payment path display — show all attempts (failed branches + current)
+            // Payment path display — single card with all route branches
             val allAttempts by lightning.payments.tracker.attempts.collectAsState()
             val failedAttempts = allAttempts.filter { it.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.FAILED }
+            val hasRouteData = paymentAttempt != null && paymentAttempt!!.status != com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING
 
-            if (failedAttempts.isNotEmpty() || (paymentAttempt != null && paymentAttempt!!.status != com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING)) {
-                // Show failed branches first (compact)
-                failedAttempts.forEachIndexed { index, attempt ->
-                    PaymentPathCard(attempt, label = "Route ${index + 1} ✗", compact = true)
-                    Spacer(Modifier.height(4.dp))
-                }
-                // Show current/latest attempt
-                if (paymentAttempt != null && paymentAttempt!!.status != com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING) {
-                    val currentLabel = if (failedAttempts.isNotEmpty()) "Route ${failedAttempts.size + 1}" else null
-                    PaymentPathCard(paymentAttempt!!, label = currentLabel)
-                }
+            if (failedAttempts.isNotEmpty() || hasRouteData) {
+                RouteTreeCard(
+                    failedAttempts = failedAttempts,
+                    currentAttempt = if (hasRouteData) paymentAttempt else null
+                )
             }
 
             // Result / Error
@@ -472,6 +467,112 @@ fun SendPaymentScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun RouteTreeCard(
+    failedAttempts: List<com.pocketnode.lightning.PaymentTracker.PaymentAttempt>,
+    currentAttempt: com.pocketnode.lightning.PaymentTracker.PaymentAttempt?
+) {
+    val allAttempts = failedAttempts + listOfNotNull(currentAttempt)
+    if (allAttempts.isEmpty()) return
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Header
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Routes", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.weight(1f))
+                val statusText = when {
+                    currentAttempt?.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED -> "✓ Delivered"
+                    currentAttempt?.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.IN_FLIGHT -> "In flight"
+                    currentAttempt?.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.FAILED -> "✗ All routes failed"
+                    currentAttempt != null -> "Trying..."
+                    else -> "✗ All routes failed"
+                }
+                Text(statusText, style = MaterialTheme.typography.labelSmall,
+                    color = when {
+                        currentAttempt?.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED -> Color(0xFF4CAF50)
+                        statusText.contains("failed") -> MaterialTheme.colorScheme.error
+                        else -> Color(0xFFFF9800)
+                    })
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // You (sender) — always first
+            HopRow(label = "You", isFirst = true,
+                status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS, feeMsat = null)
+
+            // Common first hop (channel peer) — show once
+            val firstHop = allAttempts.firstOrNull()?.hops?.firstOrNull()
+            if (firstHop != null) {
+                HopRow(label = firstHop.alias ?: firstHop.nodeId.take(12) + "...",
+                    isFirst = false, status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS,
+                    feeMsat = firstHop.feeMsat)
+            }
+
+            // Each attempt as a branch from hop 2 onward
+            allAttempts.forEachIndexed { attemptIdx, attempt ->
+                if (attempt.hops.size <= 1) return@forEachIndexed
+                val isCurrent = attempt == currentAttempt
+                val isFailed = attempt.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.FAILED
+                val isSuccess = attempt.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED
+
+                // Branch label
+                val branchHops = attempt.hops.drop(1) // skip common first hop
+                val branchLabel = if (allAttempts.size > 1) {
+                    val prefix = if (isFailed) "✗" else if (isSuccess) "✓" else "→"
+                    "$prefix Route ${attemptIdx + 1}:"
+                } else null
+
+                if (branchLabel != null) {
+                    Text(branchLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = when {
+                            isSuccess -> Color(0xFF4CAF50)
+                            isFailed -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                            else -> Color(0xFFFF9800)
+                        },
+                        modifier = Modifier.padding(start = 16.dp, top = if (attemptIdx > 0) 4.dp else 0.dp))
+                }
+
+                branchHops.forEachIndexed { hopIdx, hop ->
+                    val isLastHop = hopIdx == branchHops.lastIndex
+                    val displayAlias = hop.alias ?: hop.nodeId.take(12) + "..."
+                    val displayLabel = when {
+                        isLastHop && isSuccess -> "⚡ $displayAlias"
+                        else -> displayAlias
+                    }
+                    // Skip fee on last hop (that's the payment amount)
+                    val displayFee = if (isLastHop) null else hop.feeMsat
+                    val failIdx = attempt.failureHopIndex - 1 // adjust for dropped first hop
+                    HopRow(
+                        label = displayLabel,
+                        isFirst = false,
+                        status = hop.status,
+                        feeMsat = displayFee,
+                        isFailed = hopIdx == failIdx
+                    )
+                }
+            }
+
+            // Failure reason for the latest attempt
+            val latestFailed = (currentAttempt ?: failedAttempts.lastOrNull())
+            if (latestFailed?.failureReason != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(cleanFailureReason(latestFailed.failureReason!!),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error)
+            }
+        }
     }
 }
 
