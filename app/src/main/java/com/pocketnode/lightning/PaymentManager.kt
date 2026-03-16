@@ -16,6 +16,14 @@ class PaymentManager(private val context: Context) {
 
     companion object {
         private const val TAG = "PaymentManager"
+
+        /** Default routing config: generous fee budget for mobile reliability */
+        private val ROUTE_CONFIG = RouteParametersConfig(
+            maxTotalRoutingFeeMsat = 50_000UL,  // 50 sats max fee (covers multi-hop on payments up to ~500k sats)
+            maxTotalCltvExpiryDelta = 1008u,     // ~1 week lockup max
+            maxPathCount = 4u.toUByte(),         // Allow MPP across 4 paths
+            maxChannelSaturationPowerOfHalf = 2u.toUByte()  // Default, avoid heavily saturated channels
+        )
     }
 
     /** Node reference, set by LightningService after start */
@@ -36,7 +44,7 @@ class PaymentManager(private val context: Context) {
         }
         return try {
             val invoice = Bolt11Invoice.fromStr(invoiceStr)
-            val paymentId = n.bolt11Payment().send(invoice, null)
+            val paymentId = n.bolt11Payment().send(invoice, ROUTE_CONFIG)
             Log.i(TAG, "Payment queued: $paymentId, waiting for result...")
             val result = waitForPayment(n, paymentId, 30)
             if (result) {
@@ -65,9 +73,9 @@ class PaymentManager(private val context: Context) {
         return try {
             val offer = Offer.fromStr(offerStr)
             val paymentId = if (amountMsat != null)
-                n.bolt12Payment().sendUsingAmount(offer, amountMsat.toULong(), null, null, null)
+                n.bolt12Payment().sendUsingAmount(offer, amountMsat.toULong(), null, null, ROUTE_CONFIG)
             else
-                n.bolt12Payment().send(offer, null, null, null)
+                n.bolt12Payment().send(offer, null, null, ROUTE_CONFIG)
             val id = paymentId.toString()
             Log.i(TAG, "BOLT12 payment queued: $id, waiting for result...")
             val result = waitForPayment(n, id, 30)
