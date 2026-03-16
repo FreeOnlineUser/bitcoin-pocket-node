@@ -76,6 +76,9 @@ fun SendPaymentScreen(
     var showRetryDialog by remember { mutableStateOf(false) }
     var retryDetail by remember { mutableStateOf<com.pocketnode.lightning.PaymentManager.PaymentResult.RoutingFailed?>(null) }
 
+    // Payment path tracker
+    val paymentAttempt by lightning.payments.tracker.currentAttempt.collectAsState()
+
     // Detect input type
     val cleanInput = invoiceInput.removePrefix("lightning:").removePrefix("LIGHTNING:").trim()
     val isOffer = cleanInput.startsWith("lno1", ignoreCase = true)
@@ -299,6 +302,11 @@ fun SendPaymentScreen(
                 }
             }
 
+            // Payment path display
+            if (paymentAttempt != null && (sending || paymentAttempt!!.status != com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING)) {
+                PaymentPathCard(paymentAttempt!!)
+            }
+
             // Result / Error
             if (result != null) {
                 Card(
@@ -328,6 +336,11 @@ fun SendPaymentScreen(
                 }
             }
         }
+    }
+
+    // Clear tracker when navigating away
+    DisposableEffect(Unit) {
+        onDispose { lightning.payments.tracker.clear() }
     }
 
     // Fee bump retry dialog
@@ -396,5 +409,132 @@ fun SendPaymentScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun PaymentPathCard(attempt: com.pocketnode.lightning.PaymentTracker.PaymentAttempt) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Route",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    when (attempt.status) {
+                        com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING -> "Finding route..."
+                        com.pocketnode.lightning.PaymentTracker.AttemptStatus.IN_FLIGHT -> "In flight"
+                        com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED -> "✓ Delivered"
+                        com.pocketnode.lightning.PaymentTracker.AttemptStatus.FAILED -> "✗ Failed"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = when (attempt.status) {
+                        com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED -> Color(0xFF4CAF50)
+                        com.pocketnode.lightning.PaymentTracker.AttemptStatus.FAILED -> MaterialTheme.colorScheme.error
+                        else -> Color(0xFFFF9800)
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // You (sender)
+            HopRow(
+                label = "You",
+                isFirst = true,
+                status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS,
+                feeMsat = null
+            )
+
+            // Each hop
+            attempt.hops.forEachIndexed { index, hop ->
+                HopRow(
+                    label = hop.alias ?: hop.nodeId.take(12) + "...",
+                    isFirst = false,
+                    status = hop.status,
+                    feeMsat = if (hop.feeMsat > 0) hop.feeMsat else null,
+                    isFailed = index == attempt.failureHopIndex
+                )
+            }
+
+            // Destination
+            if (attempt.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED) {
+                HopRow(
+                    label = "Destination",
+                    isFirst = false,
+                    status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS,
+                    feeMsat = null
+                )
+            }
+
+            // Failure reason
+            if (attempt.failureReason != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    attempt.failureReason!!,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HopRow(
+    label: String,
+    isFirst: Boolean,
+    status: com.pocketnode.lightning.PaymentTracker.HopStatus,
+    feeMsat: Long?,
+    isFailed: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Connection line + status dot
+        Text(
+            if (isFirst) "●" else "├─",
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = when {
+                isFailed -> MaterialTheme.colorScheme.error
+                status == com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS -> Color(0xFF4CAF50)
+                status == com.pocketnode.lightning.PaymentTracker.HopStatus.PENDING -> Color(0xFFFF9800)
+                else -> MaterialTheme.colorScheme.error
+            },
+            modifier = Modifier.width(24.dp)
+        )
+
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = when {
+                isFailed -> MaterialTheme.colorScheme.error
+                status == com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS -> MaterialTheme.colorScheme.onSurface
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.weight(1f)
+        )
+
+        if (feeMsat != null && feeMsat > 0) {
+            Text(
+                "+${feeMsat / 1000}.${(feeMsat % 1000).toString().padStart(3, '0')} sat",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

@@ -58,6 +58,9 @@ class PaymentManager(private val context: Context) {
     /** Event handler callback, set by LightningService */
     var handleEvents: (() -> Unit)? = null
 
+    /** Payment path tracker for UI display */
+    val tracker = PaymentTracker()
+
     // ── Send ─────────────────────────────────────────────────────────
 
     fun payInvoice(invoiceStr: String, routeConfig: RouteParametersConfig? = null): Result<String> {
@@ -85,15 +88,26 @@ class PaymentManager(private val context: Context) {
             val invoice = Bolt11Invoice.fromStr(invoiceStr)
             val amountMsat = invoice.amountMilliSatoshis()?.toLong() ?: 0L
             val config = routeConfig ?: defaultRouteConfig(amountMsat)
+
+            // Wire up graph for alias lookups
+            tracker.networkGraph = n.networkGraph()
+            tracker.startPayment("pending", amountMsat)
+
             val paymentId = n.bolt11Payment().send(invoice, config)
             Log.i(TAG, "Payment queued: $paymentId (maxFee=${config.maxTotalRoutingFeeMsat}msat)")
+
+            // Try to capture route info from peer list / graph
+            captureRouteHops(n, paymentId, amountMsat)
+
             val result = waitForPayment(n, paymentId, 30)
             if (result) {
                 Log.i(TAG, "Payment confirmed successful: $paymentId")
+                tracker.onPaymentSucceeded(paymentId)
                 PaymentResult.Success(paymentId)
             } else {
                 // Check if this looks like a routing failure
                 val payment = n.listPayments().find { it.id == paymentId }
+                tracker.onPaymentFailed(paymentId, null, "RetriesExhausted")
                 val isRoutingFailure = payment?.status == PaymentStatus.FAILED
                 if (isRoutingFailure && routeConfig == null) {
                     // Offer bumped retry
@@ -248,6 +262,57 @@ class PaymentManager(private val context: Context) {
             Thread.sleep(500)
         }
         return false
+    }
+
+    /**
+     * Try to capture route hop info for the payment.
+     * LDK doesn't expose the route in its Kotlin API, so we build what we can
+     * from the network graph and connected peers.
+     */
+    private fun captureRouteHops(n: Node, paymentId: String, amountMsat: Long) {
+        try {
+            // We can't get the actual route from LDK's API, but we know our first hop
+            // is always through our channel peer. Build a partial view.
+            val channels = n.listChannels()
+            if (channels.isEmpty()) return
+
+            // Use the first usable channel as the known first hop
+            val firstChannel = channels.firstOrNull { it.isUsable } ?: channels.first()
+            val firstPeerPubkey = firstChannel.counterpartyNodeId
+            val graph = n.networkGraph()
+            val firstAlias = try {
+                graph.node(firstPeerPubkey)?.announcementInfo?.alias
+            } catch (_: Exception) { null }
+
+            val hops = mutableListOf(
+                PaymentTracker.Hop(
+                    nodeId = firstPeerPubkey,
+                    alias = firstAlias ?: "Channel peer",
+                    scid = firstChannel.channelId.take(16),
+                    feeMsat = 0, // Unknown until complete
+                    status = PaymentTracker.HopStatus.PENDING
+                )
+            )
+
+            // Add "..." placeholder for middle hops (we don't know them yet)
+            hops.add(PaymentTracker.Hop(
+                nodeId = "...",
+                alias = "Routing...",
+                scid = "",
+                feeMsat = 0,
+                status = PaymentTracker.HopStatus.PENDING
+            ))
+
+            tracker.onRouteFound(paymentId, 
+                hops.map { it.nodeId }, 
+                emptyList(), 
+                emptyList()
+            )
+            // Override with our richer hop objects
+            tracker._currentAttempt.value = tracker._currentAttempt.value?.copy(hops = hops)
+        } catch (e: Exception) {
+            Log.w(TAG, "captureRouteHops: ${e.message}")
+        }
     }
 
     private fun ensureRpc(pmm: PowerModeManager) {

@@ -964,8 +964,14 @@ class LightningService(private val context: Context) {
         try {
             val event = n.nextEvent() ?: return
             when (event) {
-                is Event.PaymentSuccessful -> Log.i(TAG, "Payment successful: ${event.paymentId}")
-                is Event.PaymentFailed     -> Log.w(TAG, "Payment failed: ${event.paymentId}")
+                is Event.PaymentSuccessful -> {
+                    Log.i(TAG, "Payment successful: ${event.paymentId}")
+                    event.paymentId?.let { payments.tracker.onPaymentSucceeded(it) }
+                }
+                is Event.PaymentFailed     -> {
+                    Log.w(TAG, "Payment failed: ${event.paymentId} reason: ${event.reason}")
+                    event.paymentId?.let { payments.tracker.onPaymentFailed(it, null, event.reason?.toString()) }
+                }
                 is Event.PaymentReceived   -> {
                     Log.i(TAG, "Payment received: ${event.amountMsat} msat")
                     onchain.getOnchainAddress() // trigger rotation check
