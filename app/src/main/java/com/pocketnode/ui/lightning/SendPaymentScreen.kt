@@ -480,16 +480,39 @@ private fun PaymentPathCard(attempt: com.pocketnode.lightning.PaymentTracker.Pay
                 )
             }
 
-            // Failure reason
+            // Failure reason (cleaned up from raw Rust debug format)
             if (attempt.failureReason != null) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    attempt.failureReason!!,
+                    cleanFailureReason(attempt.failureReason!!),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
             }
         }
+    }
+}
+
+/** Convert raw Rust PathFailure debug strings to human-readable text. */
+private fun cleanFailureReason(raw: String): String {
+    return when {
+        raw.contains("ChannelFailure") && raw.contains("is_permanent: false") ->
+            "Channel temporarily unavailable (not enough liquidity)"
+        raw.contains("ChannelFailure") && raw.contains("is_permanent: true") ->
+            "Channel permanently failed"
+        raw.contains("NodeFailure") && raw.contains("is_permanent: false") ->
+            "Node temporarily unreachable"
+        raw.contains("NodeFailure") && raw.contains("is_permanent: true") ->
+            "Node permanently unreachable"
+        raw.contains("TemporaryChannelFailure") ->
+            "Channel lacks liquidity for this amount"
+        raw.contains("UnknownNextPeer") ->
+            "Next hop not found"
+        raw.contains("FeeInsufficient") ->
+            "Fee too low for this route"
+        raw.contains("IncorrectOrUnknownPaymentDetails") ->
+            "Invoice expired or already paid"
+        else -> raw.take(80) // Truncate anything else
     }
 }
 
@@ -509,7 +532,11 @@ private fun HopRow(
     ) {
         // Connection line + status dot
         Text(
-            if (isFirst) "●" else "├─",
+            when {
+                isFirst -> "●"
+                isFailed -> "✗"
+                else -> "├─"
+            },
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = when {
