@@ -115,6 +115,13 @@ class PaymentTracker {
         _attempts.value = _attempts.value + updated
     }
 
+    fun onPaymentPending(paymentId: String) {
+        val current = _currentAttempt.value ?: return
+        if (current.paymentId != paymentId) return
+        val updated = current.copy(status = AttemptStatus.IN_FLIGHT)
+        _currentAttempt.value = updated
+    }
+
     fun onPaymentFailed(paymentId: String, failedScid: String?, reason: String?) {
         val current = _currentAttempt.value ?: return
         if (current.paymentId != paymentId) return

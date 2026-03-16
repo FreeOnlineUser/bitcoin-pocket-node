@@ -72,6 +72,20 @@ fun SendPaymentScreen(
     var paymentComplete by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var sendingStartTime by remember { mutableStateOf(0L) }
+    var showGoBack by remember { mutableStateOf(false) }
+
+    // Show "Go Back" after 60s of sending
+    LaunchedEffect(sending) {
+        if (sending) {
+            sendingStartTime = System.currentTimeMillis()
+            showGoBack = false
+            delay(60_000)
+            if (sending) showGoBack = true
+        } else {
+            showGoBack = false
+        }
+    }
 
     // Fee bump retry dialog state
     var showRetryDialog by remember { mutableStateOf(false) }
@@ -277,10 +291,16 @@ fun SendPaymentScreen(
                                 lightning.payInvoice(cleanInput)
                             }
                         }
-                        payResult.onSuccess {
-                            result = "⚡ Payment successful!"
-                            sending = false
-                            paymentComplete = true
+                        payResult.onSuccess { id ->
+                            if (id.startsWith("PENDING:")) {
+                                result = "⏳ Payment in flight, waiting for confirmation..."
+                                sending = false
+                                // Don't set paymentComplete — payment may still resolve
+                            } else {
+                                result = "⚡ Payment successful!"
+                                sending = false
+                                paymentComplete = true
+                            }
                         }.onFailure { e ->
                             if (e is com.pocketnode.lightning.PaymentManager.RoutingException) {
                                 retryDetail = e.detail
@@ -307,6 +327,16 @@ fun SendPaymentScreen(
                     Text("Sending...")
                 } else {
                     Text(if (isOffer) "⚡ Pay Offer" else "⚡ Pay Invoice")
+                }
+            }
+
+            // "Go Back" button after 60s of sending
+            if (showGoBack && sending) {
+                OutlinedButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Payment still routing. Go back — balance will update when it resolves.")
                 }
             }
 
@@ -397,7 +427,8 @@ fun SendPaymentScreen(
                                 sending = false
                                 paymentComplete = true
                             }.onFailure { e ->
-                                error = e.message ?: "Payment failed"
+                                // Use the real failure reason, not generic message
+                                error = e.message ?: "No route found with enough liquidity"
                                 sending = false
                             }
                         }

@@ -47,6 +47,24 @@ class PaymentManager(private val context: Context) {
     companion object {
         private const val TAG = "PaymentManager"
 
+        /** Clean raw Rust failure reason into human-readable text */
+        fun cleanFailureReason(failReason: String?, paymentStatus: PaymentStatus?): String {
+            return when {
+                failReason != null && (failReason.contains("ChannelFailure") && failReason.contains("is_permanent: false")) ->
+                    "Routing peer didn't have enough outgoing liquidity"
+                failReason != null && failReason.contains("TemporaryChannelFailure") ->
+                    "Routing peer didn't have enough outgoing liquidity"
+                failReason != null && failReason.contains("FeeInsufficient") ->
+                    "Fee too low for route"
+                failReason != null && failReason.contains("IncorrectOrUnknownPaymentDetails") ->
+                    "Invoice expired or already paid"
+                failReason != null && failReason.contains("NodeFailure") ->
+                    "Routing node unreachable"
+                paymentStatus == PaymentStatus.FAILED -> "No route found with enough liquidity"
+                else -> "Payment timed out"
+            }
+        }
+
         /** Default fee: 50 sats or 0.5% of payment, whichever is higher */
         fun defaultRouteConfig(amountMsat: Long = 0): RouteParametersConfig {
             val percentFee = (amountMsat * 5 / 1000).coerceAtLeast(50_000) // 0.5% or 50 sats min
@@ -73,6 +91,7 @@ class PaymentManager(private val context: Context) {
     /** Payment result with routing failure detail for retry UI */
     sealed class PaymentResult {
         data class Success(val paymentId: String) : PaymentResult()
+        data class Pending(val paymentId: String) : PaymentResult()
         data class RoutingFailed(
             val invoiceStr: String,
             val amountMsat: Long,
@@ -97,6 +116,7 @@ class PaymentManager(private val context: Context) {
         val result = payInvoiceWithRetry(invoiceStr, routeConfig)
         return when (result) {
             is PaymentResult.Success -> Result.success(result.paymentId)
+            is PaymentResult.Pending -> Result.success("PENDING:${result.paymentId}")
             is PaymentResult.RoutingFailed -> Result.failure(RoutingException(result))
             is PaymentResult.Failed -> Result.failure(Exception(result.error))
         }
@@ -130,45 +150,44 @@ class PaymentManager(private val context: Context) {
             // Try to capture route info from peer list / graph
             captureRouteHops(n, paymentId, amountMsat)
 
-            val result = waitForPayment(n, paymentId, 30)
-            if (result) {
-                Log.i(TAG, "Payment confirmed successful: $paymentId")
-                tracker.onPaymentSucceeded(paymentId)
-                PaymentResult.Success(paymentId)
-            } else {
-                // Check if this looks like a routing failure
-                val payment = n.listPayments().find { it.id == paymentId }
-                // Get actual failure reason from path data if available
-                val pathAttempts = n.paymentPathAttempts()
-                val failedPath = pathAttempts.lastOrNull { it.status == PaymentPathStatus.FAILED }
-                val failReason = failedPath?.failureReason
-                tracker.onPaymentFailed(paymentId, failedPath?.failedScid?.toString(), failReason)
-                val isRoutingFailure = payment?.status == PaymentStatus.FAILED
-                if (isRoutingFailure && routeConfig == null) {
-                    // Offer bumped retry
-                    val bumped = bumpedRouteConfig(amountMsat)
-                    Log.w(TAG, "Payment routing failed. Current max: ${config.maxTotalRoutingFeeMsat}msat, bump to: ${bumped.maxTotalRoutingFeeMsat}msat")
-                    PaymentResult.RoutingFailed(
-                        invoiceStr = invoiceStr,
-                        amountMsat = amountMsat,
-                        currentMaxFeeMsat = config.maxTotalRoutingFeeMsat?.toLong() ?: 0,
-                        bumpedMaxFeeMsat = bumped.maxTotalRoutingFeeMsat?.toLong() ?: 0
-                    )
-                } else {
-                    // Use cleaned failure reason from path data
-                    val cleanReason = when {
-                        failReason != null && failReason.contains("ChannelFailure") && failReason.contains("is_permanent: false") ->
-                            "Routing peer didn't have enough outgoing liquidity"
-                        failReason != null && failReason.contains("TemporaryChannelFailure") ->
-                            "Routing peer didn't have enough outgoing liquidity"
-                        failReason != null && failReason.contains("FeeInsufficient") ->
-                            "Fee too low for route"
-                        failReason != null && failReason.contains("IncorrectOrUnknownPaymentDetails") ->
-                            "Invoice expired or already paid"
-                        payment?.status == PaymentStatus.FAILED -> "Payment failed: no route found"
-                        else -> "Payment timed out"
+            // Wait for LDK to resolve — no arbitrary timeout.
+            // Safety cap at 5 min; if still PENDING, report honestly.
+            val result = waitForPayment(n, paymentId, 300)
+            val payment = n.listPayments().find { it.id == paymentId }
+            val actualStatus = payment?.status
+
+            when {
+                result || actualStatus == PaymentStatus.SUCCEEDED -> {
+                    Log.i(TAG, "Payment confirmed successful: $paymentId")
+                    tracker.onPaymentSucceeded(paymentId)
+                    PaymentResult.Success(paymentId)
+                }
+                actualStatus == PaymentStatus.PENDING -> {
+                    // Still in-flight after 5 min safety cap — NOT failed
+                    Log.w(TAG, "Payment $paymentId still PENDING after safety cap — in-flight")
+                    tracker.onPaymentPending(paymentId)
+                    PaymentResult.Pending(paymentId)
+                }
+                else -> {
+                    // Actually failed — get real reason
+                    val pathAttempts = n.paymentPathAttempts()
+                    val failedPath = pathAttempts.lastOrNull { it.status == PaymentPathStatus.FAILED }
+                    val failReason = failedPath?.failureReason
+                    tracker.onPaymentFailed(paymentId, failedPath?.failedScid?.toString(), failReason)
+
+                    if (actualStatus == PaymentStatus.FAILED && routeConfig == null) {
+                        val bumped = bumpedRouteConfig(amountMsat)
+                        Log.w(TAG, "Payment routing failed. Current max: ${config.maxTotalRoutingFeeMsat}msat, bump to: ${bumped.maxTotalRoutingFeeMsat}msat")
+                        PaymentResult.RoutingFailed(
+                            invoiceStr = invoiceStr,
+                            amountMsat = amountMsat,
+                            currentMaxFeeMsat = config.maxTotalRoutingFeeMsat?.toLong() ?: 0,
+                            bumpedMaxFeeMsat = bumped.maxTotalRoutingFeeMsat?.toLong() ?: 0
+                        )
+                    } else {
+                        val cleanReason = cleanFailureReason(failReason, payment?.status)
+                        PaymentResult.Failed(cleanReason)
                     }
-                    PaymentResult.Failed(cleanReason)
                 }
             }
         } catch (e: Exception) {
