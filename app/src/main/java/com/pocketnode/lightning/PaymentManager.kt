@@ -34,14 +34,35 @@ class PaymentManager(private val context: Context) {
         // Check persistent cache first
         aliasCache[pubkey]?.let { return it }
         // Try graph lookup
-        return try {
+        try {
             val nodeInfo = graph.node(pubkey)
             val alias = nodeInfo?.announcementInfo?.alias
             if (alias != null && !alias.startsWith(pubkey.take(8))) {
                 cacheAlias(pubkey, alias)
+                return alias
             }
-            alias
-        } catch (_: Exception) { null }
+        } catch (_: Exception) {}
+        // Fallback: fetch from mempool.space API (same API we already use)
+        return try {
+            val url = java.net.URL("https://mempool.space/api/v1/lightning/nodes/$pubkey")
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 3000
+            conn.readTimeout = 3000
+            if (conn.responseCode == 200) {
+                val body = conn.inputStream.bufferedReader().readText()
+                // Simple JSON parse for "alias":"value"
+                val match = Regex("\"alias\"\\s*:\\s*\"([^\"]+)\"").find(body)
+                val alias = match?.groupValues?.get(1)
+                if (alias != null && alias.isNotBlank() && !alias.startsWith(pubkey.take(8))) {
+                    Log.d(TAG, "Fetched alias '$alias' for ${pubkey.take(16)}... from mempool.space")
+                    cacheAlias(pubkey, alias)
+                    alias
+                } else null
+            } else null
+        } catch (e: Exception) {
+            Log.d(TAG, "Mempool alias fetch failed for ${pubkey.take(16)}: ${e.message}")
+            null
+        }
     }
 
     companion object {
