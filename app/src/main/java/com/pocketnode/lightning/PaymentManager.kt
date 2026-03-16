@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.pocketnode.power.PowerModeManager
 import org.lightningdevkit.ldknode.*
+import org.lightningdevkit.ldknode.PaymentPathStatus
 
 /**
  * Handles Lightning payment operations: send, receive, and payment tracking.
@@ -89,9 +90,10 @@ class PaymentManager(private val context: Context) {
             val amountMsat = invoice.amountMilliSatoshis()?.toLong() ?: 0L
             val config = routeConfig ?: defaultRouteConfig(amountMsat)
 
-            // Wire up graph for alias lookups
+            // Wire up graph for alias lookups and clear previous paths
             tracker.networkGraph = n.networkGraph()
             tracker.startPayment("pending", amountMsat)
+            n.clearPaymentPaths()
 
             val paymentId = n.bolt11Payment().send(invoice, config)
             Log.i(TAG, "Payment queued: $paymentId (maxFee=${config.maxTotalRoutingFeeMsat}msat)")
@@ -265,54 +267,104 @@ class PaymentManager(private val context: Context) {
     }
 
     /**
-     * Try to capture route hop info for the payment.
-     * LDK doesn't expose the route in its Kotlin API, so we build what we can
-     * from the network graph and connected peers.
+     * Poll LDK's payment_path_attempts() for real route data.
+     * Called after send() returns, path data arrives via PaymentPathSuccessful/Failed events.
      */
     private fun captureRouteHops(n: Node, paymentId: String, amountMsat: Long) {
+        // Initial state: show first hop from our channel
         try {
-            // We can't get the actual route from LDK's API, but we know our first hop
-            // is always through our channel peer. Build a partial view.
             val channels = n.listChannels()
             if (channels.isEmpty()) return
-
-            // Use the first usable channel as the known first hop
             val firstChannel = channels.firstOrNull { it.isUsable } ?: channels.first()
-            val firstPeerPubkey = firstChannel.counterpartyNodeId
             val graph = n.networkGraph()
             val firstAlias = try {
-                graph.node(firstPeerPubkey)?.announcementInfo?.alias
+                graph.node(firstChannel.counterpartyNodeId)?.announcementInfo?.alias
             } catch (_: Exception) { null }
 
-            val hops = mutableListOf(
-                PaymentTracker.Hop(
-                    nodeId = firstPeerPubkey,
-                    alias = firstAlias ?: "Channel peer",
-                    scid = firstChannel.channelId.take(16),
-                    feeMsat = 0, // Unknown until complete
-                    status = PaymentTracker.HopStatus.PENDING
-                )
+            tracker._currentAttempt.value = tracker._currentAttempt.value?.copy(
+                hops = listOf(
+                    PaymentTracker.Hop(
+                        nodeId = firstChannel.counterpartyNodeId,
+                        alias = firstAlias ?: "Channel peer",
+                        scid = firstChannel.channelId.take(16),
+                        feeMsat = 0,
+                        status = PaymentTracker.HopStatus.PENDING
+                    ),
+                    PaymentTracker.Hop(
+                        nodeId = "...",
+                        alias = "Routing...",
+                        scid = "",
+                        feeMsat = 0,
+                        status = PaymentTracker.HopStatus.PENDING
+                    )
+                ),
+                status = PaymentTracker.AttemptStatus.IN_FLIGHT
             )
-
-            // Add "..." placeholder for middle hops (we don't know them yet)
-            hops.add(PaymentTracker.Hop(
-                nodeId = "...",
-                alias = "Routing...",
-                scid = "",
-                feeMsat = 0,
-                status = PaymentTracker.HopStatus.PENDING
-            ))
-
-            tracker.onRouteFound(paymentId, 
-                hops.map { it.nodeId }, 
-                emptyList(), 
-                emptyList()
-            )
-            // Override with our richer hop objects
-            tracker._currentAttempt.value = tracker._currentAttempt.value?.copy(hops = hops)
         } catch (e: Exception) {
-            Log.w(TAG, "captureRouteHops: ${e.message}")
+            Log.w(TAG, "captureRouteHops initial: ${e.message}")
         }
+
+        // Background thread: poll for real path data from LDK events
+        Thread({
+            try {
+                Thread.sleep(1000) // Give events time to fire
+                val paths = n.paymentPathAttempts()
+                if (paths.isEmpty()) return@Thread
+
+                val graph = n.networkGraph()
+                // Find paths for this payment (may be multiple attempts)
+                val relevantPaths = paths.filter { it.paymentId.contains(paymentId.take(16)) }
+                val latestPath = relevantPaths.lastOrNull() ?: paths.lastOrNull() ?: return@Thread
+
+                val hops = latestPath.hops.map { hop ->
+                    val alias = try {
+                        graph.node(hop.nodeId)?.announcementInfo?.alias
+                    } catch (_: Exception) { null }
+                    PaymentTracker.Hop(
+                        nodeId = hop.nodeId,
+                        alias = alias,
+                        scid = hop.shortChannelId.toString(),
+                        feeMsat = hop.feeMsat.toLong(),
+                        status = when (latestPath.status) {
+                            PaymentPathStatus.SUCCEEDED -> PaymentTracker.HopStatus.SUCCESS
+                            PaymentPathStatus.FAILED -> PaymentTracker.HopStatus.PENDING
+                            else -> PaymentTracker.HopStatus.PENDING
+                        }
+                    )
+                }
+
+                // Mark failed hop if applicable
+                val failedScid = latestPath.failedScid
+                val finalHops = if (failedScid != null && latestPath.status == PaymentPathStatus.FAILED) {
+                    val failIdx = hops.indexOfFirst { it.scid == failedScid.toString() }
+                    hops.mapIndexed { i, hop ->
+                        when {
+                            failIdx >= 0 && i < failIdx -> hop.copy(status = PaymentTracker.HopStatus.SUCCESS)
+                            failIdx >= 0 && i == failIdx -> hop.copy(status = PaymentTracker.HopStatus.FAILED)
+                            else -> hop
+                        }
+                    }
+                } else hops
+
+                val status = when (latestPath.status) {
+                    PaymentPathStatus.SUCCEEDED -> PaymentTracker.AttemptStatus.SUCCEEDED
+                    PaymentPathStatus.FAILED -> PaymentTracker.AttemptStatus.FAILED
+                    else -> PaymentTracker.AttemptStatus.IN_FLIGHT
+                }
+
+                tracker._currentAttempt.value = PaymentTracker.PaymentAttempt(
+                    paymentId = paymentId,
+                    amountMsat = amountMsat,
+                    hops = finalHops,
+                    status = status,
+                    failureHopIndex = if (failedScid != null) finalHops.indexOfFirst { it.scid == failedScid.toString() } else -1,
+                    failureReason = latestPath.failureReason
+                )
+                Log.i(TAG, "Route captured: ${finalHops.size} hops, status=$status")
+            } catch (e: Exception) {
+                Log.w(TAG, "captureRouteHops poll: ${e.message}")
+            }
+        }, "route-capture").start()
     }
 
     private fun ensureRpc(pmm: PowerModeManager) {
