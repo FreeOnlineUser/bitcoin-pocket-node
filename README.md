@@ -237,7 +237,7 @@ Built-in Lightning wallet powered by [LDK](https://lightningdevkit.org/) (ldk-no
 1. Start your Bitcoin node and wait for sync
 2. Open the Lightning wallet from the dashboard
 3. Fund your on-chain wallet (receive bitcoin to the displayed address)
-4. Browse peers (Most Connected, Largest, Lowest Fee, or search) and open a channel
+4. Connect to a peer by pubkey and open a channel
 5. Send and receive Lightning payments
 
 ### Architecture
@@ -259,13 +259,9 @@ bitcoind ← RPC → ldk-node (in-process)
 
 The app runs an LNDHub-compatible API server on localhost:3000. Connect BlueWallet in LNDHub mode to use your Lightning node from another app on the same phone.
 
-### Peer Discovery
+### Opening Channels
 
-Built-in peer browser using mempool.space API. Browse nodes by:
-- **Most Connected:** highest channel count
-- **Largest:** biggest total capacity
-- **Lowest Fee:** cheapest routing fees
-- **Search:** find nodes by name or pubkey
+Connect to any Lightning node by entering its pubkey@host:port. Choose your channel size, confirm, and the funding transaction is broadcast automatically.
 
 ## Target Platform
 
