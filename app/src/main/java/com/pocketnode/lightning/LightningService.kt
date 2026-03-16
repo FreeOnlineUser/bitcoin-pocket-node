@@ -1047,7 +1047,7 @@ class LightningService(private val context: Context) {
 
     // === Payment operations (delegated to PaymentManager) ===
 
-    fun payInvoice(invoiceStr: String): Result<String> = payments.payInvoice(invoiceStr)
+    fun payInvoice(invoiceStr: String, routeConfig: org.lightningdevkit.ldknode.RouteParametersConfig? = null): Result<String> = payments.payInvoice(invoiceStr, routeConfig)
     fun payOffer(offerStr: String, amountMsat: Long? = null): Result<String> = payments.payOffer(offerStr, amountMsat)
     fun createInvoice(amountMsat: Long, description: String, expirySecs: Int = 3600): Result<String> = payments.createInvoice(amountMsat, description, expirySecs)
     fun createOffer(amountMsat: Long, description: String): Result<String> = payments.createOffer(amountMsat, description)

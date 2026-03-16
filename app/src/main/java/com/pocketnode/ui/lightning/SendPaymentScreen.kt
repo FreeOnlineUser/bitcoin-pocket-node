@@ -72,6 +72,10 @@ fun SendPaymentScreen(
     var result by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
 
+    // Fee bump retry dialog state
+    var showRetryDialog by remember { mutableStateOf(false) }
+    var retryDetail by remember { mutableStateOf<com.pocketnode.lightning.PaymentManager.PaymentResult.RoutingFailed?>(null) }
+
     // Detect input type
     val cleanInput = invoiceInput.removePrefix("lightning:").removePrefix("LIGHTNING:").trim()
     val isOffer = cleanInput.startsWith("lno1", ignoreCase = true)
@@ -266,9 +270,15 @@ fun SendPaymentScreen(
                             result = "⚡ Payment successful!"
                             sending = false
                             paymentComplete = true
-                        }.onFailure {
-                            error = it.message ?: "Payment failed"
-                            sending = false
+                        }.onFailure { e ->
+                            if (e is com.pocketnode.lightning.PaymentManager.RoutingException) {
+                                retryDetail = e.detail
+                                showRetryDialog = true
+                                sending = false
+                            } else {
+                                error = e.message ?: "Payment failed"
+                                sending = false
+                            }
                         }
                     }
                 },
@@ -318,5 +328,73 @@ fun SendPaymentScreen(
                 }
             }
         }
+    }
+
+    // Fee bump retry dialog
+    if (showRetryDialog && retryDetail != null) {
+        val detail = retryDetail!!
+        val currentFeeSats = detail.currentMaxFeeMsat / 1000
+        val bumpedFeeSats = detail.bumpedMaxFeeMsat / 1000
+        val amountSats = detail.amountMsat / 1000
+
+        AlertDialog(
+            onDismissRequest = {
+                showRetryDialog = false
+                retryDetail = null
+            },
+            title = { Text("Routing Failed") },
+            text = {
+                Column {
+                    Text("Could not find a route with max fee of $currentFeeSats sats.")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Retry with higher fee budget of $bumpedFeeSats sats?",
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Payment: $amountSats sats",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showRetryDialog = false
+                        retryDetail = null
+                        sending = true
+                        error = null
+                        scope.launch {
+                            val bumpedConfig = com.pocketnode.lightning.PaymentManager.bumpedRouteConfig(detail.amountMsat)
+                            val payResult = withContext(Dispatchers.IO) {
+                                lightning.payInvoice(detail.invoiceStr, bumpedConfig)
+                            }
+                            payResult.onSuccess {
+                                result = "⚡ Payment successful!"
+                                sending = false
+                                paymentComplete = true
+                            }.onFailure { e ->
+                                error = e.message ?: "Payment failed"
+                                sending = false
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+                ) {
+                    Text("Retry ($bumpedFeeSats sat fee)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showRetryDialog = false
+                    retryDetail = null
+                    error = "Payment cancelled"
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
