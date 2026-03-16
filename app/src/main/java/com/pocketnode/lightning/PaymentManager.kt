@@ -15,6 +15,35 @@ import org.lightningdevkit.ldknode.PaymentPathStatus
  */
 class PaymentManager(private val context: Context) {
 
+    /** Persistent alias cache — survives restarts and gossip pruning */
+    private val aliasCache: MutableMap<String, String> by lazy {
+        val prefs = context.getSharedPreferences("node_aliases", Context.MODE_PRIVATE)
+        val all = prefs.all
+        val map = mutableMapOf<String, String>()
+        for ((k, v) in all) { if (v is String) map[k] = v }
+        map
+    }
+
+    private fun cacheAlias(pubkey: String, alias: String) {
+        aliasCache[pubkey] = alias
+        context.getSharedPreferences("node_aliases", Context.MODE_PRIVATE)
+            .edit().putString(pubkey, alias).apply()
+    }
+
+    private fun lookupAlias(graph: NetworkGraph, pubkey: String): String? {
+        // Check persistent cache first
+        aliasCache[pubkey]?.let { return it }
+        // Try graph lookup
+        return try {
+            val nodeInfo = graph.node(pubkey)
+            val alias = nodeInfo?.announcementInfo?.alias
+            if (alias != null && !alias.startsWith(pubkey.take(8))) {
+                cacheAlias(pubkey, alias)
+            }
+            alias
+        } catch (_: Exception) { null }
+    }
+
     companion object {
         private const val TAG = "PaymentManager"
 
@@ -306,15 +335,7 @@ class PaymentManager(private val context: Context) {
                 ?: paths.lastOrNull() ?: return
 
             val hops = latestPath.hops.map { hop ->
-                val alias = try {
-                    val nodeInfo = graph.node(hop.nodeId)
-                    val a = nodeInfo?.announcementInfo?.alias
-                    if (a == null) Log.d(TAG, "No alias for ${hop.nodeId.take(16)}... (nodeInfo=${nodeInfo != null})")
-                    a
-                } catch (e: Exception) {
-                    Log.d(TAG, "Alias lookup failed for ${hop.nodeId.take(16)}: ${e.message}")
-                    null
-                }
+                val alias = lookupAlias(graph, hop.nodeId)
                 PaymentTracker.Hop(
                     nodeId = hop.nodeId,
                     alias = alias ?: hop.nodeId.take(12) + "...",
@@ -373,9 +394,7 @@ class PaymentManager(private val context: Context) {
             if (channels.isEmpty()) return
             val firstChannel = channels.firstOrNull { it.isUsable } ?: channels.first()
             val graph = n.networkGraph()
-            val firstAlias = try {
-                graph.node(firstChannel.counterpartyNodeId)?.announcementInfo?.alias
-            } catch (_: Exception) { null }
+            val firstAlias = lookupAlias(graph, firstChannel.counterpartyNodeId)
 
             tracker._currentAttempt.value = tracker._currentAttempt.value?.copy(
                 hops = listOf(

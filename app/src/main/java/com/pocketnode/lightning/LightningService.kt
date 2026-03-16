@@ -249,7 +249,9 @@ class LightningService(private val context: Context) {
                 rpcPassword
             )
 
-            builder.setGossipSourceRgs(RGS_URL)
+            // Use P2P gossip instead of RGS — P2P provides both channel graph
+            // AND node announcements (aliases). RGS only provides channel data.
+            // builder.setGossipSourceRgs(RGS_URL)
 
             // --- Wallet birthday for seed recovery ---
             val seedFile = File(storageDir, "keys_seed")
