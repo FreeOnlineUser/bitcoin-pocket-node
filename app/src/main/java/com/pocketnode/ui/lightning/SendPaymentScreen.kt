@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import kotlinx.coroutines.delay
 
 /**
  * Send a Lightning payment by pasting a BOLT11 invoice or BOLT12 offer.
@@ -78,6 +79,13 @@ fun SendPaymentScreen(
 
     // Payment path tracker
     val paymentAttempt by lightning.payments.tracker.currentAttempt.collectAsState()
+    val scrollState = rememberScrollState()
+
+    // Auto-scroll to bottom when payment attempt updates, or on error/result
+    LaunchedEffect(paymentAttempt, error, result) {
+        delay(100) // Let compose lay out
+        scope.launch { scrollState.animateScrollTo(scrollState.maxValue) }
+    }
 
     // Detect input type
     val cleanInput = invoiceInput.removePrefix("lightning:").removePrefix("LIGHTNING:").trim()
@@ -101,7 +109,7 @@ fun SendPaymentScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Invoice input
@@ -458,22 +466,17 @@ private fun PaymentPathCard(attempt: com.pocketnode.lightning.PaymentTracker.Pay
 
             // Each hop
             attempt.hops.forEachIndexed { index, hop ->
+                val isLastHop = index == attempt.hops.lastIndex
+                val displayAlias = hop.alias ?: hop.nodeId.take(12) + "..."
+                val displayLabel = if (isLastHop) "⚡ $displayAlias" else displayAlias
+                // Last hop fee_msat is the payment amount, not a routing fee
+                val displayFee = if (isLastHop) null else if (hop.feeMsat > 0) hop.feeMsat else null
                 HopRow(
-                    label = hop.alias ?: hop.nodeId.take(12) + "...",
+                    label = displayLabel,
                     isFirst = false,
                     status = hop.status,
-                    feeMsat = if (hop.feeMsat > 0) hop.feeMsat else null,
+                    feeMsat = displayFee,
                     isFailed = index == attempt.failureHopIndex
-                )
-            }
-
-            // Destination
-            if (attempt.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED) {
-                HopRow(
-                    label = "Destination",
-                    isFirst = false,
-                    status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS,
-                    feeMsat = null
                 )
             }
 

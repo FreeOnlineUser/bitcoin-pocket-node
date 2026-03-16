@@ -253,11 +253,22 @@ class PaymentManager(private val context: Context) {
         val deadline = System.currentTimeMillis() + timeoutSecs * 1000L
         while (System.currentTimeMillis() < deadline) {
             try { handleEvents?.invoke() } catch (_: Exception) {}
+
+            // Poll for real route data from LDK path events
+            pollRouteData(n, paymentId)
+
             val payment = n.listPayments().find { it.id == paymentId }
             if (payment != null) {
                 when (payment.status) {
-                    PaymentStatus.SUCCEEDED -> return true
-                    PaymentStatus.FAILED -> return false
+                    PaymentStatus.SUCCEEDED -> {
+                        // Final poll to catch PaymentPathSuccessful
+                        pollRouteData(n, paymentId)
+                        return true
+                    }
+                    PaymentStatus.FAILED -> {
+                        pollRouteData(n, paymentId)
+                        return false
+                    }
                     else -> {}
                 }
             }
@@ -266,12 +277,80 @@ class PaymentManager(private val context: Context) {
         return false
     }
 
+    /** Check LDK for real path data and update tracker if found. */
+    private fun pollRouteData(n: Node, paymentId: String) {
+        try {
+            val paths = n.paymentPathAttempts()
+            if (paths.isEmpty()) return
+
+            val graph = n.networkGraph()
+            // Match by payment ID — LDK uses hex-encoded PaymentId
+            val latestPath = paths.lastOrNull { it.paymentId == paymentId }
+                ?: paths.lastOrNull() ?: return
+
+            val hops = latestPath.hops.map { hop ->
+                val alias = try {
+                    val nodeInfo = graph.node(hop.nodeId)
+                    val a = nodeInfo?.announcementInfo?.alias
+                    if (a == null) Log.d(TAG, "No alias for ${hop.nodeId.take(16)}... (nodeInfo=${nodeInfo != null})")
+                    a
+                } catch (e: Exception) {
+                    Log.d(TAG, "Alias lookup failed for ${hop.nodeId.take(16)}: ${e.message}")
+                    null
+                }
+                PaymentTracker.Hop(
+                    nodeId = hop.nodeId,
+                    alias = alias ?: hop.nodeId.take(12) + "...",
+                    scid = hop.shortChannelId.toString(),
+                    feeMsat = hop.feeMsat.toLong(),
+                    status = when (latestPath.status) {
+                        PaymentPathStatus.SUCCEEDED -> PaymentTracker.HopStatus.SUCCESS
+                        PaymentPathStatus.FAILED -> PaymentTracker.HopStatus.PENDING
+                        else -> PaymentTracker.HopStatus.PENDING
+                    }
+                )
+            }
+
+            if (hops.isEmpty()) return
+
+            // Mark failed hop if applicable
+            val failedScid = latestPath.failedScid
+            val finalHops = if (failedScid != null && latestPath.status == PaymentPathStatus.FAILED) {
+                val failIdx = hops.indexOfFirst { it.scid == failedScid.toString() }
+                hops.mapIndexed { i, hop ->
+                    when {
+                        failIdx >= 0 && i < failIdx -> hop.copy(status = PaymentTracker.HopStatus.SUCCESS)
+                        failIdx >= 0 && i == failIdx -> hop.copy(status = PaymentTracker.HopStatus.FAILED)
+                        else -> hop
+                    }
+                }
+            } else hops
+
+            val status = when (latestPath.status) {
+                PaymentPathStatus.SUCCEEDED -> PaymentTracker.AttemptStatus.SUCCEEDED
+                PaymentPathStatus.FAILED -> PaymentTracker.AttemptStatus.FAILED
+                else -> PaymentTracker.AttemptStatus.IN_FLIGHT
+            }
+
+            tracker._currentAttempt.value = PaymentTracker.PaymentAttempt(
+                paymentId = paymentId,
+                amountMsat = tracker._currentAttempt.value?.amountMsat ?: 0,
+                hops = finalHops,
+                status = status,
+                failureHopIndex = if (failedScid != null) finalHops.indexOfFirst { it.scid == failedScid.toString() } else -1,
+                failureReason = latestPath.failureReason
+            )
+            Log.i(TAG, "Route data: ${finalHops.size} hops, status=$status")
+        } catch (e: Exception) {
+            // Don't spam logs on every poll
+        }
+    }
+
     /**
-     * Poll LDK's payment_path_attempts() for real route data.
-     * Called after send() returns, path data arrives via PaymentPathSuccessful/Failed events.
+     * Set initial placeholder hops (first channel peer + "routing...").
+     * Real hops come from pollRouteData() during waitForPayment().
      */
     private fun captureRouteHops(n: Node, paymentId: String, amountMsat: Long) {
-        // Initial state: show first hop from our channel
         try {
             val channels = n.listChannels()
             if (channels.isEmpty()) return
@@ -301,70 +380,8 @@ class PaymentManager(private val context: Context) {
                 status = PaymentTracker.AttemptStatus.IN_FLIGHT
             )
         } catch (e: Exception) {
-            Log.w(TAG, "captureRouteHops initial: ${e.message}")
+            Log.w(TAG, "captureRouteHops: ${e.message}")
         }
-
-        // Background thread: poll for real path data from LDK events
-        Thread({
-            try {
-                Thread.sleep(1000) // Give events time to fire
-                val paths = n.paymentPathAttempts()
-                if (paths.isEmpty()) return@Thread
-
-                val graph = n.networkGraph()
-                // Find paths for this payment (may be multiple attempts)
-                val relevantPaths = paths.filter { it.paymentId.contains(paymentId.take(16)) }
-                val latestPath = relevantPaths.lastOrNull() ?: paths.lastOrNull() ?: return@Thread
-
-                val hops = latestPath.hops.map { hop ->
-                    val alias = try {
-                        graph.node(hop.nodeId)?.announcementInfo?.alias
-                    } catch (_: Exception) { null }
-                    PaymentTracker.Hop(
-                        nodeId = hop.nodeId,
-                        alias = alias,
-                        scid = hop.shortChannelId.toString(),
-                        feeMsat = hop.feeMsat.toLong(),
-                        status = when (latestPath.status) {
-                            PaymentPathStatus.SUCCEEDED -> PaymentTracker.HopStatus.SUCCESS
-                            PaymentPathStatus.FAILED -> PaymentTracker.HopStatus.PENDING
-                            else -> PaymentTracker.HopStatus.PENDING
-                        }
-                    )
-                }
-
-                // Mark failed hop if applicable
-                val failedScid = latestPath.failedScid
-                val finalHops = if (failedScid != null && latestPath.status == PaymentPathStatus.FAILED) {
-                    val failIdx = hops.indexOfFirst { it.scid == failedScid.toString() }
-                    hops.mapIndexed { i, hop ->
-                        when {
-                            failIdx >= 0 && i < failIdx -> hop.copy(status = PaymentTracker.HopStatus.SUCCESS)
-                            failIdx >= 0 && i == failIdx -> hop.copy(status = PaymentTracker.HopStatus.FAILED)
-                            else -> hop
-                        }
-                    }
-                } else hops
-
-                val status = when (latestPath.status) {
-                    PaymentPathStatus.SUCCEEDED -> PaymentTracker.AttemptStatus.SUCCEEDED
-                    PaymentPathStatus.FAILED -> PaymentTracker.AttemptStatus.FAILED
-                    else -> PaymentTracker.AttemptStatus.IN_FLIGHT
-                }
-
-                tracker._currentAttempt.value = PaymentTracker.PaymentAttempt(
-                    paymentId = paymentId,
-                    amountMsat = amountMsat,
-                    hops = finalHops,
-                    status = status,
-                    failureHopIndex = if (failedScid != null) finalHops.indexOfFirst { it.scid == failedScid.toString() } else -1,
-                    failureReason = latestPath.failureReason
-                )
-                Log.i(TAG, "Route captured: ${finalHops.size} hops, status=$status")
-            } catch (e: Exception) {
-                Log.w(TAG, "captureRouteHops poll: ${e.message}")
-            }
-        }, "route-capture").start()
     }
 
     private fun ensureRpc(pmm: PowerModeManager) {
