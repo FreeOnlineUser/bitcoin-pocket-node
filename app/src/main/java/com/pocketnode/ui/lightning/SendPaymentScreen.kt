@@ -507,35 +507,23 @@ private fun RouteTreeCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // You (sender)
-            HopRow(label = "You", isFirst = true,
-                status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS, feeMsat = null)
-
-            // First hop (channel peer) — always common
-            val firstHop = current.hops.firstOrNull()
-            if (firstHop != null) {
-                HopRow(
-                    label = firstHop.alias ?: firstHop.nodeId.take(12) + "...",
-                    isFirst = false,
-                    status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS,
-                    feeMsat = firstHop.feeMsat
-                )
-            }
-
-            // Failed routes inline — one line each (hops after the common first hop)
+            // Failed routes — one line each showing the path as names joined by →
             failedAttempts.forEach { attempt ->
                 val names = attempt.hops.drop(1).map { hop ->
                     hop.alias ?: hop.nodeId.take(8) + "..."
                 }
+                val failHopIdx = if (attempt.failureHopIndex > 0) attempt.failureHopIndex - 1 else -1
+                val failName = if (failHopIdx in names.indices) names[failHopIdx] else null
                 val pathStr = names.joinToString(" → ")
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp, horizontal = 0.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("✗ ", color = MaterialTheme.colorScheme.error,
+                    Text("✗", color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace)
+                    Spacer(Modifier.width(6.dp))
                     Text(pathStr,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
@@ -545,10 +533,16 @@ private fun RouteTreeCard(
                 }
             }
 
-            // Remaining hops of current route (after first hop)
-            current.hops.drop(1).forEachIndexed { index, hop ->
-                val actualIndex = index + 1 // account for dropped first hop
-                val isLastHop = actualIndex == current.hops.lastIndex
+            if (failedAttempts.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+            }
+
+            // Current route — full hop display
+            HopRow(label = "You", isFirst = true,
+                status = com.pocketnode.lightning.PaymentTracker.HopStatus.SUCCESS, feeMsat = null)
+
+            current.hops.forEachIndexed { index, hop ->
+                val isLastHop = index == current.hops.lastIndex
                 val displayAlias = hop.alias ?: hop.nodeId.take(12) + "..."
                 val displayLabel = when {
                     isLastHop && current.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.SUCCEEDED -> "⚡ $displayAlias"
@@ -560,7 +554,7 @@ private fun RouteTreeCard(
                     isFirst = false,
                     status = hop.status,
                     feeMsat = displayFee,
-                    isFailed = actualIndex == current.failureHopIndex
+                    isFailed = index == current.failureHopIndex
                 )
             }
 
