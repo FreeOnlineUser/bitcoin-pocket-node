@@ -10,7 +10,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 
 - **Two proven bootstrap paths:** sync from home node (under 1 hour) or download from internet (3-6 hours, on-chain only)
 - **Phone-to-phone sharing (built, untested on second device):** scan a QR code, get a full node. No servers, no accounts
-- **3 Bitcoin implementations:** Core 30, Core 29.3, Knots 29.3 (all with BIP 110 toggle). Switch with one tap, same chainstate
+- **3 Bitcoin implementations:** Core 30, Core 29.3, Knots 29.3. One-tap switching, same chainstate. Universal BIP 110 signaling toggle
 - **No thermal load:** phone shows no sign of load or overheat during normal operation
 - ~26 GB total disk with Lightning (11 GB chainstate + 2 GB pruned blocks + 13 GB block filters), ~13 GB without
 - **Pure Kotlin Electrum server** with wallet tracking: balance, transactions, UTXOs all served from your own pruned node
@@ -117,7 +117,7 @@ See [Version Selection Design](docs/VERSION-SELECTION.md) and [BIP 110 Research]
 
 ## Features
 
-- **3 Bitcoin implementations** with one-tap switching: Core 30, Core 29.3, Knots 29.3. Universal BIP 110 signaling toggle
+- **3 Bitcoin implementations** with one-tap switching: Core 30, Core 29.3, Knots 29.3. Universal BIP 110 signaling toggle (Core 29.3, Knots)
 - **Two proven bootstrap paths:** home node or internet download (phone-to-phone built, untested)
 - **Pure Kotlin Electrum server** purpose-built for pruned nodes: the only Electrum server that works with `prune=2048`. Balances from the UTXO set, transaction history persisted forever (survives pruning), unsolicited notifications push new transactions to BlueWallet in real time
 - **Built-in Lightning node** powered by LDK (send, receive, channels, peer browser, seed backup/restore with automatic fund recovery)
@@ -183,7 +183,7 @@ Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset
 │  ┌────┴──────────────┴──────────────┴─────────┐  │
 │  │  bitcoind (ARM64), user selects:           │  │
 │  │  Core 30 | Core 29.3 | Knots 29.3           │  │
-│  │  (all with BIP 110 toggle)                 │  │
+│  │  (BIP 110 toggle on Core 29.3 + Knots)     │  │
 │  │  Foreground service, local RPC             │  │
 │  └────────────────┬───────────────────────────┘  │
 │                   │ RPC                          │
@@ -272,7 +272,7 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 - **OS:** Android 7+ (tested on GrapheneOS, EMUI, Samsung OneUI)
 - **Hardware:** Any ARM64 device (tested on Pixel, Samsung, Huawei)
 - **Default:** Bitcoin Core 29.3 (BIP 110 compatible, standard relay rules)
-- **Also bundled:** Core 30, Knots 29.3 (user selects from dashboard, all with BIP 110 toggle)
+- **Also bundled:** Core 30, Knots 29.3 (user selects from dashboard, BIP 110 toggle on Core 29.3 + Knots)
 - **AssumeUTXO heights:** 840k (upstream) + 880k, 910k (backported from Core 30)
 
 ## Building
