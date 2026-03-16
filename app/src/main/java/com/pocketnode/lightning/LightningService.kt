@@ -70,7 +70,9 @@ class LightningService(private val context: Context) {
         val ldkHeight: Long = 0,
         val chainSynced: Boolean = false,
         // Watchtower bridge connectivity
-        val watchtowerReachable: Boolean? = null  // null=unknown, true=connected, false=failed
+        val watchtowerReachable: Boolean? = null,  // null=unknown, true=connected, false=failed
+        // Graph readiness for routing
+        val graphNodes: Int = 0
     ) {
         data class PendingChannel(
             val channelId: String,
@@ -827,15 +829,16 @@ class LightningService(private val context: Context) {
                 Log.d(TAG, "  ch=${ch.channelId.take(12)} usable=${ch.isUsable} ready=${ch.isChannelReady} value=${ch.channelValueSats} outbound=${ch.outboundCapacityMsat.toLong()/1000} inbound=${ch.inboundCapacityMsat.toLong()/1000} confs=${ch.confirmations}")
             }
             // Routing readiness: graph size, peers, sync timestamps
+            var currentGraphNodes = 0
             try {
                 val graph = n.networkGraph()
                 val graphChannels = graph.listChannels().size
-                val graphNodes = graph.listNodes().size
+                currentGraphNodes = graph.listNodes().size
                 val peers = n.listPeers()
                 val status = n.status()
                 val walletSync = status.latestLightningWalletSyncTimestamp
                 val rgsSync = status.latestRgsSnapshotTimestamp
-                Log.d(TAG, "routing: graph=${graphChannels}ch/${graphNodes}nodes peers=${peers.size} walletSync=$walletSync rgsSync=$rgsSync")
+                Log.d(TAG, "routing: graph=${graphChannels}ch/${currentGraphNodes}nodes peers=${peers.size} walletSync=$walletSync rgsSync=$rgsSync")
             } catch (e: Exception) {
                 Log.w(TAG, "routing info unavailable: ${e.message}")
             }
@@ -953,7 +956,8 @@ class LightningService(private val context: Context) {
                 pendingCloseSats = pendingCloseTotalSats,
                 pendingCloseDetails = pendingCloses,
                 ldkHeight = ldkH,
-                chainSynced = synced
+                chainSynced = synced,
+                graphNodes = currentGraphNodes
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update state", e)

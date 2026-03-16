@@ -44,6 +44,10 @@ fun SendPaymentScreen(
 
     var invoiceInput by remember { mutableStateOf("") }
 
+    // Graph readiness — need nodes for routing
+    val lnState by com.pocketnode.lightning.LightningService.stateFlow.collectAsState()
+    val graphReady = lnState.graphNodes >= 100
+
     // Hold network open while on this screen (peer connects while user reviews invoice)
     val networkHeld = remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
@@ -314,7 +318,7 @@ fun SendPaymentScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                enabled = !sending && !paymentComplete && invoiceInput.isNotBlank(),
+                enabled = !sending && !paymentComplete && invoiceInput.isNotBlank() && graphReady,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
             ) {
                 if (sending) {
@@ -325,6 +329,14 @@ fun SendPaymentScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text("Sending...")
+                } else if (!graphReady) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White.copy(alpha = 0.5f),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Syncing network...")
                 } else {
                     Text(if (isOffer) "⚡ Pay Offer" else "⚡ Pay Invoice")
                 }
