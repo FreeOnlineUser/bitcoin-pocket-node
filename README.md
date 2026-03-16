@@ -101,19 +101,17 @@ See [Direct Chainstate Copy](docs/direct-chainstate-copy.md) for a detailed comp
 
 ## Version Selection
 
-Your node, your rules. Choose which Bitcoin implementation runs on your phone:
+3 Bitcoin implementations with one-tap switching: Core 30, Core 29.3, Knots 29.3. Universal BIP 110 signaling toggle.
 
 | Implementation | Size | Policy |
 |---|---|---|
-| **Bitcoin Core 29.3** | 8 MB | Standard relay rules, BIP 110 compatible (v72t's port) |
 | **Bitcoin Core 30** | 8.6 MB | Permissive: larger OP_RETURN data allowed |
+| **Bitcoin Core 29.3** | 8 MB | Standard relay rules, BIP 110 compatible (v72t's port) |
 | **Bitcoin Knots 29.3** | 12 MB | Restrictive: filters non-standard transactions |
-
-BIP-110 signaling is supported on Core 29.3 and Knots 29.3.
 
 All three share the same chainstate format. Switch without re-syncing. Tap "Change" on the dashboard, confirm, and the node restarts with the new binary.
 
-**BIP 110** ([bip110.dev](https://bip110.dev/)) temporarily limits arbitrary data embedding at the consensus level. A universal toggle enables version bit 4 signaling and peer preference for reduced data carriers on both Core 29.3 and Knots. Built from Dathon Ohm's [reference implementation](https://github.com/bitcoinknots/bitcoin/compare/29.x-knots...dathonohm:bitcoin:uasf-modified-bip9) with a 55% activation threshold.
+**BIP 110** ([bip110.dev](https://bip110.dev/)) temporarily limits arbitrary data embedding at the consensus level. The universal toggle enables version bit 4 signaling and peer preference for reduced data carriers on Core 29.3 and Knots. Built from Dathon Ohm's [reference implementation](https://github.com/bitcoinknots/bitcoin/compare/29.x-knots...dathonohm:bitcoin:uasf-modified-bip9) with a 55% activation threshold.
 
 See [Version Selection Design](docs/VERSION-SELECTION.md) and [BIP 110 Research](docs/BIP110-RESEARCH.md) for details.
 
