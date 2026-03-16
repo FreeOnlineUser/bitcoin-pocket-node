@@ -140,6 +140,14 @@ fun LightningPayScreen(
             val walletConnected by com.pocketnode.power.PowerModeManager.walletConnectedFlow.collectAsState()
             com.pocketnode.ui.BurstSyncBanner(burstState = burstState, nextBurstMs = nextBurst, walletConnected = walletConnected)
 
+            // Peer count (top right)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                com.pocketnode.ui.components.PeerCountBadge()
+            }
+
             // Bootstrap status (only when not ready)
             if (!isReady) {
                 // Settings access during loading (e.g. after channel close)

@@ -82,7 +82,8 @@ fun SendOnchainScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
                     }
-                }
+                },
+                actions = { com.pocketnode.ui.components.PeerCountBadge() }
             )
         }
     ) { padding ->

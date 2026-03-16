@@ -125,6 +125,7 @@ fun PeerBrowserScreen(
                     }
                 },
                 actions = {
+                    com.pocketnode.ui.components.PeerCountBadge()
                     if (selectedTab < 2) {
                         IconButton(onClick = { refreshNodes() }) {
                             Icon(Icons.Default.Refresh, "Refresh from mempool.space")

@@ -72,7 +72,9 @@ class LightningService(private val context: Context) {
         // Watchtower bridge connectivity
         val watchtowerReachable: Boolean? = null,  // null=unknown, true=connected, false=failed
         // Graph readiness for routing
-        val graphNodes: Int = 0
+        val graphNodes: Int = 0,
+        // Connected peer count
+        val peerCount: Int = 0
     ) {
         data class PendingChannel(
             val channelId: String,
@@ -830,11 +832,13 @@ class LightningService(private val context: Context) {
             }
             // Routing readiness: graph size, peers, sync timestamps
             var currentGraphNodes = 0
+            var currentPeerCount = 0
             try {
                 val graph = n.networkGraph()
                 val graphChannels = graph.listChannels().size
                 currentGraphNodes = graph.listNodes().size
                 val peers = n.listPeers()
+                currentPeerCount = peers.size
                 val status = n.status()
                 val walletSync = status.latestLightningWalletSyncTimestamp
                 val rgsSync = status.latestRgsSnapshotTimestamp
@@ -957,7 +961,8 @@ class LightningService(private val context: Context) {
                 pendingCloseDetails = pendingCloses,
                 ldkHeight = ldkH,
                 chainSynced = synced,
-                graphNodes = currentGraphNodes
+                graphNodes = currentGraphNodes,
+                peerCount = currentPeerCount
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update state", e)
