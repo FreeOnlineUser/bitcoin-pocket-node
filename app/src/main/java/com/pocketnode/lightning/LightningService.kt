@@ -104,6 +104,7 @@ class LightningService(private val context: Context) {
     val payments = PaymentManager(context)
     val channels = ChannelManager(context)
     val onchain = OnchainWallet(context)
+    val recovery = RecoveryManager(context).also { it.stateFlow = _state }
 
     // Signaled by handleEvents() when a channel event (Pending/Ready/Closed) occurs
     @Volatile private var channelEventLatch: java.util.concurrent.CountDownLatch? = null
@@ -164,7 +165,7 @@ class LightningService(private val context: Context) {
     private fun startInternal(rpcUser: String, rpcPassword: String, rpcPort: Int) {
         try {
             // Apply pending seed restore before LDK touches any files
-            applyPendingSeedRestore()
+            recovery.applyPendingSeedRestore(onchain)
 
             val rpc = BitcoinRpcClient(rpcUser, rpcPassword, port = rpcPort)
             rpcClient = rpc
@@ -214,7 +215,7 @@ class LightningService(private val context: Context) {
                 if (lastLdkHeight > 0 && bitcoindHeight > 0 && (bitcoindHeight - lastLdkHeight) > staleThreshold) {
                     Log.w(TAG, "LDK chain state is stale: LDK at $lastLdkHeight, bitcoind at $bitcoindHeight (${bitcoindHeight - lastLdkHeight} blocks behind)")
                     Log.w(TAG, "Resetting chain state to avoid synchronize_listeners hang. Seed and channels preserved.")
-                    resetChainState(storageDir)
+                    recovery.resetChainState(storageDir)
                 }
             }
 
@@ -361,6 +362,9 @@ class LightningService(private val context: Context) {
             channels.savePeerAnchorsCallback = { peerId, anchors -> savePeerAnchors(peerId, anchors) }
             onchain.node = ldkNode
             onchain.rpcClient = rpcClient
+            recovery.stopNode = { stop() }
+            recovery.startNode = { u, p, port -> start(u, p, port) }
+            recovery.clearStartingFlag = { synchronized(this) { starting = false } }
 
             // One-time: clear stale peer channel limits from pre-fix caching bug
             val limitsPrefs = context.getSharedPreferences("peer_channel_limits", MODE_PRIVATE)
@@ -475,7 +479,7 @@ class LightningService(private val context: Context) {
                 } else {
                     Log.i(TAG, "Reusing watchtower sweep address: $sweepAddr")
                 }
-                val scriptPubKey = bech32ToScriptPubKey(sweepAddr)
+                val scriptPubKey = recovery.bech32ToScriptPubKey(sweepAddr)
                 if (scriptPubKey != null) ldkNode.watchtowerSetSweepAddress(scriptPubKey)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to set watchtower sweep address: ${e.message}")
@@ -515,7 +519,7 @@ class LightningService(private val context: Context) {
             // --- Background recovery scan fallback ---
             if (needsRecoveryScan && scanDescriptors.isNotEmpty()) {
                 Thread({
-                    backgroundRecoveryScanWithDescriptors(ldkNode, rpc, storageDir, rpcUser, rpcPassword, rpcPort, scanDescriptors)
+                    recovery.backgroundRecoveryScanWithDescriptors(rpc, storageDir, rpcUser, rpcPassword, rpcPort, scanDescriptors)
                 }, "recovery-scan").start()
             }
 
@@ -576,7 +580,7 @@ class LightningService(private val context: Context) {
                         }
                         // Periodic monitor backup + watchtower drain (every 5 min if channels exist)
                         if (st.channelCount > 0 && now - lastWalletSync > 300_000) {
-                            backupChannelMonitors()
+                            node?.let { recovery.backupChannelMonitors(it) }
                             drainWatchtowerBlobs()
                         }
                     } catch (_: Exception) {}
@@ -597,7 +601,7 @@ class LightningService(private val context: Context) {
                     if (ldkHeight < bitcoindHeight && ldkHeight <= startHeight && !_state.value.scanningForFunds) {
                         Log.e(TAG, "Sync watchdog: LDK stuck at $ldkHeight, bitcoind at $bitcoindHeight. Resetting chain state.")
                         stop()
-                        resetChainState(storageDir)
+                        recovery.resetChainState(storageDir)
                         // Clear the stale sync height so prune check doesn't block restart
                         context.getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
                             .edit().putLong("last_ldk_sync_height", 0).apply()
@@ -620,7 +624,7 @@ class LightningService(private val context: Context) {
             val errorMsg = e.message ?: "Unknown error"
 
             if (errorMsg.contains("WalletSetupFailed") || errorMsg.contains("wallet")) {
-                val recovered = tryRestoreSeedBackup()
+                val recovered = recovery.tryRestoreSeedBackup()
                 if (recovered) {
                     _state.value = _state.value.copy(
                         status = LightningState.Status.ERROR,
@@ -641,43 +645,6 @@ class LightningService(private val context: Context) {
      * Try to restore the most recent seed backup that differs from the current seed.
      * Returns true if a backup was restored.
      */
-    /**
-     * Reset LDK chain state while preserving seed and channel data.
-     * Deletes files that synchronize_listeners uses to determine its starting point.
-     * On next start, LDK will sync from the current chain tip instead of the stale height.
-     */
-    private fun resetChainState(storageDir: File) {
-        val preserveNames = setOf("keys_seed", "keys_seed.bak", "mnemonic", "channel_manager", "monitors", "wallet_birthday")
-        storageDir.listFiles()?.forEach { file ->
-            if (file.name !in preserveNames) {
-                val deleted = if (file.isDirectory) file.deleteRecursively() else file.delete()
-                Log.d(TAG, "resetChainState: ${if (deleted) "deleted" else "FAILED to delete"} ${file.name}")
-            } else {
-                Log.d(TAG, "resetChainState: preserved ${file.name}")
-            }
-        }
-    }
-
-    private fun tryRestoreSeedBackup(): Boolean {
-        val storageDir = File(context.filesDir, STORAGE_DIR)
-        val seedFile = File(storageDir, "keys_seed")
-        val currentSeed = if (seedFile.exists()) seedFile.readBytes() else return false
-
-        val backups = storageDir.listFiles()?.filter {
-            it.name.startsWith("keys_seed.bak.")
-        }?.sortedByDescending { it.lastModified() } ?: return false
-
-        for (backup in backups) {
-            val backupSeed = backup.readBytes()
-            if (backupSeed.size == 64 && !backupSeed.contentEquals(currentSeed)) {
-                seedFile.writeBytes(backupSeed)
-                Log.i(TAG, "Auto-restored seed from ${backup.name}")
-                return true
-            }
-        }
-        return false
-    }
-
     // === Prune Recovery ===
 
     private suspend fun recoverPrunedBlocks(
@@ -1053,7 +1020,7 @@ class LightningService(private val context: Context) {
                 || event is Event.ChannelClosed
                 || event is Event.PaymentSuccessful || event is Event.PaymentReceived) {
                 drainWatchtowerBlobs()
-                backupChannelMonitors()
+                node?.let { recovery.backupChannelMonitors(it) }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling events", e)
@@ -1116,422 +1083,12 @@ class LightningService(private val context: Context) {
     private fun savePeerAnchors(peerId: String, supportsAnchors: Boolean) = channels.savePeerAnchors(peerId, supportsAnchors)
 
 
-    // === Seed Backup & Restore ===
+    // === Seed & Recovery (delegated to RecoveryManager) ===
 
-    fun getSeedWords(): List<String>? {
-        // BIP39 path: read stored mnemonic directly
-        val mnemonicFile = File(context.filesDir, "$STORAGE_DIR/mnemonic")
-        if (mnemonicFile.exists()) {
-            val words = mnemonicFile.readText().trim()
-            Log.d(TAG, "getSeedWords: from mnemonic file (${words.split(" ").size} words)")
-            return words.split(" ")
-        }
-        // Legacy path: derive mnemonic from keys_seed first 32 bytes
-        val seedFile = File(context.filesDir, "$STORAGE_DIR/keys_seed")
-        Log.d(TAG, "getSeedWords: checking ${seedFile.absolutePath}, exists=${seedFile.exists()}")
-        if (!seedFile.exists()) return null
-        val rawBytes = seedFile.readBytes()
-        Log.d(TAG, "getSeedWords: read ${rawBytes.size} bytes (legacy keys_seed)")
-        val entropy = when (rawBytes.size) {
-            32 -> rawBytes
-            64 -> rawBytes.sliceArray(0 until 32)
-            else -> { Log.e(TAG, "Unexpected seed size: ${rawBytes.size}"); return null }
-        }
-        return try {
-            Bip39.entropyToMnemonic(entropy, context)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to convert seed to mnemonic: ${e.message}")
-            null
-        }
-    }
-
-    fun hasSeed(): Boolean =
-        File(context.filesDir, "$STORAGE_DIR/mnemonic").exists() ||
-        File(context.filesDir, "$STORAGE_DIR/keys_seed").exists()
-
-    fun restoreFromMnemonic(words: List<String>) {
-        val mnemonicStr = words.joinToString(" ")
-
-        // Write the mnemonic to a pending restore file.
-        // On next start(), applyPendingSeedRestore clears old state and writes the mnemonic file.
-        // fromBip39Mnemonic handles the PBKDF2 derivation, making the mnemonic the single
-        // source of truth for the entire wallet (on-chain + Lightning keys).
-        val pendingFile = File(context.filesDir, "pending_mnemonic_restore")
-        pendingFile.writeText(mnemonicStr)
-        Log.i(TAG, "Pending mnemonic restore written (${words.size} words). Will apply on next start.")
-
-        // Stop node if running — must fully stop so start() can run fresh
-        if (node != null) {
-            try { stop() } catch (_: Exception) {}
-            // Reset the starting flag so start() won't return early
-            synchronized(this) { starting = false }
-        }
-
-        // Only clear the sweep address (new node = new keys). Keep tower connection settings.
-        val wtPrefs = context.getSharedPreferences("watchtower_prefs", MODE_PRIVATE)
-        wtPrefs.edit().also { editor ->
-            wtPrefs.all.keys.filter { it.startsWith("sweep_address_") }.forEach { editor.remove(it) }
-        }.apply()
-    }
-
-    /**
-     * Apply a pending seed restore before LDK starts.
-     * Called at the top of start() before any file handles are opened.
-     */
-    private fun applyPendingSeedRestore() {
-        // New BIP39 path: mnemonic file
-        val pendingMnemonic = File(context.filesDir, "pending_mnemonic_restore")
-        // Legacy path: raw seed bytes
-        val pendingFile = File(context.filesDir, "pending_seed_restore")
-
-        val mnemonicStr: String?
-        val legacySeed64: ByteArray?
-
-        if (pendingMnemonic.exists()) {
-            mnemonicStr = pendingMnemonic.readText().trim()
-            legacySeed64 = null
-            if (mnemonicStr.split(" ").size !in listOf(12, 15, 18, 21, 24)) {
-                Log.e(TAG, "Invalid pending mnemonic (${mnemonicStr.split(" ").size} words). Deleting.")
-                pendingMnemonic.delete()
-                return
-            }
-        } else if (pendingFile.exists()) {
-            mnemonicStr = null
-            legacySeed64 = pendingFile.readBytes()
-            if (legacySeed64.size != 64) {
-                Log.e(TAG, "Invalid pending seed restore file (${legacySeed64.size} bytes). Deleting.")
-                pendingFile.delete()
-                return
-            }
-        } else {
-            return // Nothing to restore
-        }
-
-        val storageDir = File(context.filesDir, STORAGE_DIR)
-        if (!storageDir.exists()) storageDir.mkdirs()
-
-        // Clear ALL state (including wallet_birthday from previous wallet)
-        storageDir.listFiles()?.forEach { file ->
-            file.deleteRecursively()
-            Log.d(TAG, "Cleared for restore: ${file.name}")
-        }
-
-        if (mnemonicStr != null) {
-            // BIP39 path: write mnemonic file (fromBip39Mnemonic handles derivation)
-            File(storageDir, "mnemonic").writeText(mnemonicStr)
-            // Backup mnemonic
-            val backupDir = File(context.filesDir, "${STORAGE_DIR}_backup")
-            if (!backupDir.exists()) backupDir.mkdirs()
-            File(backupDir, "mnemonic").writeText(mnemonicStr)
-            Log.i(TAG, "BIP39 mnemonic restore applied.")
-        } else if (legacySeed64 != null) {
-            // Legacy path: write raw keys_seed
-            File(storageDir, "keys_seed").writeBytes(legacySeed64)
-            Log.i(TAG, "Legacy seed restore applied.")
-        }
-
-        // Copy wallet_birthday from backup if available and mnemonic matches
-        val backupBirthday = File(context.filesDir, "${STORAGE_DIR}_backup/wallet_birthday")
-        val backupMnemonicFile = File(context.filesDir, "${STORAGE_DIR}_backup/mnemonic")
-        if (backupBirthday.exists() && mnemonicStr != null && backupMnemonicFile.exists()) {
-            if (backupMnemonicFile.readText().trim() == mnemonicStr) {
-                backupBirthday.copyTo(File(storageDir, "wallet_birthday"), overwrite = true)
-                Log.i(TAG, "Restored wallet birthday: ${backupBirthday.readText().trim()}")
-            }
-        }
-
-        // Restore channel monitors from backup if mnemonic matches
-        val backupMonitorsDir = File(context.filesDir, "${STORAGE_DIR}_backup/monitors")
-        if (backupMonitorsDir.exists() && mnemonicStr != null && backupMnemonicFile.exists()) {
-            if (backupMnemonicFile.readText().trim() == mnemonicStr) {
-                val monitorsDir = File(storageDir, "monitors")
-                if (!monitorsDir.exists()) monitorsDir.mkdirs()
-                var restored = 0
-                backupMonitorsDir.listFiles()?.forEach { file ->
-                    if (file.name.endsWith(".bin")) {
-                        file.copyTo(File(monitorsDir, file.nameWithoutExtension), overwrite = true)
-                        restored++
-                    }
-                }
-                if (restored > 0) {
-                    Log.i(TAG, "Restored $restored channel monitor(s) from backup")
-                }
-            }
-        }
-
-        pendingMnemonic.delete()
-        pendingFile.delete()
-        // Clear deposit address cache (stale after restore)
-        context.getSharedPreferences("deposit_address", MODE_PRIVATE)
-            .edit().clear().apply()
-        onchain.clearDepositAddress()
-        // Mark as restored wallet so we trigger recovery scan (not birthday save) on first start
-        context.getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
-            .edit().putBoolean("pending_recovery_scan", true).apply()
-        Log.i(TAG, "Seed restore applied. Fresh wallet state ready.")
-    }
-
-    /**
-     * Background UTXO scan fallback for wallets without a saved birthday.
-     * Gets LDK's actual addresses, scans with scantxoutset, and if UTXOs
-     * are found at an older height, saves the birthday and restarts LDK.
-     */
-    /**
-     * Recovery scan using BIP84 xprv descriptors (non-destructive, no address index consumed).
-     */
-    private fun backgroundRecoveryScanWithDescriptors(
-        @Suppress("UNUSED_PARAMETER") ldkNode: org.lightningdevkit.ldknode.Node,
-        rpc: com.pocketnode.rpc.BitcoinRpcClient,
-        storageDir: File,
-        rpcUser: String,
-        rpcPassword: String,
-        rpcPort: Int,
-        descriptors: List<String>
-    ) {
-        try {
-            _state.value = _state.value.copy(scanningForFunds = true)
-
-            val scanObjects = org.json.JSONArray()
-            for (desc in descriptors) {
-                val obj = org.json.JSONObject()
-                obj.put("desc", desc)
-                obj.put("range", 20)
-                scanObjects.put(obj)
-            }
-
-            val birthdayHeight = tryScanTxOutSet(rpc, scanObjects)
-
-            if (birthdayHeight == null) {
-                Log.i(TAG, "Descriptor recovery scan: no funds found.")
-                _state.value = _state.value.copy(scanningForFunds = false)
-                File(storageDir, "restored_wallet").delete()
-                return
-            }
-
-            File(storageDir, "wallet_birthday").writeText(birthdayHeight.toString())
-            File(storageDir, "restored_wallet").delete()
-            Log.i(TAG, "Descriptor recovery scan: saved birthday $birthdayHeight. Restarting LDK...")
-
-            stop()
-            Thread.sleep(500)
-            resetChainState(storageDir)
-            synchronized(this) { starting = false }
-            start(rpcUser, rpcPassword, rpcPort)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Descriptor recovery scan failed: ${e.message}", e)
-            _state.value = _state.value.copy(scanningForFunds = false)
-        }
-    }
-
-    private fun backgroundRecoveryScan(
-        @Suppress("UNUSED_PARAMETER") ldkNode: org.lightningdevkit.ldknode.Node,
-        rpc: com.pocketnode.rpc.BitcoinRpcClient,
-        storageDir: File,
-        rpcUser: String,
-        rpcPassword: String,
-        rpcPort: Int,
-        addresses: List<String>
-    ) {
-        try {
-            _state.value = _state.value.copy(scanningForFunds = true)
-
-            if (addresses.isEmpty()) {
-                Log.w(TAG, "Background recovery scan: no addresses provided")
-                return
-            }
-
-            // Build addr() descriptors
-            val scanObjects = org.json.JSONArray()
-            for (addr in addresses) {
-                val obj = org.json.JSONObject()
-                obj.put("desc", "addr($addr)")
-                scanObjects.put(obj)
-            }
-
-            // Scan UTXO set for our addresses (~4 min on phone hardware)
-            val birthdayHeight = tryScanTxOutSet(rpc, scanObjects)
-
-            if (birthdayHeight == null) {
-                Log.i(TAG, "Background recovery scan: no funds found in ${addresses.size} addresses.")
-                _state.value = _state.value.copy(scanningForFunds = false)
-                File(storageDir, "restored_wallet").delete()
-                return
-            }
-
-            // Save the birthday and clear restored marker
-            File(storageDir, "wallet_birthday").writeText(birthdayHeight.toString())
-            File(storageDir, "restored_wallet").delete()
-            Log.i(TAG, "Background recovery scan: saved birthday $birthdayHeight. Restarting LDK...")
-
-            // Restart LDK with the birthday — must clear bdk_wallet so birthday takes effect
-            stop()
-            Thread.sleep(500)
-            resetChainState(storageDir)
-            synchronized(this) { starting = false }
-            start(rpcUser, rpcPassword, rpcPort)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Background recovery scan failed: ${e.message}", e)
-            _state.value = _state.value.copy(scanningForFunds = false)
-        }
-    }
-
-    /**
-     * Fast scan using block filter index (BIP 157). Returns in seconds.
-     * Returns birthday height or null if no matches / index not available.
-     */
-    /**
-     * Scan entire UTXO set for matching addresses (~4 min on phone hardware).
-     * Returns birthday height or null if no UTXOs found.
-     */
-    private fun tryScanTxOutSet(
-        rpc: com.pocketnode.rpc.BitcoinRpcClient,
-        scanObjects: org.json.JSONArray
-    ): Int? {
-        try {
-            Log.i(TAG, "Recovery scan: falling back to scantxoutset (UTXO set scan)...")
-
-            // Abort any previous scan
-            try {
-                val abortParams = org.json.JSONArray()
-                abortParams.put("abort")
-                rpc.callSync("scantxoutset", abortParams, readTimeoutMs = 10_000)
-            } catch (_: Exception) {}
-
-            val params = org.json.JSONArray()
-            params.put("start")
-            params.put(scanObjects)
-
-            // Poll progress while scan runs
-            val progressPoller = Thread({
-                try {
-                    while (!Thread.interrupted()) {
-                        Thread.sleep(2_000)
-                        val statusParams = org.json.JSONArray()
-                        statusParams.put("status")
-                        val status = rpc.callSync("scantxoutset", statusParams, readTimeoutMs = 5_000)
-                        if (status != null && status.has("progress")) {
-                            val pct = status.getInt("progress")
-                            _state.value = _state.value.copy(scanProgress = pct)
-                        }
-                    }
-                } catch (_: InterruptedException) {}
-                catch (_: Exception) {}
-            }, "scan-progress")
-            progressPoller.start()
-
-            val result = rpc.callSync("scantxoutset", params, readTimeoutMs = 300_000)
-            progressPoller.interrupt()
-
-            if (result == null || result.has("_rpc_error")) {
-                val errMsg = result?.optString("_rpc_error", "null response") ?: "null response"
-                Log.e(TAG, "scantxoutset failed: $errMsg")
-                return null
-            }
-
-            val totalAmount = result.optDouble("total_amount", 0.0)
-            val totalSats = (totalAmount * 100_000_000).toLong()
-            val unspents = result.optJSONArray("unspents") ?: org.json.JSONArray()
-
-            if (totalSats == 0L || unspents.length() == 0) {
-                return null
-            }
-
-            var minHeight = Int.MAX_VALUE
-            for (i in 0 until unspents.length()) {
-                val h = unspents.getJSONObject(i).getInt("height")
-                if (h < minHeight) minHeight = h
-            }
-
-            val birthday = maxOf(minHeight - 10, 0)
-            Log.i(TAG, "scantxoutset: found $totalSats sats in ${unspents.length()} UTXOs. " +
-                    "Min height: $minHeight, birthday: $birthday")
-            return birthday
-
-        } catch (e: Exception) {
-            Log.e(TAG, "scantxoutset failed: ${e.message}", e)
-            return null
-        }
-    }
-
-    private fun bech32ToScriptPubKey(address: String): ByteArray? {
-        return try {
-            val lower = address.lowercase()
-            val hrpEnd = lower.lastIndexOf('1')
-            if (hrpEnd < 1) return null
-            val data = lower.substring(hrpEnd + 1)
-            val charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
-            val values = data.map { charset.indexOf(it) }.filter { it >= 0 }
-            if (values.size < 8) return null
-            val payload = values.dropLast(6)
-            if (payload.isEmpty()) return null
-            val witnessVersion = payload[0]
-            val program = convertBits(payload.drop(1), 5, 8, false) ?: return null
-            val script = ByteArray(2 + program.size)
-            script[0] = if (witnessVersion == 0) 0x00 else (0x50 + witnessVersion).toByte()
-            script[1] = program.size.toByte()
-            program.forEachIndexed { i, b -> script[2 + i] = b }
-            script
-        } catch (e: Exception) {
-            Log.e(TAG, "bech32 decode failed: ${e.message}")
-            null
-        }
-    }
-
-    private fun convertBits(data: List<Int>, fromBits: Int, toBits: Int, pad: Boolean): ByteArray? {
-        var acc = 0; var bits = 0
-        val result = mutableListOf<Byte>()
-        val maxv = (1 shl toBits) - 1
-        for (value in data) {
-            acc = (acc shl fromBits) or value; bits += fromBits
-            while (bits >= toBits) { bits -= toBits; result.add(((acc shr bits) and maxv).toByte()) }
-        }
-        if (pad && bits > 0) result.add(((acc shl (toBits - bits)) and maxv).toByte())
-        else if (bits >= fromBits || ((acc shl (toBits - bits)) and maxv) != 0) return null
-        return result.toByteArray()
-    }
-
-    /**
-     * Back up channel monitors to the backup directory.
-     * This preserves the full serialized monitor data so it can survive
-     * a seed restore (which clears the lightning/ directory).
-     * Should be called on channel open, channel update, and periodically.
-     */
-    fun backupChannelMonitors() {
-        val n = node ?: return
-        try {
-            val monitors = n.watchtowerExportMonitors()
-            if (monitors.isEmpty()) return
-
-            val backupDir = File(context.filesDir, "${STORAGE_DIR}_backup/monitors")
-            if (!backupDir.exists()) backupDir.mkdirs()
-
-            for (monitor in monitors) {
-                val file = File(backupDir, "${monitor.channelId}.bin")
-                val existingSize = if (file.exists()) file.length() else 0
-                // Only write if data changed (updateId increased or file missing)
-                if (!file.exists() || file.length() != monitor.monitorBytes.size.toLong()) {
-                    file.writeBytes(monitor.monitorBytes)
-                    Log.i(TAG, "Backed up monitor ${monitor.channelId.take(12)} " +
-                            "(update=${monitor.latestUpdateId}, ${monitor.monitorBytes.size}b)")
-                }
-            }
-
-            // Also save monitor metadata for restore
-            val metaFile = File(context.filesDir, "${STORAGE_DIR}_backup/monitors_meta.json")
-            val meta = org.json.JSONArray()
-            for (monitor in monitors) {
-                val obj = org.json.JSONObject()
-                obj.put("channel_id", monitor.channelId)
-                obj.put("counterparty", monitor.counterpartyNodeId)
-                obj.put("update_id", monitor.latestUpdateId)
-                obj.put("size", monitor.monitorBytes.size)
-                meta.put(obj)
-            }
-            metaFile.writeText(meta.toString(2))
-        } catch (e: Exception) {
-            Log.w(TAG, "backupChannelMonitors: ${e.message}")
-        }
-    }
+    fun getSeedWords(): List<String>? = recovery.getSeedWords()
+    fun hasSeed(): Boolean = recovery.hasSeed()
+    fun restoreFromMnemonic(words: List<String>) = recovery.restoreFromMnemonic(
+        words, node != null, { stop() }, { synchronized(this) { starting = false } }
+    )
+    fun backupChannelMonitors() = node?.let { recovery.backupChannelMonitors(it) }
 }
