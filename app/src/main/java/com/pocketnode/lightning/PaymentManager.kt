@@ -330,8 +330,13 @@ class PaymentManager(private val context: Context) {
             if (payment != null) {
                 when (payment.status) {
                     PaymentStatus.SUCCEEDED -> {
-                        // Final poll to catch PaymentPathSuccessful
-                        pollRouteData(n, paymentId)
+                        // Keep polling for route data — LDK may not have
+                        // processed PaymentPathSuccessful yet
+                        for (i in 1..6) {
+                            pollRouteData(n, paymentId)
+                            if (tracker._currentAttempt.value?.hops?.isNotEmpty() == true) break
+                            Thread.sleep(500)
+                        }
                         return true
                     }
                     PaymentStatus.FAILED -> {
