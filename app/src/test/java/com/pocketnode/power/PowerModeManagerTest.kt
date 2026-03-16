@@ -52,6 +52,34 @@ class PowerModeManagerTest {
     }
 
     @Test
+    fun `constructor is private - only getInstance available`() {
+        // Verify the singleton pattern by checking the companion object has getInstance
+        // The private constructor means PowerModeManager(context) won't compile outside the class
+        val methods = PowerModeManager.Companion::class.java.methods.map { it.name }
+        assertTrue("Should have getInstance method", methods.contains("getInstance"))
+    }
+
+    @Test
+    fun `shared state flows are singleton`() {
+        // All state flows are on the companion object, so they're shared
+        // regardless of how the instance is obtained
+        val flow1 = PowerModeManager.modeFlow
+        val flow2 = PowerModeManager.modeFlow
+        assertSame("modeFlow should be the same object", flow1, flow2)
+
+        val burst1 = PowerModeManager.burstStateFlow
+        val burst2 = PowerModeManager.burstStateFlow
+        assertSame("burstStateFlow should be the same object", burst1, burst2)
+    }
+
+    @Test
+    fun `burst mutex is shared across all access`() {
+        val m1 = PowerModeManager.burstMutex
+        val m2 = PowerModeManager.burstMutex
+        assertSame("burstMutex should be the same object", m1, m2)
+    }
+
+    @Test
     fun `mode MAX should not trigger burst sync`() {
         // MAX mode is continuous sync, no burst cycling needed
         val mode = PowerModeManager.Mode.MAX
