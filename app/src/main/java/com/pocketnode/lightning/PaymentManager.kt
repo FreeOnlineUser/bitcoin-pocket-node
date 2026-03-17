@@ -370,24 +370,24 @@ class PaymentManager(private val context: Context) {
             val myPaths = paths.filter { it.paymentId == paymentId }
             if (myPaths.isEmpty()) return
 
-            // Process any NEW paths we haven't seen yet
+            // Build all attempts
+            val attempts = myPaths.map { buildAttempt(graph, paymentId, it) }
+
+            // Archive any NEW failed attempts we haven't seen
             if (myPaths.size > lastSeenPathCount) {
-                for (i in lastSeenPathCount until myPaths.size) {
-                    val path = myPaths[i]
-                    val attempt = buildAttempt(graph, paymentId, path)
-                    if (attempt.status == PaymentTracker.AttemptStatus.FAILED) {
-                        // Archive this failed attempt
-                        tracker.archiveAttempt(attempt)
+                for (i in lastSeenPathCount until attempts.size) {
+                    if (attempts[i].status == PaymentTracker.AttemptStatus.FAILED) {
+                        tracker.archiveAttempt(attempts[i])
                     }
                 }
                 lastSeenPathCount = myPaths.size
             }
 
-            // Always show the latest path as current
-            val latestPath = myPaths.last()
-            val currentAttempt = buildAttempt(graph, paymentId, latestPath)
+            // Prioritize succeeded path as current, fall back to latest
+            val succeeded = attempts.lastOrNull { it.status == PaymentTracker.AttemptStatus.SUCCEEDED }
+            val currentAttempt = succeeded ?: attempts.last()
             tracker._currentAttempt.value = currentAttempt
-            Log.i(TAG, "Route data: ${currentAttempt.hops.size} hops, status=${currentAttempt.status} (attempt ${myPaths.size})")
+            Log.i(TAG, "Route data: ${currentAttempt.hops.size} hops, status=${currentAttempt.status} (attempt ${myPaths.size}, succeeded=${succeeded != null})")
         } catch (e: Exception) {
             // Don't spam logs on every poll
         }
