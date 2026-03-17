@@ -54,7 +54,7 @@ fun PeerCountBadge(modifier: Modifier = Modifier) {
                         style = MaterialTheme.typography.titleSmall
                     )
                     Text(
-                        "P2P connections for downloading blocks. Only needed when syncing new blocks.",
+                        "P2P connections for downloading blocks, only needed when syncing. Also temporarily connects when sending or receiving with Lightning.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
