@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +38,8 @@ fun ReceivePaymentScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
+    val focusManager = LocalFocusManager.current
+    val scrollState = rememberScrollState()
     val lightning = remember { LightningService.getInstance(context) }
 
     var useOffer by remember { mutableStateOf(false) }
@@ -81,7 +84,7 @@ fun ReceivePaymentScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Invoice / Offer toggle
@@ -188,6 +191,8 @@ fun ReceivePaymentScreen(
                         result.onSuccess { invoiceStr ->
                             output = invoiceStr
                             generating = false
+                            focusManager.clearFocus()
+                            scope.launch { delay(100); scrollState.animateScrollTo(scrollState.maxValue) }
                             // Start waiting for payment (BOLT11 only, 5 min timeout)
                             if (!useOffer) {
                                 waiting = true
@@ -201,6 +206,7 @@ fun ReceivePaymentScreen(
                                         if (current > balanceBefore) {
                                             received = true
                                             waiting = false
+                                            scope.launch { delay(100); scrollState.animateScrollTo(scrollState.maxValue) }
                                         }
                                     }
                                     if (!received) waiting = false
