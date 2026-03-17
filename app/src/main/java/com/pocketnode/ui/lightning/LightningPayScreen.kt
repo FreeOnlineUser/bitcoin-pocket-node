@@ -134,14 +134,6 @@ fun LightningPayScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Peer count (top right)
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(end = 8.dp, top = 4.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                com.pocketnode.ui.components.PeerCountBadge()
-            }
-
             // Bootstrap status (only when not ready)
             if (!isReady) {
                 // Settings access during loading (e.g. after channel close)
@@ -246,6 +238,9 @@ fun LightningPayScreen(
 
             // === Below the fold: details ===
             if (isReady) {
+                com.pocketnode.ui.components.PeerCountBadge(
+                    modifier = Modifier.padding(start = 32.dp, bottom = 4.dp)
+                )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 32.dp),
                     color = Color(0xFF333333)
