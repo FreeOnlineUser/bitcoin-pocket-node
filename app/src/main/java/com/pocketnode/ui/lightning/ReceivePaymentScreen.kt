@@ -112,7 +112,7 @@ fun ReceivePaymentScreen(
                                         "Reusable, no expiry. Requires you to be online when scanned. Switch to Max mode for reliable use."
                                 else
                                     if (PowerModeManager.modeFlow.value == PowerModeManager.Mode.MAX)
-                                        "One-time invoice, expires in 24 hours. Works with all Lightning wallets."
+                                        "One-time invoice, expires in 24 hours on Max mode. Works with all Lightning wallets."
                                     else
                                         "One-time invoice, expires in 5 minutes. Switch to Max mode for 24-hour expiry.",
                                 style = MaterialTheme.typography.bodySmall,
