@@ -105,8 +105,16 @@ fun ReceivePaymentScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                if (useOffer) "Reusable, no expiry. Payers need BOLT12 support."
-                                else "One-time invoice. Works with all Lightning wallets.",
+                                if (useOffer)
+                                    if (PowerModeManager.modeFlow.value == PowerModeManager.Mode.MAX)
+                                        "Reusable, no expiry. Payers need BOLT12 support. Best on Max mode (always online)."
+                                    else
+                                        "Reusable, no expiry. Requires you to be online when scanned. Switch to Max mode for reliable use."
+                                else
+                                    if (PowerModeManager.modeFlow.value == PowerModeManager.Mode.MAX)
+                                        "One-time invoice, expires in 24 hours. Works with all Lightning wallets."
+                                    else
+                                        "One-time invoice, expires in 5 minutes. Switch to Max mode for 24-hour expiry.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
@@ -182,9 +190,11 @@ fun ReceivePaymentScreen(
                                 }
                             } else {
                                 val sats = amountSats.toLongOrNull() ?: 0L
+                                val expiry = if (PowerModeManager.modeFlow.value == PowerModeManager.Mode.MAX) 86400 else 300
                                 lightning.createInvoice(
                                     amountMsat = sats * 1000,
-                                    description = description.ifBlank { "Bitcoin Pocket Node" }
+                                    description = description.ifBlank { "Bitcoin Pocket Node" },
+                                    expirySecs = expiry
                                 )
                             }
                         }
@@ -193,10 +203,10 @@ fun ReceivePaymentScreen(
                             generating = false
                             focusManager.clearFocus()
                             scope.launch { delay(100); scrollState.animateScrollTo(scrollState.maxValue) }
-                            // Start waiting for payment (BOLT11 only, 5 min timeout)
+                            // Start waiting for payment (BOLT11 only)
                             if (!useOffer) {
                                 waiting = true
-                                waitTimeLeft = 300
+                                waitTimeLeft = if (PowerModeManager.modeFlow.value == PowerModeManager.Mode.MAX) 86400 else 300
                                 val balanceBefore = LightningService.stateFlow.value.lightningBalanceSats
                                 scope.launch {
                                     while (waitTimeLeft > 0 && !received) {
@@ -249,7 +259,10 @@ fun ReceivePaymentScreen(
                         Spacer(Modifier.height(8.dp))
                         Text(
                             if (useOffer) "Share this offer. It can be paid multiple times and never expires. Tied to your current channels -- regenerate if channels change."
-                            else "Share this invoice with the sender. It expires in 1 hour.",
+                            else if (PowerModeManager.modeFlow.value == PowerModeManager.Mode.MAX)
+                                "Share this invoice with the sender. It expires in 24 hours."
+                            else
+                                "Share this invoice with the sender. It expires in 5 minutes.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
