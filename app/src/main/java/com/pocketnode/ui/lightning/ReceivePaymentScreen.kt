@@ -114,7 +114,7 @@ fun ReceivePaymentScreen(
                                     if (PowerModeManager.modeFlow.value == PowerModeManager.Mode.MAX)
                                         "One-time invoice, expires in 24 hours on Max mode. Works with all Lightning wallets."
                                     else
-                                        "One-time invoice, expires in 5 minutes in this mode. For 24-hour expiry, create the invoice in Max mode.",
+                                        "One-time invoice, expires in 5 minutes. Pocket Node remains online for 5 minutes after invoice is made. For 24-hour expiry invoices, create them while in Max mode.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
