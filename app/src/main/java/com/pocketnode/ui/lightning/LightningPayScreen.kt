@@ -238,9 +238,6 @@ fun LightningPayScreen(
 
             // === Below the fold: details ===
             if (isReady) {
-                com.pocketnode.ui.components.PeerCountBadge(
-                    modifier = Modifier.padding(start = 32.dp, bottom = 4.dp)
-                )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 32.dp),
                     color = Color(0xFF333333)
@@ -248,13 +245,19 @@ fun LightningPayScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Balance section
-                Text(
-                    "Balance",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = SubtleGrey,
-                    modifier = Modifier.padding(horizontal = 32.dp).fillMaxWidth()
-                )
+                // Balance + peer count row
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Balance",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = SubtleGrey
+                    )
+                    com.pocketnode.ui.components.PeerCountBadge()
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
