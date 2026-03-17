@@ -95,6 +95,54 @@ interface WatchtowerNative : Library {
         cacheDir: String
     ): Int
 
+    // ── Watchtower via SOCKS ────────────────────────────────────────
+
+    /**
+     * Connect to a watchtower via the shared SOCKS5 proxy.
+     * Preferred method for .onion connections.
+     *
+     * @param address Tower address (host:port or .onion:port)
+     * @param towerPubkey 33-byte compressed secp256k1 public key
+     * @param clientKey 32-byte private key
+     * @param maxUpdates Maximum updates per session
+     * @param sweepFeeRate Fee rate in sat/kweight
+     * @param proxyAddr SOCKS5 proxy address (e.g. "127.0.0.1:9050")
+     * @return 0 on success, -1 on error
+     */
+    fun wtclient_connect_socks(
+        address: String,
+        towerPubkey: ByteArray,
+        clientKey: ByteArray,
+        maxUpdates: Short,
+        sweepFeeRate: Long,
+        proxyAddr: String
+    ): Int
+
+    // ── Arti SOCKS5 Proxy ──────────────────────────────────────────
+
+    /**
+     * Start the Arti SOCKS5 proxy on 127.0.0.1:<port>.
+     * All traffic (bitcoind, HTTP, watchtower) routes through this.
+     *
+     * @param stateDir Persistent Tor state directory
+     * @param cacheDir Tor cache directory
+     * @param port SOCKS5 listen port (e.g. 9050)
+     * @return 0 on success, -1 on error
+     */
+    fun arti_start_socks(stateDir: String, cacheDir: String, port: Short): Int
+
+    /**
+     * Stop the Arti SOCKS5 proxy.
+     * @return 0 on success, -1 if not running
+     */
+    fun arti_stop_socks(): Int
+
+    /**
+     * Check if the Arti SOCKS5 proxy is running.
+     * @return 1 if running, 0 if not
+     */
+    fun arti_is_running(): Int
+
     companion object {
         val INSTANCE: WatchtowerNative by lazy {
             Native.load("ldk_watchtower_client", WatchtowerNative::class.java)
