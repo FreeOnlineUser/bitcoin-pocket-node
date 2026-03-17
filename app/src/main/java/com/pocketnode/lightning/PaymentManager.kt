@@ -331,10 +331,15 @@ class PaymentManager(private val context: Context) {
                 when (payment.status) {
                     PaymentStatus.SUCCEEDED -> {
                         // Keep polling for route data — LDK may not have
-                        // processed PaymentPathSuccessful yet
+                        // processed PaymentPathSuccessful yet.
+                        // Check that real route data replaced the placeholder
+                        // (placeholder has nodeId "..." for the second hop)
                         for (i in 1..6) {
                             pollRouteData(n, paymentId)
-                            if (tracker._currentAttempt.value?.hops?.isNotEmpty() == true) break
+                            val hops = tracker._currentAttempt.value?.hops
+                            val hasRealRoute = hops != null && hops.none { it.nodeId == "..." }
+                            Log.d(TAG, "post-success poll $i: hops=${hops?.size} real=$hasRealRoute")
+                            if (hasRealRoute) break
                             Thread.sleep(500)
                         }
                         return true
