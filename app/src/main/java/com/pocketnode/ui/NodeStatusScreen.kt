@@ -471,6 +471,7 @@ fun NodeStatusScreen(
                 // Tor network toggle
                 val torEnabled by com.pocketnode.tor.TorManager.enabledFlow.collectAsState()
                 val torStatus by com.pocketnode.tor.TorManager.statusFlow.collectAsState()
+                var torSwitching by remember { mutableStateOf(false) }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -500,19 +501,52 @@ fun NodeStatusScreen(
                     }
                     Switch(
                         checked = torEnabled,
+                        enabled = !torSwitching,
                         onCheckedChange = { enabled ->
+                            torSwitching = true
                             val tm = com.pocketnode.tor.TorManager.getInstance(context)
                             tm.setEnabled(enabled)
                             coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                // Stop Lightning first (clean shutdown)
+                                try {
+                                    val ls = com.pocketnode.lightning.LightningService.getInstance(context)
+                                    val wasRunning = com.pocketnode.lightning.LightningService.stateFlow.value.status == com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING
+                                    if (wasRunning) {
+                                        ls.stop()
+                                        // Mark it so bitcoind auto-restarts it when synced
+                                        context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                                            .edit().putBoolean("lightning_was_running", true).apply()
+                                    }
+                                } catch (_: Exception) {}
+
+                                // Stop bitcoind service
+                                context.stopService(android.content.Intent(context, BitcoindService::class.java))
+                                kotlinx.coroutines.delay(2000) // Let it shut down
+
+                                // Start/stop Tor proxy
                                 tm.applyState()
+
+                                // Wait for Tor to be ready if enabling
+                                if (enabled) {
+                                    var waited = 0
+                                    while (com.pocketnode.tor.TorManager.statusFlow.value != com.pocketnode.tor.TorManager.TorStatus.RUNNING && waited < 30000) {
+                                        kotlinx.coroutines.delay(500)
+                                        waited += 500
+                                    }
+                                }
+
+                                // Restart bitcoind (will pick up -proxy from enabledFlow)
+                                val intent = android.content.Intent(context, BitcoindService::class.java)
+                                context.startForegroundService(intent)
+                                torSwitching = false
                             }
                         },
                         colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF9C27B0))
                     )
                 }
-                if (torEnabled && torStatus == com.pocketnode.tor.TorManager.TorStatus.RUNNING) {
+                if (torSwitching) {
                     Text(
-                        "Restart Bitcoin node to apply Tor proxy. HTTP calls are already routed.",
+                        if (torEnabled) "🧅 Starting Tor and restarting node..." else "Stopping Tor and restarting node...",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFFF9800),
                         modifier = Modifier.padding(bottom = 4.dp)

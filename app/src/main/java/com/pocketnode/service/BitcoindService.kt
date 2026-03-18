@@ -388,9 +388,12 @@ class BitcoindService : Service() {
 
                         val currentMode = PowerModeManager.modeFlow.value
                         val modeLabel = "${currentMode.emoji} ${currentMode.notificationLabel}"
+                        val torActive = com.pocketnode.tor.TorManager.enabledFlow.value &&
+                                com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING
+                        val torPrefix = if (torActive) "🧅 " else ""
                         val title = when {
-                            synced -> modeLabel
-                            else -> "⏳ Syncing"
+                            synced -> "$torPrefix$modeLabel"
+                            else -> "${torPrefix}⏳ Syncing"
                         }
 
                         val sb = StringBuilder()
