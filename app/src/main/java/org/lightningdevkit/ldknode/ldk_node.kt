@@ -1190,6 +1190,10 @@ internal open class UniffiVTableCallbackInterfaceVssHeaderProvider(
 
 
 
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -1474,6 +1478,8 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_ldk_node_fn_method_node_announcement_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_ldk_node_fn_method_node_apply_rgs_data(`ptr`: Pointer,`data`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     fun uniffi_ldk_node_fn_method_node_bolt11_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
     fun uniffi_ldk_node_fn_method_node_bolt12_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -1532,6 +1538,8 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_ldk_node_fn_method_node_remove_payment(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_ldk_node_fn_method_node_rgs_url(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_ldk_node_fn_method_node_set_tor_proxy(`ptr`: Pointer,`proxyAddr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_ldk_node_fn_method_node_sign_message(`ptr`: Pointer,`msg`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2004,6 +2012,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_ldk_node_checksum_method_node_announcement_addresses(
     ): Short
+    fun uniffi_ldk_node_checksum_method_node_apply_rgs_data(
+    ): Short
     fun uniffi_ldk_node_checksum_method_node_bolt11_payment(
     ): Short
     fun uniffi_ldk_node_checksum_method_node_bolt12_payment(
@@ -2061,6 +2071,8 @@ internal interface UniffiLib : Library {
     fun uniffi_ldk_node_checksum_method_node_payment_path_attempts(
     ): Short
     fun uniffi_ldk_node_checksum_method_node_remove_payment(
+    ): Short
+    fun uniffi_ldk_node_checksum_method_node_rgs_url(
     ): Short
     fun uniffi_ldk_node_checksum_method_node_set_tor_proxy(
     ): Short
@@ -2505,6 +2517,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_announcement_addresses() != 61426.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_node_apply_rgs_data() != 26803.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_node_bolt11_payment() != 41402.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2590,6 +2605,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_remove_payment() != 47952.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_rgs_url() != 8680.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_set_tor_proxy() != 34858.toShort()) {
@@ -6966,6 +6984,8 @@ public interface NodeInterface {
     
     fun `announcementAddresses`(): List<SocketAddress>?
     
+    fun `applyRgsData`(`data`: List<kotlin.UByte>): kotlin.UInt
+    
     fun `bolt11Payment`(): Bolt11Payment
     
     fun `bolt12Payment`(): Bolt12Payment
@@ -7023,6 +7043,8 @@ public interface NodeInterface {
     fun `paymentPathAttempts`(): List<PaymentPathInfo>
     
     fun `removePayment`(`paymentId`: PaymentId)
+    
+    fun `rgsUrl`(): kotlin.String?
     
     fun `setTorProxy`(`proxyAddr`: SocketAddress?)
     
@@ -7148,6 +7170,19 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_announcement_addresses(
         it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(NodeException::class)override fun `applyRgsData`(`data`: List<kotlin.UByte>): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(NodeException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_apply_rgs_data(
+        it, FfiConverterSequenceUByte.lower(`data`),_status)
 }
     }
     )
@@ -7510,6 +7545,18 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
 }
     }
     
+    
+
+    override fun `rgsUrl`(): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_rgs_url(
+        it, _status)
+}
+    }
+    )
+    }
     
 
     override fun `setTorProxy`(`proxyAddr`: SocketAddress?)

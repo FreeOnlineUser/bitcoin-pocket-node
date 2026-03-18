@@ -254,8 +254,15 @@ class LightningService(private val context: Context) {
                 rpcPassword
             )
 
-            // RGS for pathfinding (7k+ nodes), aliases resolved via mempool API + cache
-            builder.setGossipSourceRgs(RGS_URL)
+            // Gossip source: RGS for fast graph sync, P2P when Tor active (RGS fetched via Tor separately)
+            val torEnabledAtBuild = com.pocketnode.tor.TorManager.enabledFlow.value
+            if (torEnabledAtBuild) {
+                // P2P gossip only — RGS will be fetched via Tor and applied manually
+                builder.setGossipSourceP2p()
+                Log.i(TAG, "Gossip source: P2P (RGS will be fetched via Tor)")
+            } else {
+                builder.setGossipSourceRgs(RGS_URL)
+            }
 
             // --- Wallet birthday for seed recovery ---
             val seedFile = File(storageDir, "keys_seed")
@@ -358,14 +365,18 @@ class LightningService(private val context: Context) {
             if (lastError != null) throw lastError
 
             // Configure Tor SOCKS proxy for Lightning peer connections
-            if (com.pocketnode.tor.TorManager.enabledFlow.value &&
-                com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING) {
+            val torActive = com.pocketnode.tor.TorManager.enabledFlow.value &&
+                com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING
+            if (torActive) {
                 try {
                     ldkNode.setTorProxy(com.pocketnode.tor.TorManager.SOCKS_ADDR)
                     Log.i(TAG, "Tor SOCKS proxy configured for Lightning peer connections")
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to set Tor proxy on LDK node: ${e.message}")
                 }
+
+                // Start background RGS fetch via Tor (ldk-node's internal fetch uses clearnet)
+                startTorRgsFetcher(ldkNode)
             }
 
             node = ldkNode
@@ -796,6 +807,52 @@ class LightningService(private val context: Context) {
 
     /** Get connected Lightning peers. Returns list of PeerDetails from LDK. */
     fun networkGraph(): org.lightningdevkit.ldknode.NetworkGraph? = node?.networkGraph()
+
+    private var rgsJob: kotlinx.coroutines.Job? = null
+    @Volatile private var lastRgsTimestamp: Long = 0L
+
+    /**
+     * Fetch RGS snapshots via Tor instead of ldk-node's internal clearnet fetch.
+     * Runs every 60 minutes while Tor is active.
+     */
+    private fun startTorRgsFetcher(ldkNode: org.lightningdevkit.ldknode.Node) {
+        rgsJob?.cancel()
+        rgsJob = scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val rgsBaseUrl = RGS_URL
+            Log.i(TAG, "Starting RGS fetch via Tor (base: $rgsBaseUrl)")
+
+            while (true) {
+                try {
+                    val url = "$rgsBaseUrl/$lastRgsTimestamp"
+                    Log.d(TAG, "Fetching RGS via Tor: $url")
+
+                    val conn = com.pocketnode.tor.TorAwareHttp.openConnection(url)
+                    conn.connectTimeout = 60_000
+                    conn.readTimeout = 60_000
+                    conn.setRequestProperty("Accept", "application/octet-stream")
+
+                    val code = conn.responseCode
+                    if (code == 200) {
+                        val body = conn.inputStream.readBytes()
+                        if (body.isNotEmpty()) {
+                            val ubyteList = body.map { it.toUByte() }
+                            val newTimestamp = ldkNode.applyRgsData(ubyteList)
+                            lastRgsTimestamp = newTimestamp.toLong()
+                            Log.i(TAG, "RGS via Tor applied: ${body.size} bytes, timestamp=$newTimestamp")
+                        }
+                    } else {
+                        Log.w(TAG, "RGS via Tor fetch failed: HTTP $code")
+                    }
+                    conn.disconnect()
+                } catch (e: Exception) {
+                    Log.w(TAG, "RGS via Tor fetch error: ${e.message}")
+                }
+
+                // Wait 60 minutes before next fetch
+                kotlinx.coroutines.delay(60 * 60 * 1000L)
+            }
+        }
+    }
 
     fun listPeers(): List<org.lightningdevkit.ldknode.PeerDetails> {
         return try {
