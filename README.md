@@ -291,6 +291,9 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 ### Build bitcoind for ARM64
 See [docs/cross-compile-android.md](docs/cross-compile-android.md)
 
+### Build ldk-node for ARM64
+See [docs/ldk-node-android-build.md](docs/ldk-node-android-build.md) — covers the Rust cross-compile, UniFFI binding generation, and AAR packaging.
+
 ### Build the Android app
 ```bash
 export ANDROID_HOME=/path/to/android-sdk
@@ -421,6 +424,7 @@ app/src/main/java/com/pocketnode/
 
 - [Build Guide](docs/build-android-arm64.md)
 - [Cross-Compile Guide](docs/cross-compile-android.md)
+- [ldk-node Android Build](docs/ldk-node-android-build.md)
 - [Tor Integration](docs/tor-integration.md)
 - [Chainparams Patch](docs/chainparams-patch.md)
 - [Direct Chainstate Copy](docs/direct-chainstate-copy.md)
