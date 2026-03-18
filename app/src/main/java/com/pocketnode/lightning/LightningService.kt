@@ -357,6 +357,17 @@ class LightningService(private val context: Context) {
             }
             if (lastError != null) throw lastError
 
+            // Configure Tor SOCKS proxy for Lightning peer connections
+            if (com.pocketnode.tor.TorManager.enabledFlow.value &&
+                com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING) {
+                try {
+                    ldkNode.setTorProxy(com.pocketnode.tor.TorManager.SOCKS_ADDR)
+                    Log.i(TAG, "Tor SOCKS proxy configured for Lightning peer connections")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to set Tor proxy on LDK node: ${e.message}")
+                }
+            }
+
             node = ldkNode
 
             // Wire up extracted managers
