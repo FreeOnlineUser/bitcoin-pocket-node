@@ -996,11 +996,28 @@ fun LightningScreen(
 private fun LightningPeerDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     var peers by remember { mutableStateOf<List<org.lightningdevkit.ldknode.PeerDetails>>(emptyList()) }
+    var aliases by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            peers = LightningService.getInstance(context).listPeers()
+            val ls = LightningService.getInstance(context)
+            peers = ls.listPeers()
+            // Resolve aliases from network graph
+            try {
+                val graph = ls.networkGraph()
+                val aliasMap = mutableMapOf<String, String>()
+                for (peer in peers) {
+                    try {
+                        val nodeInfo = graph?.node(peer.nodeId)
+                        val alias = nodeInfo?.announcementInfo?.alias
+                        if (!alias.isNullOrBlank()) {
+                            aliasMap[peer.nodeId] = alias
+                        }
+                    } catch (_: Exception) {}
+                }
+                aliases = aliasMap
+            } catch (_: Exception) {}
             loading = false
         }
     }
@@ -1032,26 +1049,58 @@ private fun LightningPeerDialog(onDismiss: () -> Unit) {
                             )
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                val alias = aliases[peer.nodeId]
+                                if (alias != null) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            alias,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1
+                                        )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            if (isOnion) Text("🧅", style = MaterialTheme.typography.bodySmall)
+                                            if (peer.supportsAnchors) Text("⚓", style = MaterialTheme.typography.bodySmall)
+                                            Text(
+                                                if (peer.isConnected) "●" else "○",
+                                                color = if (peer.isConnected) Color(0xFF4CAF50) else Color(0xFFF44336),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
                                     Text(
                                         peer.nodeId.take(16) + "...",
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.bodySmall,
                                         fontFamily = FontFamily.Monospace,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.weight(1f)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                     )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        if (isOnion) Text("🧅", style = MaterialTheme.typography.bodySmall)
-                                        if (peer.supportsAnchors) Text("⚓", style = MaterialTheme.typography.bodySmall)
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Text(
-                                            if (peer.isConnected) "●" else "○",
-                                            color = if (peer.isConnected) Color(0xFF4CAF50) else Color(0xFFF44336),
-                                            style = MaterialTheme.typography.bodySmall
+                                            peer.nodeId.take(16) + "...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.weight(1f)
                                         )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            if (isOnion) Text("🧅", style = MaterialTheme.typography.bodySmall)
+                                            if (peer.supportsAnchors) Text("⚓", style = MaterialTheme.typography.bodySmall)
+                                            Text(
+                                                if (peer.isConnected) "●" else "○",
+                                                color = if (peer.isConnected) Color(0xFF4CAF50) else Color(0xFFF44336),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
                                     }
                                 }
                                 Text(

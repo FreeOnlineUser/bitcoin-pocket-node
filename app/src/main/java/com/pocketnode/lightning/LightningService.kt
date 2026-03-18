@@ -795,6 +795,8 @@ class LightningService(private val context: Context) {
     }
 
     /** Get connected Lightning peers. Returns list of PeerDetails from LDK. */
+    fun networkGraph(): org.lightningdevkit.ldknode.NetworkGraph? = node?.networkGraph()
+
     fun listPeers(): List<org.lightningdevkit.ldknode.PeerDetails> {
         return try {
             node?.listPeers() ?: emptyList()
