@@ -45,14 +45,18 @@ fun PeerBrowserScreen(
     var loading by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Most Connected", "Largest", "Search")
-    var lastUpdate by remember { mutableStateOf(getCacheAge(context)) }
+    val torEnabled by com.pocketnode.tor.TorManager.enabledFlow.collectAsState()
+    val torStatus by com.pocketnode.tor.TorManager.statusFlow.collectAsState()
+    val isTor = torEnabled && torStatus == com.pocketnode.tor.TorManager.TorStatus.RUNNING
+    var lastUpdate by remember { mutableStateOf(getCacheAge(context, isTor)) }
     var enrichKey by remember { mutableStateOf(0) }
 
     // Load from cache first, fetch from network only if no cache
-    LaunchedEffect(selectedTab) {
+    // Re-triggers when tab or Tor state changes (separate caches)
+    LaunchedEffect(selectedTab, isTor) {
         if (selectedTab < 2) {
             loading = true
-            val cached = loadCachedNodes(context, selectedTab)
+            val cached = loadCachedNodes(context, selectedTab, isTor)
             if (cached.isNotEmpty()) {
                 nodes = cached
                 loading = false
@@ -63,11 +67,11 @@ fun PeerBrowserScreen(
                         1 -> NodeDirectory.getTopByCapacity(30)
                         else -> emptyList()
                     }
-                    if (fetched.isNotEmpty()) saveCachedNodes(context, selectedTab, fetched)
+                    if (fetched.isNotEmpty()) saveCachedNodes(context, selectedTab, fetched, isTor)
                     fetched
                 }
                 loading = false
-                lastUpdate = getCacheAge(context)
+                lastUpdate = getCacheAge(context, isTor)
             }
         }
     }
@@ -92,7 +96,7 @@ fun PeerBrowserScreen(
                         } catch (_: Exception) {}
                     }
                 }
-                if (selectedTab < 2) saveCachedNodes(context, selectedTab, enriched)
+                if (selectedTab < 2) saveCachedNodes(context, selectedTab, enriched, isTor)
             }
         }
     }
@@ -100,25 +104,28 @@ fun PeerBrowserScreen(
     fun refreshNodes() {
         loading = true
         scope.launch {
-            nodes = withContext(Dispatchers.IO) {
-                val fetched = when (selectedTab) {
+            val fetched = withContext(Dispatchers.IO) {
+                when (selectedTab) {
                     0 -> NodeDirectory.getTopNodes(30)
                     1 -> NodeDirectory.getTopByCapacity(30)
                     else -> emptyList()
                 }
-                if (fetched.isNotEmpty()) saveCachedNodes(context, selectedTab, fetched)
-                fetched
             }
+            if (fetched.isNotEmpty()) {
+                nodes = fetched
+                withContext(Dispatchers.IO) { saveCachedNodes(context, selectedTab, fetched, isTor) }
+                enrichKey++
+            }
+            // If fetch failed, keep showing existing nodes (from cache)
             loading = false
-            lastUpdate = getCacheAge(context)
-            enrichKey++
+            lastUpdate = getCacheAge(context, isTor)
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Find Peers") },
+                title = { Text(if (isTor) "🧅 Find Peers (Tor)" else "Find Peers") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -160,7 +167,7 @@ fun PeerBrowserScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Data from mempool.space" + if (lastUpdate.isNotEmpty()) " · $lastUpdate" else "",
+                    (if (isTor) "🧅 via Tor" else "Data from mempool.space") + if (lastUpdate.isNotEmpty()) " · $lastUpdate" else "",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 )
@@ -182,7 +189,9 @@ fun PeerBrowserScreen(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
             )
-            val displayNodes = if (anchorOnly) nodes.filter { it.supportsAnchors != false } else nodes
+            // When Tor is active, filter to nodes with .onion addresses (after enrichment)
+            val torFiltered = if (isTor) nodes.filter { it.hasOnion || it.sockets.isEmpty() } else nodes
+            val displayNodes = if (anchorOnly) torFiltered.filter { it.supportsAnchors != false } else torFiltered
 
             // Search bar (visible on Search tab)
             if (selectedTab == 2) {
@@ -227,6 +236,7 @@ fun PeerBrowserScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         if (selectedTab == 2) "Search for a node by name or pubkey"
+                        else if (isTor && nodes.isNotEmpty()) "No Tor-reachable peers found yet — enriching..."
                         else if (anchorOnly && nodes.isNotEmpty()) "No anchor-capable peers found"
                         else "No nodes found",
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -315,6 +325,9 @@ private fun NodeCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        if (node.hasOnion) {
+                            Text("🧅", style = MaterialTheme.typography.bodySmall)
+                        }
                         if (supportsAnchors != null) {
                             Text(
                                 if (supportsAnchors) "⚓" else "⚠️",
@@ -369,10 +382,12 @@ private fun NodeCard(
 }
 
 // --- Peer cache helpers ---
+// Separate caches for Tor vs clearnet so switching modes doesn't wipe the other
 
-private fun cacheKey(tab: Int) = "peers_tab_$tab"
+private fun cacheKey(tab: Int, tor: Boolean) = "peers_tab_${tab}_${if (tor) "tor" else "clear"}"
+private fun cacheUpdateKey(tor: Boolean) = "last_update_${if (tor) "tor" else "clear"}"
 
-private fun saveCachedNodes(context: Context, tab: Int, nodes: List<LightningNode>) {
+private fun saveCachedNodes(context: Context, tab: Int, nodes: List<LightningNode>, tor: Boolean = false) {
     val arr = JSONArray()
     nodes.forEach { n ->
         arr.put(JSONObject().apply {
@@ -388,14 +403,14 @@ private fun saveCachedNodes(context: Context, tab: Int, nodes: List<LightningNod
         })
     }
     context.getSharedPreferences("peer_cache", Context.MODE_PRIVATE).edit()
-        .putString(cacheKey(tab), arr.toString())
-        .putLong("last_update", System.currentTimeMillis())
+        .putString(cacheKey(tab, tor), arr.toString())
+        .putLong(cacheUpdateKey(tor), System.currentTimeMillis())
         .apply()
 }
 
-private fun loadCachedNodes(context: Context, tab: Int): List<LightningNode> {
+private fun loadCachedNodes(context: Context, tab: Int, tor: Boolean = false): List<LightningNode> {
     val json = context.getSharedPreferences("peer_cache", Context.MODE_PRIVATE)
-        .getString(cacheKey(tab), null) ?: return emptyList()
+        .getString(cacheKey(tab, tor), null) ?: return emptyList()
     return try {
         val arr = JSONArray(json)
         (0 until arr.length()).map { i ->
@@ -415,9 +430,9 @@ private fun loadCachedNodes(context: Context, tab: Int): List<LightningNode> {
     } catch (_: Exception) { emptyList() }
 }
 
-private fun getCacheAge(context: Context): String {
+private fun getCacheAge(context: Context, tor: Boolean = false): String {
     val ts = context.getSharedPreferences("peer_cache", Context.MODE_PRIVATE)
-        .getLong("last_update", 0)
+        .getLong(cacheUpdateKey(tor), 0)
     if (ts == 0L) return ""
     val mins = (System.currentTimeMillis() - ts) / 60_000
     return when {

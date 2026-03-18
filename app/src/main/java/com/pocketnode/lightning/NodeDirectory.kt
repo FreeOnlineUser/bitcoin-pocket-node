@@ -32,14 +32,24 @@ object NodeDirectory {
         val minChannelSize: Long = -1, // sats, smallest open channel as proxy for minimum
         val supportsAnchors: Boolean? = null // null=unknown, from mempool.space features bit 23
     ) {
-        /** First clearnet address, or first .onion, or empty */
+        /** First reachable address: prefers .onion when Tor is active, clearnet otherwise */
         val address: String get() {
             val addrs = sockets.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            // Prefer clearnet
-            return addrs.firstOrNull { !it.contains(".onion") }
-                ?: addrs.firstOrNull()
-                ?: ""
+            val torActive = com.pocketnode.tor.TorManager.enabledFlow.value &&
+                    com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING
+            return if (torActive) {
+                addrs.firstOrNull { it.contains(".onion") }
+                    ?: addrs.firstOrNull()
+                    ?: ""
+            } else {
+                addrs.firstOrNull { !it.contains(".onion") }
+                    ?: addrs.firstOrNull()
+                    ?: ""
+            }
         }
+
+        /** Whether this node has a .onion address */
+        val hasOnion: Boolean get() = sockets.contains(".onion")
 
         /** Capacity formatted as BTC */
         val capacityBtc: String get() = "%.4f BTC".format(capacity / 100_000_000.0)
@@ -212,8 +222,12 @@ object NodeDirectory {
     private fun fetch(urlStr: String): String {
         val conn = com.pocketnode.tor.TorAwareHttp.openConnection(urlStr)
         conn.requestMethod = "GET"
-        conn.connectTimeout = 10000
-        conn.readTimeout = 10000
+        // Tor circuits + .onion resolution need more time
+        val isTor = com.pocketnode.tor.TorManager.enabledFlow.value &&
+                com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING
+        val timeout = if (isTor) 30000 else 10000
+        conn.connectTimeout = timeout
+        conn.readTimeout = timeout
         conn.setRequestProperty("User-Agent", "BitcoinPocketNode/0.7")
         try {
             val code = conn.responseCode
