@@ -18,7 +18,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 - **LNDHub API** for external Lightning wallets (BlueWallet)
 - **P2P port** exposed on localhost:8333 for Neutrino-compatible wallets
 - **Proactive prune recovery** re-downloads missed blocks on startup when node was offline
-- **Embedded Tor** for direct .onion watchtower connections (no Orbot, no SSH tunnel needed)
+- **Full Tor integration** with one-tap toggle: routes bitcoind P2P, Lightning peers, and all HTTP calls through embedded Arti SOCKS proxy. Your ISP sees only Tor traffic. No Orbot needed.
 
 ## Screenshots
 
@@ -124,7 +124,8 @@ See [Version Selection Design](docs/VERSION-SELECTION.md) and [BIP 110 Research]
 - **LNDHub API** on localhost:3000 for external wallet connectivity (BlueWallet)
 - **P2P port** exposed on localhost:8333 for Neutrino-compatible wallets
 - **Wallet birthday recovery:** automatic fund discovery on seed restore via UTXO scan with live progress, instant restore for wallets with saved birthday
-- **Home node watchtower** with automatic channel protection via LDK-to-LND bridge (direct Tor .onion or SSH fallback)
+- **Home node watchtower** with automatic channel protection via LDK-to-LND bridge over Tor
+- **Full Tor privacy** with one toggle: bitcoind peers, Lightning peers (with stream isolation), HTTP API calls, and watchtower all route through embedded Arti SOCKS proxy. 🧅 indicators on all screens when active
 - **BOLT12 support:** send to offers, create reusable offers, variable-amount offers
 - **QR codes:** generate on receive, scan with camera on send (CameraX + ZXing, no Google Play)
 - **Sovereign price discovery** using UTXOracle (BTC/USD from on-chain data, no exchange APIs)
@@ -143,6 +144,7 @@ See [Version Selection Design](docs/VERSION-SELECTION.md) and [BIP 110 Research]
 - **Setup checklist** with auto-detection of completed steps
 - **Live dashboard** showing block height, sync progress, peers, mempool, disk usage
 - **Partial mempool** (50 MB) with persistence across restarts (survives nightly reboot)
+- **Embedded Tor** (Arti 0.39.0) with one-tap toggle: routes bitcoind P2P, Lightning peers (stream-isolated), HTTP API calls, and watchtower through SOCKS proxy. No Orbot dependency. Persists across force-kill. 🧅 indicators on notification, badges, peer browser, and connected peers dialog
 
 ## Snapshot Sources
 
@@ -172,33 +174,36 @@ Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────┐
-│              Android App (Kotlin)                │
-│                                                  │
-│  ┌──────────┐  ┌───────────┐  ┌───────────┐     │
-│  │Chainstate│  │  Network  │  │   Sync    │     │
-│  │ Manager  │  │  Monitor  │  │ Controller│     │
-│  └────┬─────┘  └─────┬─────┘  └─────┬─────┘     │
-│       │              │              │            │
-│  ┌────┴──────────────┴──────────────┴─────────┐  │
-│  │  bitcoind (ARM64), user selects:           │  │
-│  │  Core 30 | Core 29.3 | Knots 29.3           │  │
-│  │  (BIP 110 toggle on Core 29.3 + Knots)     │  │
-│  │  Foreground service, local RPC             │  │
-│  └────────────────┬───────────────────────────┘  │
-│                   │ RPC                          │
-│      ┌────────────┼────────────┐                 │
-│      │            │            │                 │
-│  ┌───┴──────┐ ┌───┴──────┐ ┌──┴───────────┐     │
-│  │ Electrum │ │ ldk-node │ │   UTXOracle  │     │
-│  │  :50001  │ │(in-proc) │ │  price feed  │     │
-│  └───┬──────┘ └───┬──────┘ └──────────────┘     │
-│      │            │                              │
-│      │     ┌──────┴───────┐                      │
-│      │     │  LNDHub API  │                      │
-│      │     │   :3000      │                      │
-│      │     └──────┬───────┘                      │
-└──────┼────────────┼──────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│                Android App (Kotlin)                   │
+│                                                       │
+│  ┌──────────┐  ┌───────────┐  ┌───────────┐          │
+│  │Chainstate│  │  Network  │  │   Sync    │          │
+│  │ Manager  │  │  Monitor  │  │ Controller│          │
+│  └────┬─────┘  └─────┬─────┘  └─────┬─────┘          │
+│       │              │              │                 │
+│  ┌────┴──────────────┴──────────────┴──────────────┐  │
+│  │  bitcoind (ARM64), user selects:                │  │
+│  │  Core 30 | Core 29.3 | Knots 29.3              │  │
+│  │  (BIP 110 toggle on Core 29.3 + Knots)         │  │
+│  │  Foreground service, local RPC                  │  │
+│  │  Tor mode: -proxy=127.0.0.1:9050 -onlynet=onion│  │
+│  └────────────────┬────────────────────────────────┘  │
+│                   │ RPC                               │
+│      ┌────────────┼────────────┐                      │
+│      │            │            │                      │
+│  ┌───┴──────┐ ┌───┴──────┐ ┌──┴───────────┐          │
+│  │ Electrum │ │ ldk-node │ │   UTXOracle  │          │
+│  │  :50001  │ │(in-proc) │ │  price feed  │          │
+│  └───┬──────┘ └───┬──────┘ └──────────────┘          │
+│      │            │                                   │
+│      │     ┌──────┴───────┐   ┌────────────────────┐  │
+│      │     │  LNDHub API  │   │  Embedded Arti 🧅  │  │
+│      │     │   :3000      │   │  SOCKS :9050       │  │
+│      │     └──────┬───────┘   │  All traffic when  │  │
+│      │            │           │  Tor enabled        │  │
+│      │            │           └────────────────────┘  │
+└──────┼────────────┼───────────────────────────────────┘
        │            │
   BlueWallet    BlueWallet
   (on-chain)    (Lightning)
@@ -225,9 +230,10 @@ You can view the pocketnode credentials and **fully remove access** from the app
 - Background IBD independently validates everything from genesis (AssumeUTXO path)
 
 ### Android Security
-- `network_security_config.xml` allows cleartext HTTP only to `127.0.0.1` (local RPC)
+- `network_security_config.xml` allows cleartext HTTP to `127.0.0.1` (local RPC) and `.onion` domains (Tor provides encryption)
 - bitcoind runs as `libbitcoind.so` in `jniLibs/` for GrapheneOS W^X compliance
 - No internet-facing ports. RPC and Electrum server are both localhost only
+- When Tor enabled, all outbound connections route through embedded Arti SOCKS proxy with stream isolation
 
 ## Lightning Support
 
@@ -355,6 +361,9 @@ app/src/main/java/com/pocketnode/
 │   └── BitcoinRpcClient.kt     # Local bitcoind JSON-RPC
 ├── notification/
 │   └── TransactionNotificationManager.kt # Transaction push notifications
+├── tor/
+│   ├── TorManager.kt           # Arti lifecycle, SOCKS proxy, persistent preference
+│   └── TorAwareHttp.kt         # Routes OkHttp through SOCKS, .onion URL mapping
 ├── storage/
 │   └── WatchListManager.kt     # Address watch list persistence
 ├── ui/
@@ -436,7 +445,7 @@ app/src/main/java/com/pocketnode/
 
 ## Roadmap
 
-- **Tor for all traffic:** route bitcoind, LDK peers, and HTTP calls through embedded Arti SOCKS proxy. One toggle for full network privacy. See [design doc](docs/tor-integration.md)
+- **~~Tor for all traffic~~** ✅ One-tap toggle routes bitcoind, LDK peers, and HTTP calls through embedded Arti SOCKS proxy. Full network privacy shipped.
 - **LDK upstream contribution:** improving watchtower API in rust-lightning ChannelMonitor ([#813](https://github.com/lightningdevkit/ldk-node/issues/813)). Draft PR submitted.
 - **Upstream PRs:** rust-lightning [#4453](https://github.com/lightningdevkit/rust-lightning/pull/4453) (justice tx API), ldk-node [#822](https://github.com/lightningdevkit/ldk-node/pull/822) (wallet birthday), rust-lightning [#4485](https://github.com/lightningdevkit/rust-lightning/issues/4485) (anchor downgrade bug)
 - **Ark integration:** Community-scale trustless payments. Run an Ark Service Provider on your Umbrel, friends connect from their phones over Tor. No individual channel management, no routing failures, ASP can't steal funds. See [design doc](docs/ARK-INTEGRATION.md)

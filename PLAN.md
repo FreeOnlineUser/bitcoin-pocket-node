@@ -145,8 +145,8 @@ Block filter support enables Lightning on pruned nodes. Filters are copied from 
 - [x] 5-second tx poll: catches unconfirmed txs between blocks
 - [x] Stub response for pruned/uncached vin txids (prevents BlueWallet crash)
 - [x] Enriched decoderawtransaction with confirmations/blockhash/blocktime from history
-- [ ] Expose Arti SOCKS proxy from native lib for Java-side Tor routing
-- [ ] Route mempool.space history recovery through Tor (single Arti instance, shared SOCKS)
+- [x] Arti SOCKS proxy exposed for Java-side Tor routing (TorAwareHttp)
+- [x] All HTTP calls route through Tor when enabled (mempool.space, peer browser, update checker)
 - [x] Refresh wallet transactions on new blocks and every 5s poll cycle
 - [ ] Lightning recovery helper: scantxoutset + mempool.space to find force-close txs on pruned nodes, feed raw tx data to LDK for sweep (closes biggest risk in PRUNED-NODE-RISK-ANALYSIS.md)
 
@@ -284,30 +284,32 @@ Compose Multiplatform targets iOS (same shared UI as desktop port). bitcoind cro
 - [ ] Doze mode handling
 - [ ] Sync staleness nudge: gentle notification when node hasn't synced in a while. Watchtower active: 48h threshold. No watchtower: 12h threshold. Low pressure, just "Connect to WiFi when convenient to stay current."
 - [x] Built-in Tor (Arti): direct .onion connection to home node watchtower, no SSH tunnel or Orbot needed
-- [ ] Tor for Rapid Gossip Sync: route RGS fetch through Arti to hide Lightning usage from ISP
-- [ ] Tor for LDK peer connections: connect to .onion Lightning peers
-- [ ] Tor for mempool.space API: private peer browsing
+- [x] Tor for bitcoind: full network privacy via SOCKS proxy (`-proxy`, `-onlynet=onion`, `-dnsseed=0`)
+- [x] Tor for HTTP calls: TorAwareHttp routes mempool.space, peer browser, and all API calls through SOCKS
+- [x] Tor for LDK peer connections: all Lightning peers routed through SOCKS with stream isolation
+- [x] One-tap Tor toggle: auto-restarts node, persists across force-kill, 🧅 indicators everywhere
+- [ ] Tor for Rapid Gossip Sync: route RGS fetch through Arti (currently clearnet)
 - [ ] Tor for HTTPS chainstate download: setup privacy
-- [ ] Tor for bitcoind: full network privacy via SOCKS proxy (affects sync speed)
+- [ ] Electrum hidden service: remote wallet access over Tor
 - [ ] Non-technical setup documentation for everyday users
 - [ ] Expanded device testing beyond Pixel line
 - [ ] Block visualization: animated graphic showing stub creation → pruning → backfill
 - [ ] Mempool home screen widget
 
-### Tor for All Traffic
-Route all Pocket Node traffic through embedded Arti SOCKS proxy. One toggle for full network privacy.
+### Tor for All Traffic ✅ (Phases 1-4)
+One-tap Tor toggle routes all Pocket Node traffic through embedded Arti SOCKS proxy. Full network privacy: your ISP sees only Tor traffic.
 
 See [Tor Integration](docs/tor-integration.md) for the full design document.
 
-| Phase | Component | Effort | Value |
+| Phase | Component | Status | Notes |
 |-------|-----------|--------|-------|
-| 1 | Arti SOCKS proxy service | Small | Foundation for everything |
-| 2 | bitcoind `-proxy` | Trivial | Biggest privacy win |
-| 3 | HTTP calls through SOCKS | Small | No more clearnet API leaks |
-| 4 | LDK peers via .onion | Moderate | Full Lightning privacy |
-| 5 | Electrum hidden service | Hard | Remote access |
+| 1 | Arti SOCKS proxy service | ✅ | TorManager singleton, persistent preference, auto-start before bitcoind |
+| 2 | bitcoind `-proxy` | ✅ | `-proxy=127.0.0.1:9050 -onlynet=onion -dnsseed=0` |
+| 3 | HTTP calls through SOCKS | ✅ | TorAwareHttp, .onion URL mapping, 30s timeout |
+| 4 | LDK peers via SOCKS | ✅ | ldk-node `set_tor_proxy()`, `tor_connect_outbound()` with stream isolation |
+| 5 | Electrum hidden service | Future | Remote wallet access over Tor |
 
-Phase 1-3 could ship together. Phase 4 separately. Phase 5 is future.
+**UI features:** 🧅 on notification title, peer count badge, peer browser, connected peers dialog. Tor toggle auto-restarts bitcoind+LDK. Tor preference persists across force-kill. Connected Peers dialog shows node aliases from network graph.
 
 ### Upstream Contributions
 - **rust-lightning [#4453](https://github.com/lightningdevkit/rust-lightning/pull/4453):** Justice transaction API improvements for watchtower use. Draft, waiting on review.
