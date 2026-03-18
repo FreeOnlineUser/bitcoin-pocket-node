@@ -783,6 +783,15 @@ class LightningService(private val context: Context) {
         }
     }
 
+    /** Get connected Lightning peers. Returns list of PeerDetails from LDK. */
+    fun listPeers(): List<org.lightningdevkit.ldknode.PeerDetails> {
+        return try {
+            node?.listPeers() ?: emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
     fun stop() {
         try {
             stateRefreshJob?.cancel()

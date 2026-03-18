@@ -325,6 +325,16 @@ fun LightningScreen(
                 ) {
                     Text("Payment History")
                 }
+                var showLnPeers by remember { mutableStateOf(false) }
+                OutlinedButton(
+                    onClick = { showLnPeers = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Connected Peers")
+                }
+                if (showLnPeers) {
+                    LightningPeerDialog(onDismiss = { showLnPeers = false })
+                }
             }
 
             // Balances card — shown when running
@@ -980,4 +990,83 @@ fun LightningScreen(
             }
         }
     }
+}
+
+@Composable
+private fun LightningPeerDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var peers by remember { mutableStateOf<List<org.lightningdevkit.ldknode.PeerDetails>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            peers = LightningService.getInstance(context).listPeers()
+            loading = false
+        }
+    }
+
+    val torActive = com.pocketnode.tor.TorManager.enabledFlow.collectAsState().value &&
+            com.pocketnode.tor.TorManager.statusFlow.collectAsState().value == com.pocketnode.tor.TorManager.TorStatus.RUNNING
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("${if (torActive) "🧅 " else "⚡ "}Connected Peers (${peers.size})") },
+        text = {
+            if (loading) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                }
+            } else if (peers.isEmpty()) {
+                Text("No Lightning peers connected", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    peers.forEach { peer ->
+                        val addr = peer.address.toString()
+                        val isOnion = addr.contains(".onion")
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        peer.nodeId.take(16) + "...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        if (isOnion) Text("🧅", style = MaterialTheme.typography.bodySmall)
+                                        if (peer.supportsAnchors) Text("⚓", style = MaterialTheme.typography.bodySmall)
+                                        Text(
+                                            if (peer.isConnected) "●" else "○",
+                                            color = if (peer.isConnected) Color(0xFF4CAF50) else Color(0xFFF44336),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                                Text(
+                                    if (isOnion) addr.take(24) + "...onion" else addr,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }
