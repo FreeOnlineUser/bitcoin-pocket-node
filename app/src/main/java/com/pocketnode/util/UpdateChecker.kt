@@ -39,7 +39,7 @@ object UpdateChecker {
             val currentVersion = context.packageManager
                 .getPackageInfo(context.packageName, 0).versionName ?: return@withContext null
 
-            val conn = URL(RELEASES_URL).openConnection() as HttpURLConnection
+            val conn = com.pocketnode.tor.TorAwareHttp.openConnection(RELEASES_URL)
             conn.requestMethod = "GET"
             conn.setRequestProperty("Accept", "application/vnd.github+json")
             conn.connectTimeout = 10_000
@@ -117,7 +117,7 @@ object UpdateChecker {
             updateDir.mkdirs()
             val apkFile = File(updateDir, "update.apk")
 
-            val conn = URL(apkUrl).openConnection() as HttpURLConnection
+            val conn = com.pocketnode.tor.TorAwareHttp.openConnection(apkUrl)
             conn.connectTimeout = 30_000
             conn.readTimeout = 30_000
             conn.instanceFollowRedirects = true
@@ -178,7 +178,7 @@ object UpdateChecker {
      */
     private fun collectReleaseNotes(currentVersion: String): String {
         return try {
-            val conn = URL(ALL_RELEASES_URL).openConnection() as HttpURLConnection
+            val conn = com.pocketnode.tor.TorAwareHttp.openConnection(ALL_RELEASES_URL)
             conn.requestMethod = "GET"
             conn.setRequestProperty("Accept", "application/vnd.github+json")
             conn.connectTimeout = 10_000

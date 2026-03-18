@@ -210,8 +210,7 @@ object NodeDirectory {
     }
 
     private fun fetch(urlStr: String): String {
-        val url = URL(urlStr)
-        val conn = url.openConnection() as HttpURLConnection
+        val conn = com.pocketnode.tor.TorAwareHttp.openConnection(urlStr)
         conn.requestMethod = "GET"
         conn.connectTimeout = 10000
         conn.readTimeout = 10000

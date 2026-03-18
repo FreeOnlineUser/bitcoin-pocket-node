@@ -170,7 +170,7 @@ object HistoryRecovery {
     fun httpGetPublic(url: String): String? = httpGet(url)
 
     private fun httpGet(url: String): String? {
-        val conn = URL(url).openConnection() as HttpURLConnection
+        val conn = com.pocketnode.tor.TorAwareHttp.openConnection(url)
         activeConnection = conn
         conn.connectTimeout = 3000
         conn.readTimeout = 3000
