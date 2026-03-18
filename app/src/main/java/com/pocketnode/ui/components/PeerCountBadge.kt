@@ -22,10 +22,12 @@ import com.pocketnode.lightning.LightningService
 @Composable
 fun PeerCountBadge(modifier: Modifier = Modifier) {
     val lnState by LightningService.stateFlow.collectAsState()
+    val torActive = com.pocketnode.tor.TorManager.enabledFlow.collectAsState().value &&
+            com.pocketnode.tor.TorManager.statusFlow.collectAsState().value == com.pocketnode.tor.TorManager.TorStatus.RUNNING
     var showExplainer by remember { mutableStateOf(false) }
 
     Text(
-        text = "B:${lnState.btcPeerCount} L:${lnState.lnPeerCount}",
+        text = "${if (torActive) "🧅 " else ""}B:${lnState.btcPeerCount} L:${lnState.lnPeerCount}",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
         modifier = modifier
