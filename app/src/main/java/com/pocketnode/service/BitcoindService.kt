@@ -215,6 +215,13 @@ class BitcoindService : Service() {
                 args.add("-maxconnections=8")
             }
 
+            // Tor: route all P2P through SOCKS proxy when enabled
+            if (com.pocketnode.tor.TorManager.enabledFlow.value) {
+                args.add("-proxy=127.0.0.1:${com.pocketnode.tor.TorManager.SOCKS_PORT}")
+                args.add("-onlynet=onion")
+                args.add("-dnsseed=0")
+            }
+
             val pb = ProcessBuilder(args)
             pb.directory(dataDir)
             pb.environment()["LD_LIBRARY_PATH"] = nativeLibDir

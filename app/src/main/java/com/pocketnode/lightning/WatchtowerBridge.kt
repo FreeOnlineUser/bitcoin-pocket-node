@@ -278,7 +278,8 @@ class WatchtowerBridge(private val context: Context) {
     }
 
     /**
-     * Connect to tower via embedded Tor (direct .onion, no SSH tunnel).
+     * Connect to tower via Tor.
+     * Prefers shared SOCKS proxy (if running), falls back to legacy embedded Arti.
      */
     private fun connectViaTor(
         native: WatchtowerNative,
@@ -288,7 +289,26 @@ class WatchtowerBridge(private val context: Context) {
         clientKey: ByteArray,
         sweepFeeRate: Long
     ): Boolean {
-        Log.i(TAG, "Attempting Tor connection to $onionHost:$port")
+        // Prefer shared SOCKS proxy when running
+        if (com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING) {
+            Log.i(TAG, "Connecting to tower via SOCKS proxy: $onionHost:$port")
+            val result = native.wtclient_connect_socks(
+                "$onionHost:$port",
+                towerPubKey,
+                clientKey,
+                1024,
+                sweepFeeRate,
+                com.pocketnode.tor.TorManager.SOCKS_ADDR
+            )
+            if (result == 0) {
+                Log.i(TAG, "Connected to LND tower via SOCKS proxy (fee rate: $sweepFeeRate sat/kw)")
+                return true
+            }
+            Log.w(TAG, "SOCKS proxy connection failed, trying legacy Tor")
+        }
+
+        // Legacy: embedded Arti per-connection (when SOCKS proxy not running)
+        Log.i(TAG, "Attempting legacy Tor connection to $onionHost:$port")
         val torStateDir = java.io.File(context.filesDir, "tor_state").apply { mkdirs() }.absolutePath
         val torCacheDir = java.io.File(context.cacheDir, "tor_cache").apply { mkdirs() }.absolutePath
 
@@ -303,7 +323,7 @@ class WatchtowerBridge(private val context: Context) {
         )
 
         if (result == 0) {
-            Log.i(TAG, "Connected to LND tower via Tor (fee rate: $sweepFeeRate sat/kw)")
+            Log.i(TAG, "Connected to LND tower via legacy Tor (fee rate: $sweepFeeRate sat/kw)")
             return true
         }
         Log.w(TAG, "Tor connection failed, will try SSH fallback")
