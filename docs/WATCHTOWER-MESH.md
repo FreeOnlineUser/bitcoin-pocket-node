@@ -152,8 +152,41 @@ Paid watchtower service solves this by making it self-sustaining:
 
 **Free tier:** reciprocal watching (I watch yours, you watch mine) could remain as a no-cost option alongside paid towers. Community/altruistic towers can set their fee to zero.
 
+## Revised Revenue Model (March 2026)
+
+After further discussion, the paid-per-blob model adds too much complexity for unclear benefit. Watchtower blobs are tiny (~300 bytes each), freeloading isn't a real problem, and the enforcement/billing logic is heavy.
+
+**New approach: free towers, paid directory.**
+
+Watchtower service itself stays **free and altruistic**, exactly how LND towers already work. No payment protocol between client and tower, no billing, no kicking users. Anyone can run a tower and offer it to others. This matches Bitcoin's ethos: infrastructure as a public good.
+
+The value is in **discovery and curation**. Finding reliable towers, knowing which are online, comparing uptime. That's the hard problem nobody's solved.
+
+**Directory model:**
+- Tower operators register in the Pocket Tower Directory (pubkey, .onion address, capacity)
+- Directory monitors uptime, tracks reliability over time
+- Pocket Node users browse the directory from the app
+- **Free tier:** one default community tower, basic directory access
+- **Paid tier:** full directory with uptime stats, multi-tower selection, reliability scores
+- Payment via Lightning, subscription or one-time
+
+**Why this works better:**
+- No custom tower software needed: stock LND towers are compatible
+- No payment channels between client and tower
+- No enforcement headaches (kicking, blocking, grace periods)
+- Revenue comes from a service people actually need (discovery) not artificial scarcity
+- Easier to build: directory is just an API + health checks
+- Tower operators have zero overhead: just run LND with watchtower enabled
+
+**Implementation options:**
+- Simple API server (could run on Umbrel as an app)
+- Nostr relay with custom event kinds (decentralised, censorship-resistant)
+- Hardcoded community list as bootstrap fallback
+
+The 50% dev fee concept from the original model can apply to directory subscription revenue instead.
+
 ## Priority
 
 1. **Current**: LDK-to-LND watchtower bridge over Tor (working, shipped)
 2. **Next**: multi-tower support (push blobs to 2-3 towers instead of one)
-3. **Future**: watchtower server mode on Pocket Node, peer discovery via Nostr, reciprocal network
+3. **Future**: watchtower directory service, tower health monitoring, paid directory tier
