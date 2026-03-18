@@ -468,6 +468,68 @@ fun NodeStatusScreen(
                     )
                 }
 
+                // Tor network toggle
+                val torEnabled by com.pocketnode.tor.TorManager.enabledFlow.collectAsState()
+                val torStatus by com.pocketnode.tor.TorManager.statusFlow.collectAsState()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Route all traffic through Tor",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            when (torStatus) {
+                                com.pocketnode.tor.TorManager.TorStatus.OFF -> "Off. Clearnet connections visible to ISP."
+                                com.pocketnode.tor.TorManager.TorStatus.BOOTSTRAPPING -> "Bootstrapping Tor..."
+                                com.pocketnode.tor.TorManager.TorStatus.RUNNING -> "Active. All traffic routed through Tor."
+                                com.pocketnode.tor.TorManager.TorStatus.ERROR -> "Failed to start. Using clearnet."
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = when (torStatus) {
+                                com.pocketnode.tor.TorManager.TorStatus.RUNNING -> Color(0xFF4CAF50)
+                                com.pocketnode.tor.TorManager.TorStatus.BOOTSTRAPPING -> Color(0xFFFF9800)
+                                com.pocketnode.tor.TorManager.TorStatus.ERROR -> Color(0xFFF44336)
+                                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            }
+                        )
+                    }
+                    Switch(
+                        checked = torEnabled,
+                        onCheckedChange = { enabled ->
+                            val tm = com.pocketnode.tor.TorManager.getInstance(context)
+                            tm.setEnabled(enabled)
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                tm.applyState()
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF9C27B0))
+                    )
+                }
+                if (torEnabled && torStatus == com.pocketnode.tor.TorManager.TorStatus.RUNNING) {
+                    Text(
+                        "Restart Bitcoin node to apply Tor proxy. HTTP calls are already routed.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFF9800),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
+                if (!torEnabled) {
+                    val hasClearnetLeaks = true // mempool.space, GitHub, etc.
+                    if (hasClearnetLeaks) {
+                        Text(
+                            "Clearnet active. mempool.space and GitHub can see your IP.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                }
+
                 // Lightning node button — shown at top when filters installed
                 run {
                     val filterDir = java.io.File(LocalContext.current.filesDir, "bitcoin/indexes/blockfilter/basic")
