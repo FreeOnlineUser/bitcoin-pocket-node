@@ -115,6 +115,25 @@ class BitcoindService : Service() {
 
     private suspend fun startBitcoind() {
         try {
+            // Step 0: Initialize TorManager and start proxy if Tor was enabled
+            // Must happen before bitcoind starts so -proxy flag is set correctly
+            val torManager = com.pocketnode.tor.TorManager.getInstance(this)
+            if (torManager.isEnabled()) {
+                Log.i(TAG, "Tor was enabled — starting SOCKS proxy before bitcoind")
+                torManager.start()
+                // Wait up to 30s for Tor to bootstrap
+                var waited = 0
+                while (com.pocketnode.tor.TorManager.statusFlow.value != com.pocketnode.tor.TorManager.TorStatus.RUNNING && waited < 30000) {
+                    delay(500)
+                    waited += 500
+                }
+                if (com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING) {
+                    Log.i(TAG, "Tor proxy ready")
+                } else {
+                    Log.w(TAG, "Tor proxy failed to start in 30s — starting bitcoind without proxy")
+                }
+            }
+
             // Step 1: Extract binary
             val binaryPath = BinaryExtractor.extractIfNeeded(this)
             Log.i(TAG, "Binary at: $binaryPath")
