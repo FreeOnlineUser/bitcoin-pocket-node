@@ -292,7 +292,7 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 See [docs/cross-compile-android.md](docs/cross-compile-android.md)
 
 ### Build ldk-node for ARM64
-See [docs/ldk-node-android-build.md](docs/ldk-node-android-build.md) — covers the Rust cross-compile, UniFFI binding generation, and AAR packaging.
+See [docs/ldk-node-android-build.md](docs/ldk-node-android-build.md). Covers the Rust cross-compile, UniFFI binding generation, and AAR packaging.
 
 ### Build the Android app
 ```bash
