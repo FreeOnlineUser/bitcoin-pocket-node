@@ -1194,18 +1194,470 @@ internal open class UniffiVTableCallbackInterfaceVssHeaderProvider(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+// For large crates we prevent `MethodTooLargeException` (see #2340)
+// N.B. the name of the extension is very misleading, since it is 
+// rather `InterfaceTooLargeException`, caused by too many methods 
+// in the interface for large crates.
+//
+// By splitting the otherwise huge interface into two parts
+// * UniffiLib 
+// * IntegrityCheckingUniffiLib (this)
+// we allow for ~2x as many methods in the UniffiLib interface.
+// 
+// The `ffi_uniffi_contract_version` method and all checksum methods are put 
+// into `IntegrityCheckingUniffiLib` and these methods are called only once,
+// when the library is loaded.
+internal interface IntegrityCheckingUniffiLib : Library {
+    // Integrity check functions only
+    fun uniffi_ldk_node_checksum_func_default_config(
+): Short
+fun uniffi_ldk_node_checksum_func_generate_entropy_mnemonic(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_build(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_build_with_fs_store(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_fixed_headers(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_header_provider(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_lnurl_auth(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_announcement_addresses(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_async_payments_role(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rest(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rpc(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_chain_source_electrum(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_chain_source_esplora(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_custom_logger(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_filesystem_logger(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_p2p(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_rgs(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps1(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps2(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_listening_addresses(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_log_facade_logger(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_network(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_node_alias(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_pathfinding_scores_source(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_storage_dir_path(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_tor_config(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_wallet_birthday_height(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_wallet_recovery_mode(
+): Short
+fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_kwu(
+): Short
+fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_ceil(
+): Short
+fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_floor(
+): Short
+fun uniffi_ldk_node_checksum_method_logwriter_log(
+): Short
+fun uniffi_ldk_node_checksum_method_node_announcement_addresses(
+): Short
+fun uniffi_ldk_node_checksum_method_node_bolt11_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_node_bolt12_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_node_broadcast_holder_commitment_txns(
+): Short
+fun uniffi_ldk_node_checksum_method_node_clear_payment_paths(
+): Short
+fun uniffi_ldk_node_checksum_method_node_close_channel(
+): Short
+fun uniffi_ldk_node_checksum_method_node_close_channel_with_target_feerate(
+): Short
+fun uniffi_ldk_node_checksum_method_node_config(
+): Short
+fun uniffi_ldk_node_checksum_method_node_connect(
+): Short
+fun uniffi_ldk_node_checksum_method_node_disconnect(
+): Short
+fun uniffi_ldk_node_checksum_method_node_event_handled(
+): Short
+fun uniffi_ldk_node_checksum_method_node_export_pathfinding_scores(
+): Short
+fun uniffi_ldk_node_checksum_method_node_force_close_channel(
+): Short
+fun uniffi_ldk_node_checksum_method_node_list_balances(
+): Short
+fun uniffi_ldk_node_checksum_method_node_list_channels(
+): Short
+fun uniffi_ldk_node_checksum_method_node_list_payments(
+): Short
+fun uniffi_ldk_node_checksum_method_node_list_peers(
+): Short
+fun uniffi_ldk_node_checksum_method_node_listening_addresses(
+): Short
+fun uniffi_ldk_node_checksum_method_node_lnurl_auth(
+): Short
+fun uniffi_ldk_node_checksum_method_node_lsps1_liquidity(
+): Short
+fun uniffi_ldk_node_checksum_method_node_network_graph(
+): Short
+fun uniffi_ldk_node_checksum_method_node_next_event(
+): Short
+fun uniffi_ldk_node_checksum_method_node_next_event_async(
+): Short
+fun uniffi_ldk_node_checksum_method_node_node_alias(
+): Short
+fun uniffi_ldk_node_checksum_method_node_node_id(
+): Short
+fun uniffi_ldk_node_checksum_method_node_onchain_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_node_open_announced_channel(
+): Short
+fun uniffi_ldk_node_checksum_method_node_open_announced_channel_with_all(
+): Short
+fun uniffi_ldk_node_checksum_method_node_open_channel(
+): Short
+fun uniffi_ldk_node_checksum_method_node_open_channel_with_all(
+): Short
+fun uniffi_ldk_node_checksum_method_node_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_node_payment_path_attempts(
+): Short
+fun uniffi_ldk_node_checksum_method_node_remove_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_node_sign_message(
+): Short
+fun uniffi_ldk_node_checksum_method_node_splice_in(
+): Short
+fun uniffi_ldk_node_checksum_method_node_splice_in_with_all(
+): Short
+fun uniffi_ldk_node_checksum_method_node_splice_out(
+): Short
+fun uniffi_ldk_node_checksum_method_node_spontaneous_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_node_start(
+): Short
+fun uniffi_ldk_node_checksum_method_node_status(
+): Short
+fun uniffi_ldk_node_checksum_method_node_stop(
+): Short
+fun uniffi_ldk_node_checksum_method_node_sync_wallets(
+): Short
+fun uniffi_ldk_node_checksum_method_node_unified_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_node_update_channel_config(
+): Short
+fun uniffi_ldk_node_checksum_method_node_verify_signature(
+): Short
+fun uniffi_ldk_node_checksum_method_node_wait_next_event(
+): Short
+fun uniffi_ldk_node_checksum_method_node_watchtower_drain_justice_blobs(
+): Short
+fun uniffi_ldk_node_checksum_method_node_watchtower_export_monitors(
+): Short
+fun uniffi_ldk_node_checksum_method_node_watchtower_list_monitors(
+): Short
+fun uniffi_ldk_node_checksum_method_node_watchtower_set_sweep_address(
+): Short
+fun uniffi_ldk_node_checksum_method_vssheaderprovider_get_headers(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_amount_milli_satoshis(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_currency(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_expiry_time_seconds(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_fallback_addresses(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_invoice_description(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_is_expired(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_min_final_cltv_expiry_delta(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_network(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_payment_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_payment_secret(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_recover_payee_pub_key(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_route_hints(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_seconds_since_epoch(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_seconds_until_expiry(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_signable_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11invoice_would_expire(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_claim_for_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_fail_for_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_receive(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_receive_for_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_for_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_send(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_send_probes(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_send_probes_using_amount(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_absolute_expiry_seconds(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_amount(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_amount_msats(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_chain(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_created_at(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_encode(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_fallback_addresses(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_invoice_description(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_is_expired(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_issuer(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_issuer_signing_pubkey(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_metadata(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_offer_chains(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_payer_note(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_payer_signing_pubkey(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_payment_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_quantity(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_relative_expiry(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_signable_hash(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12invoice_signing_pubkey(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_blinded_paths_for_async_recipient(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_receive(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_receive_async(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_receive_variable_amount(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_request_refund_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_send(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount(
+): Short
+fun uniffi_ldk_node_checksum_method_bolt12payment_set_paths_to_static_invoice_server(
+): Short
+fun uniffi_ldk_node_checksum_method_humanreadablename_domain(
+): Short
+fun uniffi_ldk_node_checksum_method_humanreadablename_user(
+): Short
+fun uniffi_ldk_node_checksum_method_lsps1liquidity_check_order_status(
+): Short
+fun uniffi_ldk_node_checksum_method_lsps1liquidity_request_channel(
+): Short
+fun uniffi_ldk_node_checksum_method_networkgraph_channel(
+): Short
+fun uniffi_ldk_node_checksum_method_networkgraph_list_channels(
+): Short
+fun uniffi_ldk_node_checksum_method_networkgraph_list_nodes(
+): Short
+fun uniffi_ldk_node_checksum_method_networkgraph_node(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_amount(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_chains(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_expects_quantity(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_id(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_is_expired(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_is_valid_quantity(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_issuer(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_issuer_signing_pubkey(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_metadata(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_offer_description(
+): Short
+fun uniffi_ldk_node_checksum_method_offer_supports_chain(
+): Short
+fun uniffi_ldk_node_checksum_method_onchainpayment_bump_fee_rbf(
+): Short
+fun uniffi_ldk_node_checksum_method_onchainpayment_new_address(
+): Short
+fun uniffi_ldk_node_checksum_method_onchainpayment_send_all_to_address(
+): Short
+fun uniffi_ldk_node_checksum_method_onchainpayment_send_to_address(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_absolute_expiry_seconds(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_amount_msats(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_chain(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_is_expired(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_issuer(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_payer_metadata(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_payer_note(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_payer_signing_pubkey(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_quantity(
+): Short
+fun uniffi_ldk_node_checksum_method_refund_refund_description(
+): Short
+fun uniffi_ldk_node_checksum_method_spontaneouspayment_send(
+): Short
+fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_probes(
+): Short
+fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs(
+): Short
+fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage(
+): Short
+fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(
+): Short
+fun uniffi_ldk_node_checksum_method_staticinvoice_amount(
+): Short
+fun uniffi_ldk_node_checksum_method_unifiedpayment_receive(
+): Short
+fun uniffi_ldk_node_checksum_method_unifiedpayment_send(
+): Short
+fun uniffi_ldk_node_checksum_constructor_builder_from_config(
+): Short
+fun uniffi_ldk_node_checksum_constructor_builder_new(
+): Short
+fun uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_kwu(
+): Short
+fun uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_vb_unchecked(
+): Short
+fun uniffi_ldk_node_checksum_constructor_bolt11invoice_from_str(
+): Short
+fun uniffi_ldk_node_checksum_constructor_bolt12invoice_from_str(
+): Short
+fun uniffi_ldk_node_checksum_constructor_humanreadablename_from_encoded(
+): Short
+fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_bip39_mnemonic(
+): Short
+fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_bytes(
+): Short
+fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_path(
+): Short
+fun uniffi_ldk_node_checksum_constructor_offer_from_str(
+): Short
+fun uniffi_ldk_node_checksum_constructor_refund_from_str(
+): Short
+fun ffi_ldk_node_uniffi_contract_version(
+): Int
+
+}
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
-
 internal interface UniffiLib : Library {
     companion object {
         internal val INSTANCE: UniffiLib by lazy {
-            loadIndirect<UniffiLib>(componentName = "ldk_node")
-            .also { lib: UniffiLib ->
-                uniffiCheckContractApiVersion(lib)
-                uniffiCheckApiChecksums(lib)
-                uniffiCallbackInterfaceLogWriter.register(lib)
+            val componentName = "ldk_node"
+            // For large crates we prevent `MethodTooLargeException` (see #2340)
+            // N.B. the name of the extension is very misleading, since it is 
+            // rather `InterfaceTooLargeException`, caused by too many methods 
+            // in the interface for large crates.
+            //
+            // By splitting the otherwise huge interface into two parts
+            // * UniffiLib (this)
+            // * IntegrityCheckingUniffiLib
+            // And all checksum methods are put into `IntegrityCheckingUniffiLib`
+            // we allow for ~2x as many methods in the UniffiLib interface.
+            // 
+            // Thus we first load the library with `loadIndirect` as `IntegrityCheckingUniffiLib`
+            // so that we can (optionally!) call `uniffiCheckApiChecksums`...
+            loadIndirect<IntegrityCheckingUniffiLib>(componentName)
+                .also { lib: IntegrityCheckingUniffiLib ->
+                    uniffiCheckContractApiVersion(lib)
+                    uniffiCheckApiChecksums(lib)
                 }
+            // ... and then we load the library as `UniffiLib`
+            // N.B. we cannot use `loadIndirect` once and then try to cast it to `UniffiLib`
+            // => results in `java.lang.ClassCastException: com.sun.proxy.$Proxy cannot be cast to ...`
+            // error. So we must call `loadIndirect` twice. For crates large enough
+            // to trigger this issue, the performance impact is negligible, running on
+            // a macOS M1 machine the `loadIndirect` call takes ~50ms.
+            val lib = loadIndirect<UniffiLib>(componentName)
+            // No need to check the contract version and checksums, since 
+            // we already did that with `IntegrityCheckingUniffiLib` above.
+            uniffiCallbackInterfaceLogWriter.register(lib)
+            uniffiCallbackInterfaceVssHeaderProvider.register(lib)
+            // Loading of library with integrity check done.
+            lib
         }
         
         // The Cleaner for the whole library
@@ -1214,1190 +1666,643 @@ internal interface UniffiLib : Library {
         }
     }
 
-    fun uniffi_ldk_node_fn_clone_bolt11invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_bolt11invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_bolt11invoice_from_str(`invoiceStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11invoice_amount_milli_satoshis(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_currency(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_expiry_time_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_bolt11invoice_fallback_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_invoice_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_bolt11invoice_min_final_cltv_expiry_delta(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_bolt11invoice_network(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_payment_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_payment_secret(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_recover_payee_pub_key(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_route_hints(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_seconds_since_epoch(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_bolt11invoice_seconds_until_expiry(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_bolt11invoice_signable_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_would_expire(`ptr`: Pointer,`atTimeSeconds`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_clone_bolt11payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_bolt11payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_claim_for_hash(`ptr`: Pointer,`paymentHash`: RustBuffer.ByValue,`claimableAmountMsat`: Long,`preimage`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_fail_for_hash(`ptr`: Pointer,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_for_hash(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_for_hash(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxProportionalLspFeeLimitPpmMsat`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxProportionalLspFeeLimitPpmMsat`: RustBuffer.ByValue,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxLspFeeLimitMsat`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel_for_hash(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxLspFeeLimitMsat`: RustBuffer.ByValue,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_send(`ptr`: Pointer,`invoice`: Pointer,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11payment_send_probes(`ptr`: Pointer,`invoice`: Pointer,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_send_probes_using_amount(`ptr`: Pointer,`invoice`: Pointer,`amountMsat`: Long,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_send_using_amount(`ptr`: Pointer,`invoice`: Pointer,`amountMsat`: Long,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_bolt12invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_bolt12invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_bolt12invoice_from_str(`invoiceStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12invoice_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_amount(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_amount_msats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_bolt12invoice_chain(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_created_at(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_bolt12invoice_encode(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_fallback_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_invoice_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_bolt12invoice_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_issuer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_offer_chains(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_payer_note(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_payer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_payment_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_relative_expiry(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_bolt12invoice_signable_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_bolt12payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_bolt12payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_bolt12payment_blinded_paths_for_async_recipient(`ptr`: Pointer,`recipientId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12payment_initiate_refund(`ptr`: Pointer,`amountMsat`: Long,`expirySecs`: Int,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_receive(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: RustBuffer.ByValue,`quantity`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_receive_async(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_receive_variable_amount(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_request_refund_payment(`ptr`: Pointer,`refund`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_send(`ptr`: Pointer,`offer`: Pointer,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12payment_send_using_amount(`ptr`: Pointer,`offer`: Pointer,`amountMsat`: Long,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12payment_set_paths_to_static_invoice_server(`ptr`: Pointer,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
+    // FFI functions
     fun uniffi_ldk_node_fn_clone_builder(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_builder(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_builder_from_config(`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_constructor_builder_new(uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build(`ptr`: Pointer,`nodeEntropy`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build_with_fs_store(`ptr`: Pointer,`nodeEntropy`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`lnurlAuthServerUrl`: RustBuffer.ByValue,`fixedHeaders`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_fixed_headers(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`fixedHeaders`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_header_provider(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`headerProvider`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_set_announcement_addresses(`ptr`: Pointer,`announcementAddresses`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_async_payments_role(`ptr`: Pointer,`role`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rest(`ptr`: Pointer,`restHost`: RustBuffer.ByValue,`restPort`: Short,`rpcHost`: RustBuffer.ByValue,`rpcPort`: Short,`rpcUser`: RustBuffer.ByValue,`rpcPassword`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rpc(`ptr`: Pointer,`rpcHost`: RustBuffer.ByValue,`rpcPort`: Short,`rpcUser`: RustBuffer.ByValue,`rpcPassword`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_chain_source_electrum(`ptr`: Pointer,`serverUrl`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_chain_source_esplora(`ptr`: Pointer,`serverUrl`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_custom_logger(`ptr`: Pointer,`logWriter`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_filesystem_logger(`ptr`: Pointer,`logFilePath`: RustBuffer.ByValue,`maxLogLevel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_gossip_source_p2p(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_gossip_source_rgs(`ptr`: Pointer,`rgsServerUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_gossip_source_rgs_with_p2p(`ptr`: Pointer,`rgsServerUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps1(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`token`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps2(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`token`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_listening_addresses(`ptr`: Pointer,`listeningAddresses`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_log_facade_logger(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_network(`ptr`: Pointer,`network`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_node_alias(`ptr`: Pointer,`nodeAlias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_pathfinding_scores_source(`ptr`: Pointer,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_storage_dir_path(`ptr`: Pointer,`storageDirPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_wallet_birthday_height(`ptr`: Pointer,`height`: Int,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_wallet_recovery_mode(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_clone_feerate(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_feerate(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_feerate_from_sat_per_kwu(`satKwu`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_constructor_feerate_from_sat_per_vb_unchecked(`satVb`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_kwu(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_ceil(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_floor(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_clone_humanreadablename(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_humanreadablename(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_humanreadablename_from_encoded(`encoded`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_humanreadablename_domain(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_humanreadablename_user(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_lsps1liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_lsps1liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_lsps1liquidity_check_order_status(`ptr`: Pointer,`orderId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_lsps1liquidity_request_channel(`ptr`: Pointer,`lspBalanceSat`: Long,`clientBalanceSat`: Long,`channelExpiryBlocks`: Int,`announceChannel`: Byte,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_logwriter(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_logwriter(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_init_callback_vtable_logwriter(`vtable`: UniffiVTableCallbackInterfaceLogWriter,
-    ): Unit
-    fun uniffi_ldk_node_fn_method_logwriter_log(`ptr`: Pointer,`record`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_clone_networkgraph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_networkgraph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_networkgraph_channel(`ptr`: Pointer,`shortChannelId`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_networkgraph_list_channels(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_networkgraph_list_nodes(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_networkgraph_node(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_node(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_node(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_announcement_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_apply_rgs_data(`ptr`: Pointer,`data`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Int
-    fun uniffi_ldk_node_fn_method_node_bolt11_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_node_bolt12_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_node_broadcast_holder_commitment_txns(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_clear_payment_paths(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_close_channel(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_close_channel_with_target_feerate(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`targetFeerateSatPer1000Weight`: Int,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_config(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_connect(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`persist`: Byte,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_disconnect(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_event_handled(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_export_pathfinding_scores(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_force_close_channel(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`reason`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_list_balances(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_list_channels(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_list_payments(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_list_peers(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_listening_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_lsps1_liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_node_network_graph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_node_next_event(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_next_event_async(`ptr`: Pointer,
-    ): Long
-    fun uniffi_ldk_node_fn_method_node_node_alias(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_node_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_onchain_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_node_open_announced_channel(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`channelAmountSats`: Long,`pushToCounterpartyMsat`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_open_channel(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`channelAmountSats`: Long,`pushToCounterpartyMsat`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_payment(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_payment_path_attempts(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_remove_payment(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_rgs_url(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_set_tor_proxy(`ptr`: Pointer,`proxyAddr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_sign_message(`ptr`: Pointer,`msg`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_splice_in(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`spliceAmountSats`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_splice_out(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`spliceAmountSats`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_spontaneous_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_node_start(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_status(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_stop(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_sync_wallets(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_unified_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_node_update_channel_config(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_verify_signature(`ptr`: Pointer,`msg`: RustBuffer.ByValue,`sig`: RustBuffer.ByValue,`pkey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_node_wait_next_event(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_watchtower_drain_justice_blobs(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_watchtower_export_monitors(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_watchtower_list_monitors(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_watchtower_set_sweep_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_clone_nodeentropy(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_nodeentropy(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_bip39_mnemonic(`mnemonic`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_bytes(`seedBytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_path(`seedPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_clone_offer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_offer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_offer_from_str(`offerStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_offer_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_amount(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_chains(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_expects_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_is_valid_quantity(`ptr`: Pointer,`quantity`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_issuer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_offer_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_supports_chain(`ptr`: Pointer,`chain`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_clone_onchainpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_onchainpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_onchainpayment_bump_fee_rbf(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_onchainpayment_new_address(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,`retainReserve`: Byte,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_onchainpayment_send_to_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,`amountSats`: Long,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_refund(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_refund(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_refund_from_str(`refundStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_refund_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_amount_msats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_refund_chain(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_refund_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_payer_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_payer_note(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_payer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_refund_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_clone_spontaneouspayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_spontaneouspayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_probes(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_custom_tlvs(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,`customTlvs`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`preimage`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`customTlvs`: RustBuffer.ByValue,`preimage`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_unifiedpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_unifiedpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_unifiedpayment_receive(`ptr`: Pointer,`amountSats`: Long,`message`: RustBuffer.ByValue,`expirySec`: Int,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_unifiedpayment_send(`ptr`: Pointer,`uriStr`: RustBuffer.ByValue,`amountMsat`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,
-    ): Long
-    fun uniffi_ldk_node_fn_clone_vssheaderprovider(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_vssheaderprovider(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_vssheaderprovider_get_headers(`ptr`: Pointer,`request`: RustBuffer.ByValue,
-    ): Long
-    fun uniffi_ldk_node_fn_func_default_config(uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_func_generate_entropy_mnemonic(`wordCount`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun ffi_ldk_node_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_u8(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_u8(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun ffi_ldk_node_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_i8(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_i8(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun ffi_ldk_node_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_u16(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_u16(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Short
-    fun ffi_ldk_node_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_i16(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_i16(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Short
-    fun ffi_ldk_node_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_u32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_u32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Int
-    fun ffi_ldk_node_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_i32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_i32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Int
-    fun ffi_ldk_node_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_u64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_u64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun ffi_ldk_node_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_i64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_i64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun ffi_ldk_node_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_f32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_f32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Float
-    fun ffi_ldk_node_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_f64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_f64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Double
-    fun ffi_ldk_node_rust_future_poll_pointer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_pointer(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_pointer(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_pointer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun ffi_ldk_node_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_rust_buffer(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_rust_buffer(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_void(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_void(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_checksum_func_default_config(
-    ): Short
-    fun uniffi_ldk_node_checksum_func_generate_entropy_mnemonic(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_amount_milli_satoshis(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_currency(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_expiry_time_seconds(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_fallback_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_invoice_description(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_is_expired(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_min_final_cltv_expiry_delta(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_network(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_payment_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_payment_secret(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_recover_payee_pub_key(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_route_hints(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_seconds_since_epoch(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_seconds_until_expiry(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_signable_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_would_expire(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_claim_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_fail_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_send(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_send_probes(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_send_probes_using_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_absolute_expiry_seconds(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_amount_msats(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_chain(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_created_at(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_encode(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_fallback_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_invoice_description(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_is_expired(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_issuer(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_issuer_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_metadata(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_offer_chains(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_payer_note(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_payer_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_payment_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_quantity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_relative_expiry(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_signable_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_blinded_paths_for_async_recipient(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_receive(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_receive_async(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_receive_variable_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_request_refund_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_send(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_set_paths_to_static_invoice_server(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build_with_fs_store(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_fixed_headers(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_header_provider(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_announcement_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_async_payments_role(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rest(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rpc(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_electrum(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_esplora(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_custom_logger(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_filesystem_logger(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_p2p(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_rgs(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_rgs_with_p2p(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps1(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps2(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_listening_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_log_facade_logger(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_network(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_node_alias(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_pathfinding_scores_source(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_storage_dir_path(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_wallet_birthday_height(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_wallet_recovery_mode(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_kwu(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_ceil(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_floor(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_humanreadablename_domain(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_humanreadablename_user(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_lsps1liquidity_check_order_status(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_lsps1liquidity_request_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_logwriter_log(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_networkgraph_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_networkgraph_list_channels(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_networkgraph_list_nodes(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_networkgraph_node(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_announcement_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_apply_rgs_data(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_bolt11_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_bolt12_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_broadcast_holder_commitment_txns(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_clear_payment_paths(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_close_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_close_channel_with_target_feerate(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_config(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_connect(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_disconnect(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_event_handled(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_export_pathfinding_scores(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_force_close_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_list_balances(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_list_channels(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_list_payments(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_list_peers(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_listening_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_lsps1_liquidity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_network_graph(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_next_event(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_next_event_async(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_node_alias(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_node_id(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_onchain_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_open_announced_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_open_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_payment_path_attempts(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_remove_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_rgs_url(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_set_tor_proxy(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_sign_message(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_splice_in(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_splice_out(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_spontaneous_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_start(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_status(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_stop(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_sync_wallets(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_unified_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_update_channel_config(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_verify_signature(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_wait_next_event(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_watchtower_drain_justice_blobs(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_watchtower_export_monitors(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_watchtower_list_monitors(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_watchtower_set_sweep_address(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_chains(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_expects_quantity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_id(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_is_expired(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_is_valid_quantity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_issuer(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_issuer_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_metadata(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_offer_description(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_supports_chain(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_onchainpayment_bump_fee_rbf(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_onchainpayment_new_address(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_onchainpayment_send_all_to_address(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_onchainpayment_send_to_address(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_absolute_expiry_seconds(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_amount_msats(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_chain(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_is_expired(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_issuer(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_payer_metadata(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_payer_note(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_payer_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_quantity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_refund_description(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_probes(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_unifiedpayment_receive(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_unifiedpayment_send(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_vssheaderprovider_get_headers(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_bolt11invoice_from_str(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_bolt12invoice_from_str(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_builder_from_config(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_builder_new(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_kwu(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_vb_unchecked(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_humanreadablename_from_encoded(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_bip39_mnemonic(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_bytes(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_path(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_offer_from_str(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_refund_from_str(
-    ): Short
-    fun ffi_ldk_node_uniffi_contract_version(
-    ): Int
-    
+): Pointer
+fun uniffi_ldk_node_fn_free_builder(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_constructor_builder_from_config(`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_constructor_builder_new(uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_builder_build(`ptr`: Pointer,`nodeEntropy`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_builder_build_with_fs_store(`ptr`: Pointer,`nodeEntropy`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_builder_build_with_vss_store(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`fixedHeaders`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_fixed_headers(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`fixedHeaders`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_header_provider(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`headerProvider`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_lnurl_auth(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`lnurlAuthServerUrl`: RustBuffer.ByValue,`fixedHeaders`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_builder_set_announcement_addresses(`ptr`: Pointer,`announcementAddresses`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_async_payments_role(`ptr`: Pointer,`role`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rest(`ptr`: Pointer,`restHost`: RustBuffer.ByValue,`restPort`: Short,`rpcHost`: RustBuffer.ByValue,`rpcPort`: Short,`rpcUser`: RustBuffer.ByValue,`rpcPassword`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rpc(`ptr`: Pointer,`rpcHost`: RustBuffer.ByValue,`rpcPort`: Short,`rpcUser`: RustBuffer.ByValue,`rpcPassword`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_chain_source_electrum(`ptr`: Pointer,`serverUrl`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_chain_source_esplora(`ptr`: Pointer,`serverUrl`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_custom_logger(`ptr`: Pointer,`logWriter`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_filesystem_logger(`ptr`: Pointer,`logFilePath`: RustBuffer.ByValue,`maxLogLevel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_gossip_source_p2p(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_gossip_source_rgs(`ptr`: Pointer,`rgsServerUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps1(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`token`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps2(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`token`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_listening_addresses(`ptr`: Pointer,`listeningAddresses`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_log_facade_logger(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_network(`ptr`: Pointer,`network`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_node_alias(`ptr`: Pointer,`nodeAlias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_pathfinding_scores_source(`ptr`: Pointer,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_storage_dir_path(`ptr`: Pointer,`storageDirPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_tor_config(`ptr`: Pointer,`torConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_wallet_birthday_height(`ptr`: Pointer,`height`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_wallet_recovery_mode(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_clone_feerate(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_feerate(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_constructor_feerate_from_sat_per_kwu(`satKwu`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_constructor_feerate_from_sat_per_vb_unchecked(`satVb`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_feerate_to_sat_per_kwu(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_ceil(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_floor(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_clone_logwriter(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_logwriter(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_init_callback_vtable_logwriter(`vtable`: UniffiVTableCallbackInterfaceLogWriter,
+): Unit
+fun uniffi_ldk_node_fn_method_logwriter_log(`ptr`: Pointer,`record`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_clone_node(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_node(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_announcement_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_bolt11_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_node_bolt12_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_node_broadcast_holder_commitment_txns(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_clear_payment_paths(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_close_channel(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_close_channel_with_target_feerate(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`targetFeerateSatPer1000Weight`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_config(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_connect(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`persist`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_disconnect(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_event_handled(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_export_pathfinding_scores(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_force_close_channel(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`reason`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_list_balances(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_list_channels(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_list_payments(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_list_peers(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_listening_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_lnurl_auth(`ptr`: Pointer,`lnurl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_lsps1_liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_node_network_graph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_node_next_event(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_next_event_async(`ptr`: Pointer,
+): Long
+fun uniffi_ldk_node_fn_method_node_node_alias(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_node_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_onchain_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_node_open_announced_channel(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`channelAmountSats`: Long,`pushToCounterpartyMsat`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_open_announced_channel_with_all(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`pushToCounterpartyMsat`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_open_channel(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`channelAmountSats`: Long,`pushToCounterpartyMsat`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_open_channel_with_all(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`pushToCounterpartyMsat`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_payment(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_payment_path_attempts(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_remove_payment(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_sign_message(`ptr`: Pointer,`msg`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_splice_in(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`spliceAmountSats`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_splice_in_with_all(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_splice_out(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`spliceAmountSats`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_spontaneous_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_node_start(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_status(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_stop(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_sync_wallets(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_unified_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_node_update_channel_config(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_node_verify_signature(`ptr`: Pointer,`msg`: RustBuffer.ByValue,`sig`: RustBuffer.ByValue,`pkey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_node_wait_next_event(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_watchtower_drain_justice_blobs(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_watchtower_export_monitors(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_watchtower_list_monitors(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_node_watchtower_set_sweep_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_clone_vssheaderprovider(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_vssheaderprovider(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_init_callback_vtable_vssheaderprovider(`vtable`: UniffiVTableCallbackInterfaceVssHeaderProvider,
+): Unit
+fun uniffi_ldk_node_fn_method_vssheaderprovider_get_headers(`ptr`: Pointer,`request`: RustBuffer.ByValue,
+): Long
+fun uniffi_ldk_node_fn_clone_bolt11invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_bolt11invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_constructor_bolt11invoice_from_str(`invoiceStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11invoice_amount_milli_satoshis(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_currency(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_expiry_time_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_bolt11invoice_fallback_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_invoice_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_bolt11invoice_min_final_cltv_expiry_delta(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_bolt11invoice_network(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_payment_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_payment_secret(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_recover_payee_pub_key(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_route_hints(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_seconds_since_epoch(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_bolt11invoice_seconds_until_expiry(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_bolt11invoice_signable_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_would_expire(`ptr`: Pointer,`atTimeSeconds`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_clone_bolt11payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_bolt11payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_bolt11payment_claim_for_hash(`ptr`: Pointer,`paymentHash`: RustBuffer.ByValue,`claimableAmountMsat`: Long,`preimage`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_bolt11payment_fail_for_hash(`ptr`: Pointer,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_bolt11payment_receive(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11payment_receive_for_hash(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_for_hash(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxProportionalLspFeeLimitPpmMsat`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxProportionalLspFeeLimitPpmMsat`: RustBuffer.ByValue,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxTotalLspFeeLimitMsat`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel_for_hash(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxTotalLspFeeLimitMsat`: RustBuffer.ByValue,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt11payment_send(`ptr`: Pointer,`invoice`: Pointer,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt11payment_send_probes(`ptr`: Pointer,`invoice`: Pointer,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_bolt11payment_send_probes_using_amount(`ptr`: Pointer,`invoice`: Pointer,`amountMsat`: Long,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_bolt11payment_send_using_amount(`ptr`: Pointer,`invoice`: Pointer,`amountMsat`: Long,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_clone_bolt12invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_bolt12invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_constructor_bolt12invoice_from_str(`invoiceStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt12invoice_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_amount(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_amount_msats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_bolt12invoice_chain(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_created_at(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_bolt12invoice_encode(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_fallback_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_invoice_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_bolt12invoice_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_issuer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_offer_chains(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_payer_note(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_payer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_payment_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_relative_expiry(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_bolt12invoice_signable_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12invoice_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_clone_bolt12payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_bolt12payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_bolt12payment_blinded_paths_for_async_recipient(`ptr`: Pointer,`recipientId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12payment_initiate_refund(`ptr`: Pointer,`amountMsat`: Long,`expirySecs`: Int,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt12payment_receive(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: RustBuffer.ByValue,`quantity`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt12payment_receive_async(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt12payment_receive_variable_amount(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt12payment_request_refund_payment(`ptr`: Pointer,`refund`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_bolt12payment_send(`ptr`: Pointer,`offer`: Pointer,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12payment_send_using_amount(`ptr`: Pointer,`offer`: Pointer,`amountMsat`: Long,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_bolt12payment_set_paths_to_static_invoice_server(`ptr`: Pointer,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_clone_humanreadablename(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_humanreadablename(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_constructor_humanreadablename_from_encoded(`encoded`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_humanreadablename_domain(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_humanreadablename_user(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_humanreadablename_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_humanreadablename_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_humanreadablename_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_humanreadablename_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_clone_lsps1liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_lsps1liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_lsps1liquidity_check_order_status(`ptr`: Pointer,`orderId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_lsps1liquidity_request_channel(`ptr`: Pointer,`lspBalanceSat`: Long,`clientBalanceSat`: Long,`channelExpiryBlocks`: Int,`announceChannel`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_clone_networkgraph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_networkgraph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_networkgraph_channel(`ptr`: Pointer,`shortChannelId`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_networkgraph_list_channels(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_networkgraph_list_nodes(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_networkgraph_node(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_clone_nodeentropy(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_nodeentropy(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_constructor_nodeentropy_from_bip39_mnemonic(`mnemonic`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_bytes(`seedBytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_path(`seedPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_clone_offer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_offer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_constructor_offer_from_str(`offerStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_offer_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_amount(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_chains(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_expects_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_offer_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_offer_is_valid_quantity(`ptr`: Pointer,`quantity`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_offer_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_issuer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_offer_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_supports_chain(`ptr`: Pointer,`chain`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_offer_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_clone_onchainpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_onchainpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_onchainpayment_bump_fee_rbf(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_onchainpayment_new_address(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,`retainReserves`: Byte,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_onchainpayment_send_to_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,`amountSats`: Long,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_clone_refund(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_refund(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_constructor_refund_from_str(`refundStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_method_refund_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_amount_msats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun uniffi_ldk_node_fn_method_refund_chain(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_refund_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_payer_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_payer_note(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_payer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_refund_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_ldk_node_fn_clone_spontaneouspayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_spontaneouspayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_spontaneouspayment_send(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_spontaneouspayment_send_probes(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_custom_tlvs(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,`customTlvs`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`preimage`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`customTlvs`: RustBuffer.ByValue,`preimage`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_clone_staticinvoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_staticinvoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_staticinvoice_amount(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_clone_unifiedpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun uniffi_ldk_node_fn_free_unifiedpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_unifiedpayment_receive(`ptr`: Pointer,`amountSats`: Long,`description`: RustBuffer.ByValue,`expirySec`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_unifiedpayment_send(`ptr`: Pointer,`uriStr`: RustBuffer.ByValue,`amountMsat`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,
+): Long
+fun uniffi_ldk_node_fn_func_default_config(uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_func_generate_entropy_mnemonic(`wordCount`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_ldk_node_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_ldk_node_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_ldk_node_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun ffi_ldk_node_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_ldk_node_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_u8(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_u8(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun ffi_ldk_node_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_i8(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_i8(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun ffi_ldk_node_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_u16(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_u16(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Short
+fun ffi_ldk_node_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_i16(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_i16(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Short
+fun ffi_ldk_node_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_u32(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_u32(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+fun ffi_ldk_node_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_i32(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_i32(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+fun ffi_ldk_node_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_u64(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_u64(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun ffi_ldk_node_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_i64(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_i64(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+fun ffi_ldk_node_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_f32(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_f32(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Float
+fun ffi_ldk_node_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_f64(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_f64(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Double
+fun ffi_ldk_node_rust_future_poll_pointer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_pointer(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_pointer(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_pointer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Pointer
+fun ffi_ldk_node_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_rust_buffer(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_rust_buffer(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun ffi_ldk_node_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_cancel_void(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_free_void(`handle`: Long,
+): Unit
+fun ffi_ldk_node_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+
 }
 
-private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
+private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
     // Get the bindings contract version from our ComponentInterface
-    val bindings_contract_version = 26
+    val bindings_contract_version = 29
     // Get the scaffolding contract version by calling the into the dylib
     val scaffolding_contract_version = lib.ffi_ldk_node_uniffi_contract_version()
     if (bindings_contract_version != scaffolding_contract_version) {
         throw RuntimeException("UniFFI contract version mismatch: try cleaning and rebuilding your project")
     }
 }
-
 @Suppress("UNUSED_PARAMETER")
-private fun uniffiCheckApiChecksums(lib: UniffiLib) {
+private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_ldk_node_checksum_func_default_config() != 55381.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_func_generate_entropy_mnemonic() != 48014.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_amount_milli_satoshis() != 50823.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_currency() != 32179.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_expiry_time_seconds() != 23625.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_fallback_addresses() != 55276.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_invoice_description() != 395.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_is_expired() != 15932.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_min_final_cltv_expiry_delta() != 8855.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_network() != 10420.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_payment_hash() != 42571.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_payment_secret() != 26081.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_recover_payee_pub_key() != 18874.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_route_hints() != 63051.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_seconds_since_epoch() != 53979.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_seconds_until_expiry() != 64193.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_signable_hash() != 30910.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_would_expire() != 30331.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_claim_for_hash() != 52848.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_fail_for_hash() != 24516.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive() != 6073.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_for_hash() != 27050.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount() != 4893.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_for_hash() != 1402.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel() != 24506.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash() != 38025.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel() != 16532.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash() != 1143.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send() != 12953.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_probes() != 19286.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_probes_using_amount() != 5976.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount() != 42793.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_absolute_expiry_seconds() != 28589.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_amount() != 5213.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_amount_msats() != 9297.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_chain() != 3308.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_created_at() != 56866.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_encode() != 13200.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_fallback_addresses() != 7925.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_invoice_description() != 1713.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_is_expired() != 39560.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_issuer() != 65270.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_issuer_signing_pubkey() != 55411.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_metadata() != 37374.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_offer_chains() != 39622.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_payer_note() != 28018.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_payer_signing_pubkey() != 12798.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_payment_hash() != 63778.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_quantity() != 43105.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_relative_expiry() != 14024.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_signable_hash() != 39303.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_signing_pubkey() != 35202.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_blinded_paths_for_async_recipient() != 14695.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund() != 15019.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_receive() != 59252.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_receive_async() != 23867.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_receive_variable_amount() != 35484.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_request_refund_payment() != 43248.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_send() != 27679.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount() != 33255.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_set_paths_to_static_invoice_server() != 20921.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_func_generate_entropy_mnemonic() != 15455.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_builder_build() != 64768.toShort()) {
@@ -2406,16 +2311,19 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_builder_build_with_fs_store() != 42069.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_builder_build_with_vss_store() != 29149.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_builder_build_with_vss_store() != 9022.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_fixed_headers() != 64024.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_header_provider() != 54133.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_header_provider() != 29566.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_builder_set_announcement_addresses() != 39271.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_lnurl_auth() != 8141.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_builder_set_announcement_addresses() != 21735.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_builder_set_async_payments_role() != 16463.toShort()) {
@@ -2445,16 +2353,13 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_builder_set_gossip_source_rgs() != 64312.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_builder_set_gossip_source_rgs_with_p2p() != 38975.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps1() != 30329.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps1() != 51527.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps2() != 20666.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps2() != 14430.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_builder_set_listening_addresses() != 14051.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_builder_set_listening_addresses() != 57941.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_builder_set_log_facade_logger() != 58410.toShort()) {
@@ -2472,6 +2377,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_builder_set_storage_dir_path() != 59019.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_builder_set_tor_config() != 53118.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_builder_set_wallet_birthday_height() != 63737.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2487,37 +2395,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_floor() != 59617.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_humanreadablename_domain() != 57872.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_humanreadablename_user() != 54299.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_lsps1liquidity_check_order_status() != 57147.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_lsps1liquidity_request_channel() != 18153.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
     if (lib.uniffi_ldk_node_checksum_method_logwriter_log() != 3299.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_networkgraph_channel() != 38070.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_networkgraph_list_channels() != 4693.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_networkgraph_list_nodes() != 36715.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_networkgraph_node() != 48925.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_node_announcement_addresses() != 61426.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_node_apply_rgs_data() != 26803.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_announcement_addresses() != 26379.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_bolt11_payment() != 41402.toShort()) {
@@ -2532,19 +2413,19 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_clear_payment_paths() != 6239.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_close_channel() != 62479.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_close_channel() != 19761.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_close_channel_with_target_feerate() != 15946.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_close_channel_with_target_feerate() != 53926.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_config() != 7511.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_connect() != 34120.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_connect() != 4107.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_disconnect() != 43538.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_disconnect() != 28878.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_event_handled() != 38712.toShort()) {
@@ -2553,7 +2434,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_export_pathfinding_scores() != 62331.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_force_close_channel() != 48831.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_force_close_channel() != 9265.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_list_balances() != 57528.toShort()) {
@@ -2568,7 +2449,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_list_peers() != 14889.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_listening_addresses() != 2665.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_listening_addresses() != 2357.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_lnurl_auth() != 45487.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_lsps1_liquidity() != 38201.toShort()) {
@@ -2583,43 +2467,46 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_next_event_async() != 25426.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_node_alias() != 29526.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_node_alias() != 54081.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_node_id() != 51489.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_node_id() != 32528.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_onchain_payment() != 6092.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel() != 36623.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel() != 42749.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_open_channel() != 40283.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel_with_all() != 58472.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_payment() != 60296.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_channel() != 7411.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_open_channel_with_all() != 26760.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_payment() != 22178.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_payment_path_attempts() != 12457.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_remove_payment() != 47952.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_node_rgs_url() != 8680.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_ldk_node_checksum_method_node_set_tor_proxy() != 34858.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_remove_payment() != 22427.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_sign_message() != 49319.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_splice_in() != 46431.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_splice_in() != 2355.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_splice_out() != 22115.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_splice_in_with_all() != 42260.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_splice_out() != 12130.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_spontaneous_payment() != 37403.toShort()) {
@@ -2640,10 +2527,10 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_unified_payment() != 33932.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_update_channel_config() != 37852.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_update_channel_config() != 22596.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_verify_signature() != 20486.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_verify_signature() != 60677.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_wait_next_event() != 55101.toShort()) {
@@ -2661,144 +2548,355 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_watchtower_set_sweep_address() != 11660.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds() != 22836.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_vssheaderprovider_get_headers() != 53392.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_amount() != 59890.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_amount_milli_satoshis() != 32418.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_chains() != 59522.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_currency() != 23097.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_expects_quantity() != 58457.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_expiry_time_seconds() != 13550.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_id() != 8391.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_fallback_addresses() != 43969.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_is_expired() != 22651.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_invoice_description() != 58644.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_is_valid_quantity() != 58469.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_is_expired() != 7799.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_issuer() != 41632.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_min_final_cltv_expiry_delta() != 55712.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_issuer_signing_pubkey() != 38162.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_network() != 48075.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_metadata() != 18979.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_payment_hash() != 30556.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_offer_description() != 11122.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_payment_secret() != 2591.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_offer_supports_chain() != 2135.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_recover_payee_pub_key() != 29418.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_bump_fee_rbf() != 47502.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_route_hints() != 40413.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_new_address() != 37251.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_seconds_since_epoch() != 29057.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_send_all_to_address() != 37748.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_seconds_until_expiry() != 40162.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_send_to_address() != 55646.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_signable_hash() != 17620.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_absolute_expiry_seconds() != 43722.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11invoice_would_expire() != 31077.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_amount_msats() != 26467.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_claim_for_hash() != 20569.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_chain() != 36565.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_fail_for_hash() != 40917.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_is_expired() != 10232.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive() != 29930.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_issuer() != 40306.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_for_hash() != 50974.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_payer_metadata() != 23501.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount() != 3285.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_payer_note() != 47799.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_for_hash() != 18560.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_payer_signing_pubkey() != 40880.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel() != 17693.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_quantity() != 15192.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash() != 52380.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_refund_refund_description() != 39295.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel() != 8559.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send() != 27905.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash() != 30774.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_probes() != 25937.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send() != 37617.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs() != 17876.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_probes() != 2041.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage() != 30854.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_probes_using_amount() != 27145.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs() != 12104.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount() != 24457.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_unifiedpayment_receive() != 9012.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_absolute_expiry_seconds() != 64960.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_unifiedpayment_send() != 30183.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_amount() != 49725.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_vssheaderprovider_get_headers() != 7788.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_amount_msats() != 60333.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_bolt11invoice_from_str() != 349.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_chain() != 58655.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_bolt12invoice_from_str() != 22276.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_created_at() != 49933.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_builder_from_config() != 994.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_encode() != 5305.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_builder_new() != 40499.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_fallback_addresses() != 44968.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_kwu() != 50548.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_invoice_description() != 40225.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_vb_unchecked() != 41808.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_is_expired() != 25200.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_humanreadablename_from_encoded() != 31970.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_issuer() != 30831.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_nodeentropy_from_bip39_mnemonic() != 14993.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_issuer_signing_pubkey() != 64809.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_bytes() != 45223.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_metadata() != 46678.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_path() != 56835.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_offer_chains() != 26217.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_offer_from_str() != 37070.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_payer_note() != 55340.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_constructor_refund_from_str() != 64884.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_payer_signing_pubkey() != 16324.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_payment_hash() != 26138.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_quantity() != 2731.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_relative_expiry() != 2637.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_signable_hash() != 8693.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12invoice_signing_pubkey() != 40070.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_blinded_paths_for_async_recipient() != 63122.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund() != 1556.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_receive() != 62366.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_receive_async() != 18142.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_receive_variable_amount() != 38705.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_request_refund_payment() != 64220.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_send() != 39845.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount() != 58098.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_bolt12payment_set_paths_to_static_invoice_server() != 4432.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_humanreadablename_domain() != 24546.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_humanreadablename_user() != 19941.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_lsps1liquidity_check_order_status() != 56905.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_lsps1liquidity_request_channel() != 8762.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_networkgraph_channel() != 19476.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_networkgraph_list_channels() != 15785.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_networkgraph_list_nodes() != 362.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_networkgraph_node() != 57416.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds() != 63488.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_amount() != 57542.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_chains() != 452.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_expects_quantity() != 63436.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_id() != 37816.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_is_expired() != 28193.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_is_valid_quantity() != 52411.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_issuer() != 3667.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_issuer_signing_pubkey() != 24676.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_metadata() != 38207.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_offer_description() != 28248.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_offer_supports_chain() != 55723.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_bump_fee_rbf() != 54102.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_new_address() != 43992.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_send_all_to_address() != 37128.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_send_to_address() != 21558.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_absolute_expiry_seconds() != 1700.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_amount_msats() != 14905.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_chain() != 65505.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_is_expired() != 42373.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_issuer() != 16526.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_payer_metadata() != 39486.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_payer_note() != 4011.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_payer_signing_pubkey() != 27530.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_quantity() != 7212.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_refund_refund_description() != 28138.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send() != 46594.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_probes() != 14653.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs() != 56266.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage() != 21182.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs() != 44297.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_staticinvoice_amount() != 49018.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_unifiedpayment_receive() != 33768.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_unifiedpayment_send() != 54400.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_builder_from_config() != 56211.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_builder_new() != 42021.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_kwu() != 33347.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_vb_unchecked() != 51694.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_bolt11invoice_from_str() != 6641.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_bolt12invoice_from_str() != 2587.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_humanreadablename_from_encoded() != 34127.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_nodeentropy_from_bip39_mnemonic() != 49277.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_bytes() != 13290.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_path() != 60826.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_offer_from_str() != 16902.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_constructor_refund_from_str() != 46403.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+}
+
+/**
+ * @suppress
+ */
+public fun uniffiEnsureInitialized() {
+    UniffiLib.INSTANCE
 }
 
 // Async support
@@ -2842,6 +2940,93 @@ internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
         freeFunc(rustFuture)
     }
 }
+internal inline fun<T> uniffiTraitInterfaceCallAsync(
+    crossinline makeCall: suspend () -> T,
+    crossinline handleSuccess: (T) -> Unit,
+    crossinline handleError: (UniffiRustCallStatus.ByValue) -> Unit,
+): UniffiForeignFuture {
+    // Using `GlobalScope` is labeled as a "delicate API" and generally discouraged in Kotlin programs, since it breaks structured concurrency.
+    // However, our parent task is a Rust future, so we're going to need to break structure concurrency in any case.
+    //
+    // Uniffi does its best to support structured concurrency across the FFI.
+    // If the Rust future is dropped, `uniffiForeignFutureFreeImpl` is called, which will cancel the Kotlin coroutine if it's still running.
+    @OptIn(DelicateCoroutinesApi::class)
+    val job = GlobalScope.launch coroutineBlock@ {
+        // Note: it's important we call either `handleSuccess` or `handleError` exactly once.  Each
+        // call consumes an Arc reference, which means there should be no possibility of a double
+        // call.  The following code is structured so that will will never call both `handleSuccess`
+        // and `handleError`, even in the face of weird exceptions.
+        //
+        // In extreme circumstances we may not call either, for example if we fail to make the JNA
+        // call to `handleSuccess`.  This means we will leak the Arc reference, which is better than
+        // double-freeing it.
+        val callResult = try {
+            makeCall()
+        } catch(e: kotlin.Exception) {
+            handleError(
+                UniffiRustCallStatus.create(
+                    UNIFFI_CALL_UNEXPECTED_ERROR,
+                    FfiConverterString.lower(e.toString()),
+                )
+            )
+            return@coroutineBlock
+        }
+        handleSuccess(callResult)
+    }
+    val handle = uniffiForeignFutureHandleMap.insert(job)
+    return UniffiForeignFuture(handle, uniffiForeignFutureFreeImpl)
+}
+
+internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallAsyncWithError(
+    crossinline makeCall: suspend () -> T,
+    crossinline handleSuccess: (T) -> Unit,
+    crossinline handleError: (UniffiRustCallStatus.ByValue) -> Unit,
+    crossinline lowerError: (E) -> RustBuffer.ByValue,
+): UniffiForeignFuture {
+    // See uniffiTraitInterfaceCallAsync for details on `DelicateCoroutinesApi`
+    @OptIn(DelicateCoroutinesApi::class)
+    val job = GlobalScope.launch coroutineBlock@ {
+        // See the note in uniffiTraitInterfaceCallAsync for details on `handleSuccess` and
+        // `handleError`.
+        val callResult = try {
+            makeCall()
+        } catch(e: kotlin.Exception) {
+            if (e is E) {
+                handleError(
+                    UniffiRustCallStatus.create(
+                        UNIFFI_CALL_ERROR,
+                        lowerError(e),
+                    )
+                )
+            } else {
+                handleError(
+                    UniffiRustCallStatus.create(
+                        UNIFFI_CALL_UNEXPECTED_ERROR,
+                        FfiConverterString.lower(e.toString()),
+                    )
+                )
+            }
+            return@coroutineBlock
+        }
+        handleSuccess(callResult)
+    }
+    val handle = uniffiForeignFutureHandleMap.insert(job)
+    return UniffiForeignFuture(handle, uniffiForeignFutureFreeImpl)
+}
+
+internal val uniffiForeignFutureHandleMap = UniffiHandleMap<Job>()
+
+internal object uniffiForeignFutureFreeImpl: UniffiForeignFutureFree {
+    override fun callback(handle: Long) {
+        val job = uniffiForeignFutureHandleMap.remove(handle)
+        if (!job.isCompleted) {
+            job.cancel()
+        }
+    }
+}
+
+// For testing
+public fun uniffiForeignFutureHandleCount() = uniffiForeignFutureHandleMap.size
 
 // Public interface members begin here.
 
@@ -2858,8 +3043,33 @@ interface Disposable {
     fun destroy()
     companion object {
         fun destroy(vararg args: Any?) {
-            args.filterIsInstance<Disposable>()
-                .forEach(Disposable::destroy)
+            for (arg in args) {
+                when (arg) {
+                    is Disposable -> arg.destroy()
+                    is ArrayList<*> -> {
+                        for (idx in arg.indices) {
+                            val element = arg[idx]
+                            if (element is Disposable) {
+                                element.destroy()
+                            }
+                        }
+                    }
+                    is Map<*, *> -> {
+                        for (element in arg.values) {
+                            if (element is Disposable) {
+                                element.destroy()
+                            }
+                        }
+                    }
+                    is Iterable<*> -> {
+                        for (element in arg) {
+                            if (element is Disposable) {
+                                element.destroy()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -2884,7 +3094,102 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
  *
  * @suppress
  * */
-object NoPointer
+object NoPointer// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+internal const val IDX_CALLBACK_FREE = 0
+// Callback return codes
+internal const val UNIFFI_CALLBACK_SUCCESS = 0
+internal const val UNIFFI_CALLBACK_ERROR = 1
+internal const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
+
+/**
+ * @suppress
+ */
+public abstract class FfiConverterCallbackInterface<CallbackInterface: Any>: FfiConverter<CallbackInterface, Long> {
+    internal val handleMap = UniffiHandleMap<CallbackInterface>()
+
+    internal fun drop(handle: Long) {
+        handleMap.remove(handle)
+    }
+
+    override fun lift(value: Long): CallbackInterface {
+        return handleMap.get(value)
+    }
+
+    override fun read(buf: ByteBuffer) = lift(buf.getLong())
+
+    override fun lower(value: CallbackInterface) = handleMap.insert(value)
+
+    override fun allocationSize(value: CallbackInterface) = 8UL
+
+    override fun write(value: CallbackInterface, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+/**
+ * The cleaner interface for Object finalization code to run.
+ * This is the entry point to any implementation that we're using.
+ *
+ * The cleaner registers objects and returns cleanables, so now we are
+ * defining a `UniffiCleaner` with a `UniffiClenaer.Cleanable` to abstract the
+ * different implmentations available at compile time.
+ *
+ * @suppress
+ */
+interface UniffiCleaner {
+    interface Cleanable {
+        fun clean()
+    }
+
+    fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable
+
+    companion object
+}
+
+// The fallback Jna cleaner, which is available for both Android, and the JVM.
+private class UniffiJnaCleaner : UniffiCleaner {
+    private val cleaner = com.sun.jna.internal.Cleaner.getCleaner()
+
+    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
+        UniffiJnaCleanable(cleaner.register(value, cleanUpTask))
+}
+
+private class UniffiJnaCleanable(
+    private val cleanable: com.sun.jna.internal.Cleaner.Cleanable,
+) : UniffiCleaner.Cleanable {
+    override fun clean() = cleanable.clean()
+}
+
+
+// We decide at uniffi binding generation time whether we were
+// using Android or not.
+// There are further runtime checks to chose the correct implementation
+// of the cleaner.
+private fun UniffiCleaner.Companion.create(): UniffiCleaner =
+    try {
+        // For safety's sake: if the library hasn't been run in android_cleaner = true
+        // mode, but is being run on Android, then we still need to think about
+        // Android API versions.
+        // So we check if java.lang.ref.Cleaner is there, and use that…
+        java.lang.Class.forName("java.lang.ref.Cleaner")
+        JavaLangRefCleaner()
+    } catch (e: ClassNotFoundException) {
+        // … otherwise, fallback to the JNA cleaner.
+        UniffiJnaCleaner()
+    }
+
+private class JavaLangRefCleaner : UniffiCleaner {
+    val cleaner = java.lang.ref.Cleaner.create()
+
+    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
+        JavaLangRefCleanable(cleaner.register(value, cleanUpTask))
+}
+
+private class JavaLangRefCleanable(
+    val cleanable: java.lang.ref.Cleaner.Cleanable
+) : UniffiCleaner.Cleanable {
+    override fun clean() = cleanable.clean()
+}
 
 /**
  * @suppress
@@ -3177,106 +3482,106 @@ public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
 
 
 /**
- * The cleaner interface for Object finalization code to run.
- * This is the entry point to any implementation that we're using.
- *
- * The cleaner registers objects and returns cleanables, so now we are
- * defining a `UniffiCleaner` with a `UniffiClenaer.Cleanable` to abstract the
- * different implmentations available at compile time.
- *
- * @suppress
+ * Represents a syntactically and semantically correct lightning BOLT11 invoice.
  */
-interface UniffiCleaner {
-    interface Cleanable {
-        fun clean()
-    }
-
-    fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable
-
-    companion object
-}
-
-// The fallback Jna cleaner, which is available for both Android, and the JVM.
-private class UniffiJnaCleaner : UniffiCleaner {
-    private val cleaner = com.sun.jna.internal.Cleaner.getCleaner()
-
-    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
-        UniffiJnaCleanable(cleaner.register(value, cleanUpTask))
-}
-
-private class UniffiJnaCleanable(
-    private val cleanable: com.sun.jna.internal.Cleaner.Cleanable,
-) : UniffiCleaner.Cleanable {
-    override fun clean() = cleanable.clean()
-}
-
-// We decide at uniffi binding generation time whether we were
-// using Android or not.
-// There are further runtime checks to chose the correct implementation
-// of the cleaner.
-private fun UniffiCleaner.Companion.create(): UniffiCleaner =
-    try {
-        // For safety's sake: if the library hasn't been run in android_cleaner = true
-        // mode, but is being run on Android, then we still need to think about
-        // Android API versions.
-        // So we check if java.lang.ref.Cleaner is there, and use that…
-        java.lang.Class.forName("java.lang.ref.Cleaner")
-        JavaLangRefCleaner()
-    } catch (e: ClassNotFoundException) {
-        // … otherwise, fallback to the JNA cleaner.
-        UniffiJnaCleaner()
-    }
-
-private class JavaLangRefCleaner : UniffiCleaner {
-    val cleaner = java.lang.ref.Cleaner.create()
-
-    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
-        JavaLangRefCleanable(cleaner.register(value, cleanUpTask))
-}
-
-private class JavaLangRefCleanable(
-    val cleanable: java.lang.ref.Cleaner.Cleanable
-) : UniffiCleaner.Cleanable {
-    override fun clean() = cleanable.clean()
-}
 public interface Bolt11InvoiceInterface {
     
+    /**
+     * Returns the amount if specified in the invoice as millisatoshis.
+     */
     fun `amountMilliSatoshis`(): kotlin.ULong?
     
+    /**
+     * Returns the currency for which the invoice was issued
+     */
     fun `currency`(): Currency
     
+    /**
+     * Returns the invoice's expiry time (in seconds), if present, otherwise [`DEFAULT_EXPIRY_TIME`].
+     *
+     * [`DEFAULT_EXPIRY_TIME`]: lightning_invoice::DEFAULT_EXPIRY_TIME
+     */
     fun `expiryTimeSeconds`(): kotlin.ULong
     
+    /**
+     * Returns a list of all fallback addresses as [`Address`]es
+     */
     fun `fallbackAddresses`(): List<Address>
     
+    /**
+     * Return the description or a hash of it for longer ones
+     */
     fun `invoiceDescription`(): Bolt11InvoiceDescription
     
+    /**
+     * Returns whether the invoice has expired.
+     */
     fun `isExpired`(): kotlin.Boolean
     
+    /**
+     * Returns the invoice's `min_final_cltv_expiry_delta` time, if present, otherwise
+     * [`DEFAULT_MIN_FINAL_CLTV_EXPIRY_DELTA`].
+     *
+     * [`DEFAULT_MIN_FINAL_CLTV_EXPIRY_DELTA`]: lightning_invoice::DEFAULT_MIN_FINAL_CLTV_EXPIRY_DELTA
+     */
     fun `minFinalCltvExpiryDelta`(): kotlin.ULong
     
+    /**
+     * Returns the network for which the invoice was issued
+     */
     fun `network`(): Network
     
+    /**
+     * Returns the hash to which we will receive the preimage on completion of the payment
+     */
     fun `paymentHash`(): PaymentHash
     
+    /**
+     * Get the payment secret if one was included in the invoice
+     */
     fun `paymentSecret`(): PaymentSecret
     
+    /**
+     * Recover the payee's public key (only to be used if none was included in the invoice)
+     */
     fun `recoverPayeePubKey`(): PublicKey
     
+    /**
+     * Returns a list of all routes included in the invoice as the underlying hints
+     */
     fun `routeHints`(): List<List<RouteHintHop>>
     
+    /**
+     * Returns the `Bolt11Invoice`'s timestamp as seconds since the Unix epoch
+     */
     fun `secondsSinceEpoch`(): kotlin.ULong
     
+    /**
+     * Returns the seconds remaining until the invoice expires.
+     */
     fun `secondsUntilExpiry`(): kotlin.ULong
     
-    fun `signableHash`(): List<kotlin.UByte>
+    /**
+     * The hash of the [`RawBolt11Invoice`] that was signed.
+     *
+     * [`RawBolt11Invoice`]: lightning_invoice::RawBolt11Invoice
+     */
+    fun `signableHash`(): kotlin.ByteArray
     
+    /**
+     * Returns whether the expiry time would pass at the given point in time.
+     * `at_time_seconds` is the timestamp as seconds since the Unix epoch.
+     */
     fun `wouldExpire`(`atTimeSeconds`: kotlin.ULong): kotlin.Boolean
     
     companion object
 }
 
-open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
+/**
+ * Represents a syntactically and semantically correct lightning BOLT11 invoice.
+ */
+open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -3357,7 +3662,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
         }
     }
 
-    override fun `amountMilliSatoshis`(): kotlin.ULong? {
+    
+    /**
+     * Returns the amount if specified in the invoice as millisatoshis.
+     */override fun `amountMilliSatoshis`(): kotlin.ULong? {
             return FfiConverterOptionalULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3369,7 +3677,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `currency`(): Currency {
+    
+    /**
+     * Returns the currency for which the invoice was issued
+     */override fun `currency`(): Currency {
             return FfiConverterTypeCurrency.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3381,7 +3692,12 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `expiryTimeSeconds`(): kotlin.ULong {
+    
+    /**
+     * Returns the invoice's expiry time (in seconds), if present, otherwise [`DEFAULT_EXPIRY_TIME`].
+     *
+     * [`DEFAULT_EXPIRY_TIME`]: lightning_invoice::DEFAULT_EXPIRY_TIME
+     */override fun `expiryTimeSeconds`(): kotlin.ULong {
             return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3393,7 +3709,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `fallbackAddresses`(): List<Address> {
+    
+    /**
+     * Returns a list of all fallback addresses as [`Address`]es
+     */override fun `fallbackAddresses`(): List<Address> {
             return FfiConverterSequenceTypeAddress.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3405,7 +3724,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `invoiceDescription`(): Bolt11InvoiceDescription {
+    
+    /**
+     * Return the description or a hash of it for longer ones
+     */override fun `invoiceDescription`(): Bolt11InvoiceDescription {
             return FfiConverterTypeBolt11InvoiceDescription.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3417,7 +3739,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `isExpired`(): kotlin.Boolean {
+    
+    /**
+     * Returns whether the invoice has expired.
+     */override fun `isExpired`(): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3429,7 +3754,13 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `minFinalCltvExpiryDelta`(): kotlin.ULong {
+    
+    /**
+     * Returns the invoice's `min_final_cltv_expiry_delta` time, if present, otherwise
+     * [`DEFAULT_MIN_FINAL_CLTV_EXPIRY_DELTA`].
+     *
+     * [`DEFAULT_MIN_FINAL_CLTV_EXPIRY_DELTA`]: lightning_invoice::DEFAULT_MIN_FINAL_CLTV_EXPIRY_DELTA
+     */override fun `minFinalCltvExpiryDelta`(): kotlin.ULong {
             return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3441,7 +3772,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `network`(): Network {
+    
+    /**
+     * Returns the network for which the invoice was issued
+     */override fun `network`(): Network {
             return FfiConverterTypeNetwork.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3453,7 +3787,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `paymentHash`(): PaymentHash {
+    
+    /**
+     * Returns the hash to which we will receive the preimage on completion of the payment
+     */override fun `paymentHash`(): PaymentHash {
             return FfiConverterTypePaymentHash.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3465,7 +3802,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `paymentSecret`(): PaymentSecret {
+    
+    /**
+     * Get the payment secret if one was included in the invoice
+     */override fun `paymentSecret`(): PaymentSecret {
             return FfiConverterTypePaymentSecret.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3477,7 +3817,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `recoverPayeePubKey`(): PublicKey {
+    
+    /**
+     * Recover the payee's public key (only to be used if none was included in the invoice)
+     */override fun `recoverPayeePubKey`(): PublicKey {
             return FfiConverterTypePublicKey.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3489,7 +3832,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `routeHints`(): List<List<RouteHintHop>> {
+    
+    /**
+     * Returns a list of all routes included in the invoice as the underlying hints
+     */override fun `routeHints`(): List<List<RouteHintHop>> {
             return FfiConverterSequenceSequenceTypeRouteHintHop.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3501,7 +3847,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `secondsSinceEpoch`(): kotlin.ULong {
+    
+    /**
+     * Returns the `Bolt11Invoice`'s timestamp as seconds since the Unix epoch
+     */override fun `secondsSinceEpoch`(): kotlin.ULong {
             return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3513,7 +3862,10 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `secondsUntilExpiry`(): kotlin.ULong {
+    
+    /**
+     * Returns the seconds remaining until the invoice expires.
+     */override fun `secondsUntilExpiry`(): kotlin.ULong {
             return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3525,8 +3877,13 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `signableHash`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
+    
+    /**
+     * The hash of the [`RawBolt11Invoice`] that was signed.
+     *
+     * [`RawBolt11Invoice`]: lightning_invoice::RawBolt11Invoice
+     */override fun `signableHash`(): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_signable_hash(
@@ -3537,7 +3894,11 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
     }
     
 
-    override fun `wouldExpire`(`atTimeSeconds`: kotlin.ULong): kotlin.Boolean {
+    
+    /**
+     * Returns whether the expiry time would pass at the given point in time.
+     * `at_time_seconds` is the timestamp as seconds since the Unix epoch.
+     */override fun `wouldExpire`(`atTimeSeconds`: kotlin.ULong): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -3721,40 +4082,257 @@ public object FfiConverterTypeBolt11Invoice: FfiConverter<Bolt11Invoice, Pointer
 //
 
 
+/**
+ * A payment handler allowing to create and pay [BOLT 11] invoices.
+ *
+ * Should be retrieved by calling [`Node::bolt11_payment`].
+ *
+ * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+ * [`Node::bolt11_payment`]: crate::Node::bolt11_payment
+ */
 public interface Bolt11PaymentInterface {
     
+    /**
+     * Allows to attempt manually claiming payments with the given preimage that have previously
+     * been registered via [`receive_for_hash`] or [`receive_variable_amount_for_hash`].
+     *
+     * This should be called in reponse to a [`PaymentClaimable`] event as soon as the preimage is
+     * available.
+     *
+     * Will check that the payment is known, and that the given preimage and claimable amount
+     * match our expectations before attempting to claim the payment, and will return an error
+     * otherwise.
+     *
+     * When claiming the payment has succeeded, a [`PaymentReceived`] event will be emitted.
+     *
+     * [`receive_for_hash`]: Self::receive_for_hash
+     * [`receive_variable_amount_for_hash`]: Self::receive_variable_amount_for_hash
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`PaymentReceived`]: crate::Event::PaymentReceived
+     */
     fun `claimForHash`(`paymentHash`: PaymentHash, `claimableAmountMsat`: kotlin.ULong, `preimage`: PaymentPreimage)
     
+    /**
+     * Allows to manually fail payments with the given hash that have previously
+     * been registered via [`receive_for_hash`] or [`receive_variable_amount_for_hash`].
+     *
+     * This should be called in reponse to a [`PaymentClaimable`] event if the payment needs to be
+     * failed back, e.g., if the correct preimage can't be retrieved in time before the claim
+     * deadline has been reached.
+     *
+     * Will check that the payment is known before failing the payment, and will return an error
+     * otherwise.
+     *
+     * [`receive_for_hash`]: Self::receive_for_hash
+     * [`receive_variable_amount_for_hash`]: Self::receive_variable_amount_for_hash
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     */
     fun `failForHash`(`paymentHash`: PaymentHash)
     
+    /**
+     * Returns a payable invoice that can be used to request and receive a payment of the amount
+     * given.
+     *
+     * The inbound payment will be automatically claimed upon arrival.
+     */
     fun `receive`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt): Bolt11Invoice
     
+    /**
+     * Returns a payable invoice that can be used to request a payment of the amount
+     * given for the given payment hash.
+     *
+     * We will register the given payment hash and emit a [`PaymentClaimable`] event once
+     * the inbound payment arrives.
+     *
+     * **Note:** users *MUST* handle this event and claim the payment manually via
+     * [`claim_for_hash`] as soon as they have obtained access to the preimage of the given
+     * payment hash. If they're unable to obtain the preimage, they *MUST* immediately fail the payment via
+     * [`fail_for_hash`].
+     *
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`claim_for_hash`]: Self::claim_for_hash
+     * [`fail_for_hash`]: Self::fail_for_hash
+     */
     fun `receiveForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `paymentHash`: PaymentHash): Bolt11Invoice
     
+    /**
+     * Returns a payable invoice that can be used to request and receive a payment for which the
+     * amount is to be determined by the user, also known as a "zero-amount" invoice.
+     *
+     * The inbound payment will be automatically claimed upon arrival.
+     */
     fun `receiveVariableAmount`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt): Bolt11Invoice
     
+    /**
+     * Returns a payable invoice that can be used to request a payment for the given payment hash
+     * and the amount to be determined by the user, also known as a "zero-amount" invoice.
+     *
+     * We will register the given payment hash and emit a [`PaymentClaimable`] event once
+     * the inbound payment arrives.
+     *
+     * **Note:** users *MUST* handle this event and claim the payment manually via
+     * [`claim_for_hash`] as soon as they have obtained access to the preimage of the given
+     * payment hash. If they're unable to obtain the preimage, they *MUST* immediately fail the payment via
+     * [`fail_for_hash`].
+     *
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`claim_for_hash`]: Self::claim_for_hash
+     * [`fail_for_hash`]: Self::fail_for_hash
+     */
     fun `receiveVariableAmountForHash`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `paymentHash`: PaymentHash): Bolt11Invoice
     
+    /**
+     * Returns a payable invoice that can be used to request a variable amount payment (also known
+     * as "zero-amount" invoice) and receive it via a newly created just-in-time (JIT) channel.
+     *
+     * When the returned invoice is paid, the configured [LSPS2]-compliant LSP will open a channel
+     * to us, supplying just-in-time inbound liquidity.
+     *
+     * If set, `max_proportional_lsp_fee_limit_ppm_msat` will limit how much proportional fee, in
+     * parts-per-million millisatoshis, we allow the LSP to take for opening the channel to us.
+     * We'll use its cheapest offer otherwise.
+     *
+     * [LSPS2]: https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS2/README.md
+     */
     fun `receiveVariableAmountViaJitChannel`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?): Bolt11Invoice
     
+    /**
+     * Returns a payable invoice that can be used to request a variable amount payment (also known
+     * as "zero-amount" invoice) and receive it via a newly created just-in-time (JIT) channel.
+     *
+     * When the returned invoice is paid, the configured [LSPS2]-compliant LSP will open a channel
+     * to us, supplying just-in-time inbound liquidity.
+     *
+     * If set, `max_proportional_lsp_fee_limit_ppm_msat` will limit how much proportional fee, in
+     * parts-per-million millisatoshis, we allow the LSP to take for opening the channel to us.
+     * We'll use its cheapest offer otherwise.
+     *
+     * We will register the given payment hash and emit a [`PaymentClaimable`] event once
+     * the inbound payment arrives. The check that [`counterparty_skimmed_fee_msat`] is within the limits
+     * is performed *before* emitting the event.
+     *
+     * **Note:** users *MUST* handle this event and claim the payment manually via
+     * [`claim_for_hash`] as soon as they have obtained access to the preimage of the given
+     * payment hash. If they're unable to obtain the preimage, they *MUST* immediately fail the payment via
+     * [`fail_for_hash`].
+     *
+     * [LSPS2]: https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS2/README.md
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`claim_for_hash`]: Self::claim_for_hash
+     * [`fail_for_hash`]: Self::fail_for_hash
+     * [`counterparty_skimmed_fee_msat`]: crate::payment::PaymentKind::Bolt11Jit::counterparty_skimmed_fee_msat
+     */
     fun `receiveVariableAmountViaJitChannelForHash`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice
     
-    fun `receiveViaJitChannel`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxLspFeeLimitMsat`: kotlin.ULong?): Bolt11Invoice
+    /**
+     * Returns a payable invoice that can be used to request a payment of the amount given and
+     * receive it via a newly created just-in-time (JIT) channel.
+     *
+     * When the returned invoice is paid, the configured [LSPS2]-compliant LSP will open a channel
+     * to us, supplying just-in-time inbound liquidity.
+     *
+     * If set, `max_total_lsp_fee_limit_msat` will limit how much fee we allow the LSP to take for opening the
+     * channel to us. We'll use its cheapest offer otherwise.
+     *
+     * [LSPS2]: https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS2/README.md
+     */
+    fun `receiveViaJitChannel`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxTotalLspFeeLimitMsat`: kotlin.ULong?): Bolt11Invoice
     
-    fun `receiveViaJitChannelForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxLspFeeLimitMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice
+    /**
+     * Returns a payable invoice that can be used to request a payment of the amount given and
+     * receive it via a newly created just-in-time (JIT) channel.
+     *
+     * When the returned invoice is paid, the configured [LSPS2]-compliant LSP will open a channel
+     * to us, supplying just-in-time inbound liquidity.
+     *
+     * If set, `max_total_lsp_fee_limit_msat` will limit how much fee we allow the LSP to take for opening the
+     * channel to us. We'll use its cheapest offer otherwise.
+     *
+     * We will register the given payment hash and emit a [`PaymentClaimable`] event once
+     * the inbound payment arrives. The check that [`counterparty_skimmed_fee_msat`] is within the limits
+     * is performed *before* emitting the event.
+     *
+     * **Note:** users *MUST* handle this event and claim the payment manually via
+     * [`claim_for_hash`] as soon as they have obtained access to the preimage of the given
+     * payment hash. If they're unable to obtain the preimage, they *MUST* immediately fail the payment via
+     * [`fail_for_hash`].
+     *
+     * [LSPS2]: https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS2/README.md
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`claim_for_hash`]: Self::claim_for_hash
+     * [`fail_for_hash`]: Self::fail_for_hash
+     * [`counterparty_skimmed_fee_msat`]: crate::payment::PaymentKind::Bolt11Jit::counterparty_skimmed_fee_msat
+     */
+    fun `receiveViaJitChannelForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxTotalLspFeeLimitMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice
     
+    /**
+     * Send a payment given an invoice.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     fun `send`(`invoice`: Bolt11Invoice, `routeParameters`: RouteParametersConfig?): PaymentId
     
+    /**
+     * Sends payment probes over all paths of a route that would be used to pay the given invoice.
+     *
+     * This may be used to send "pre-flight" probes, i.e., to train our scorer before conducting
+     * the actual payment. Note this is only useful if there likely is sufficient time for the
+     * probe to settle before sending out the actual payment, e.g., when waiting for user
+     * confirmation in a wallet UI.
+     *
+     * Otherwise, there is a chance the probe could take up some liquidity needed to complete the
+     * actual payment. Users should therefore be cautious and might avoid sending probes if
+     * liquidity is scarce and/or they don't expect the probe to return before they send the
+     * payment. To mitigate this issue, channels with available liquidity less than the required
+     * amount times [`Config::probing_liquidity_limit_multiplier`] won't be used to send
+     * pre-flight probes.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     fun `sendProbes`(`invoice`: Bolt11Invoice, `routeParameters`: RouteParametersConfig?)
     
+    /**
+     * Sends payment probes over all paths of a route that would be used to pay the given
+     * zero-value invoice using the given amount.
+     *
+     * This can be used to send pre-flight probes for a so-called "zero-amount" invoice, i.e., an
+     * invoice that leaves the amount paid to be determined by the user.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     *
+     * See [`Self::send_probes`] for more information.
+     */
     fun `sendProbesUsingAmount`(`invoice`: Bolt11Invoice, `amountMsat`: kotlin.ULong, `routeParameters`: RouteParametersConfig?)
     
+    /**
+     * Send a payment given an invoice and an amount in millisatoshis.
+     *
+     * This will fail if the amount given is less than the value required by the given invoice.
+     *
+     * This can be used to pay a so-called "zero-amount" invoice, i.e., an invoice that leaves the
+     * amount paid to be determined by the user.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     fun `sendUsingAmount`(`invoice`: Bolt11Invoice, `amountMsat`: kotlin.ULong, `routeParameters`: RouteParametersConfig?): PaymentId
     
     companion object
 }
 
-open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
+/**
+ * A payment handler allowing to create and pay [BOLT 11] invoices.
+ *
+ * Should be retrieved by calling [`Node::bolt11_payment`].
+ *
+ * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+ * [`Node::bolt11_payment`]: crate::Node::bolt11_payment
+ */
+open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -3836,6 +4414,24 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     }
 
     
+    /**
+     * Allows to attempt manually claiming payments with the given preimage that have previously
+     * been registered via [`receive_for_hash`] or [`receive_variable_amount_for_hash`].
+     *
+     * This should be called in reponse to a [`PaymentClaimable`] event as soon as the preimage is
+     * available.
+     *
+     * Will check that the payment is known, and that the given preimage and claimable amount
+     * match our expectations before attempting to claim the payment, and will return an error
+     * otherwise.
+     *
+     * When claiming the payment has succeeded, a [`PaymentReceived`] event will be emitted.
+     *
+     * [`receive_for_hash`]: Self::receive_for_hash
+     * [`receive_variable_amount_for_hash`]: Self::receive_variable_amount_for_hash
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`PaymentReceived`]: crate::Event::PaymentReceived
+     */
     @Throws(NodeException::class)override fun `claimForHash`(`paymentHash`: PaymentHash, `claimableAmountMsat`: kotlin.ULong, `preimage`: PaymentPreimage)
         = 
     callWithPointer {
@@ -3848,6 +4444,21 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Allows to manually fail payments with the given hash that have previously
+     * been registered via [`receive_for_hash`] or [`receive_variable_amount_for_hash`].
+     *
+     * This should be called in reponse to a [`PaymentClaimable`] event if the payment needs to be
+     * failed back, e.g., if the correct preimage can't be retrieved in time before the claim
+     * deadline has been reached.
+     *
+     * Will check that the payment is known before failing the payment, and will return an error
+     * otherwise.
+     *
+     * [`receive_for_hash`]: Self::receive_for_hash
+     * [`receive_variable_amount_for_hash`]: Self::receive_variable_amount_for_hash
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     */
     @Throws(NodeException::class)override fun `failForHash`(`paymentHash`: PaymentHash)
         = 
     callWithPointer {
@@ -3860,6 +4471,12 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Returns a payable invoice that can be used to request and receive a payment of the amount
+     * given.
+     *
+     * The inbound payment will be automatically claimed upon arrival.
+     */
     @Throws(NodeException::class)override fun `receive`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt): Bolt11Invoice {
             return FfiConverterTypeBolt11Invoice.lift(
     callWithPointer {
@@ -3873,6 +4490,22 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Returns a payable invoice that can be used to request a payment of the amount
+     * given for the given payment hash.
+     *
+     * We will register the given payment hash and emit a [`PaymentClaimable`] event once
+     * the inbound payment arrives.
+     *
+     * **Note:** users *MUST* handle this event and claim the payment manually via
+     * [`claim_for_hash`] as soon as they have obtained access to the preimage of the given
+     * payment hash. If they're unable to obtain the preimage, they *MUST* immediately fail the payment via
+     * [`fail_for_hash`].
+     *
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`claim_for_hash`]: Self::claim_for_hash
+     * [`fail_for_hash`]: Self::fail_for_hash
+     */
     @Throws(NodeException::class)override fun `receiveForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `paymentHash`: PaymentHash): Bolt11Invoice {
             return FfiConverterTypeBolt11Invoice.lift(
     callWithPointer {
@@ -3886,6 +4519,12 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Returns a payable invoice that can be used to request and receive a payment for which the
+     * amount is to be determined by the user, also known as a "zero-amount" invoice.
+     *
+     * The inbound payment will be automatically claimed upon arrival.
+     */
     @Throws(NodeException::class)override fun `receiveVariableAmount`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt): Bolt11Invoice {
             return FfiConverterTypeBolt11Invoice.lift(
     callWithPointer {
@@ -3899,6 +4538,22 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Returns a payable invoice that can be used to request a payment for the given payment hash
+     * and the amount to be determined by the user, also known as a "zero-amount" invoice.
+     *
+     * We will register the given payment hash and emit a [`PaymentClaimable`] event once
+     * the inbound payment arrives.
+     *
+     * **Note:** users *MUST* handle this event and claim the payment manually via
+     * [`claim_for_hash`] as soon as they have obtained access to the preimage of the given
+     * payment hash. If they're unable to obtain the preimage, they *MUST* immediately fail the payment via
+     * [`fail_for_hash`].
+     *
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`claim_for_hash`]: Self::claim_for_hash
+     * [`fail_for_hash`]: Self::fail_for_hash
+     */
     @Throws(NodeException::class)override fun `receiveVariableAmountForHash`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `paymentHash`: PaymentHash): Bolt11Invoice {
             return FfiConverterTypeBolt11Invoice.lift(
     callWithPointer {
@@ -3912,6 +4567,19 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Returns a payable invoice that can be used to request a variable amount payment (also known
+     * as "zero-amount" invoice) and receive it via a newly created just-in-time (JIT) channel.
+     *
+     * When the returned invoice is paid, the configured [LSPS2]-compliant LSP will open a channel
+     * to us, supplying just-in-time inbound liquidity.
+     *
+     * If set, `max_proportional_lsp_fee_limit_ppm_msat` will limit how much proportional fee, in
+     * parts-per-million millisatoshis, we allow the LSP to take for opening the channel to us.
+     * We'll use its cheapest offer otherwise.
+     *
+     * [LSPS2]: https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS2/README.md
+     */
     @Throws(NodeException::class)override fun `receiveVariableAmountViaJitChannel`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?): Bolt11Invoice {
             return FfiConverterTypeBolt11Invoice.lift(
     callWithPointer {
@@ -3925,6 +4593,32 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Returns a payable invoice that can be used to request a variable amount payment (also known
+     * as "zero-amount" invoice) and receive it via a newly created just-in-time (JIT) channel.
+     *
+     * When the returned invoice is paid, the configured [LSPS2]-compliant LSP will open a channel
+     * to us, supplying just-in-time inbound liquidity.
+     *
+     * If set, `max_proportional_lsp_fee_limit_ppm_msat` will limit how much proportional fee, in
+     * parts-per-million millisatoshis, we allow the LSP to take for opening the channel to us.
+     * We'll use its cheapest offer otherwise.
+     *
+     * We will register the given payment hash and emit a [`PaymentClaimable`] event once
+     * the inbound payment arrives. The check that [`counterparty_skimmed_fee_msat`] is within the limits
+     * is performed *before* emitting the event.
+     *
+     * **Note:** users *MUST* handle this event and claim the payment manually via
+     * [`claim_for_hash`] as soon as they have obtained access to the preimage of the given
+     * payment hash. If they're unable to obtain the preimage, they *MUST* immediately fail the payment via
+     * [`fail_for_hash`].
+     *
+     * [LSPS2]: https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS2/README.md
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`claim_for_hash`]: Self::claim_for_hash
+     * [`fail_for_hash`]: Self::fail_for_hash
+     * [`counterparty_skimmed_fee_msat`]: crate::payment::PaymentKind::Bolt11Jit::counterparty_skimmed_fee_msat
+     */
     @Throws(NodeException::class)override fun `receiveVariableAmountViaJitChannelForHash`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice {
             return FfiConverterTypeBolt11Invoice.lift(
     callWithPointer {
@@ -3938,12 +4632,24 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
-    @Throws(NodeException::class)override fun `receiveViaJitChannel`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxLspFeeLimitMsat`: kotlin.ULong?): Bolt11Invoice {
+    /**
+     * Returns a payable invoice that can be used to request a payment of the amount given and
+     * receive it via a newly created just-in-time (JIT) channel.
+     *
+     * When the returned invoice is paid, the configured [LSPS2]-compliant LSP will open a channel
+     * to us, supplying just-in-time inbound liquidity.
+     *
+     * If set, `max_total_lsp_fee_limit_msat` will limit how much fee we allow the LSP to take for opening the
+     * channel to us. We'll use its cheapest offer otherwise.
+     *
+     * [LSPS2]: https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS2/README.md
+     */
+    @Throws(NodeException::class)override fun `receiveViaJitChannel`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxTotalLspFeeLimitMsat`: kotlin.ULong?): Bolt11Invoice {
             return FfiConverterTypeBolt11Invoice.lift(
     callWithPointer {
     uniffiRustCallWithError(NodeException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`maxLspFeeLimitMsat`),_status)
+        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`maxTotalLspFeeLimitMsat`),_status)
 }
     }
     )
@@ -3951,12 +4657,37 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
-    @Throws(NodeException::class)override fun `receiveViaJitChannelForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxLspFeeLimitMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice {
+    /**
+     * Returns a payable invoice that can be used to request a payment of the amount given and
+     * receive it via a newly created just-in-time (JIT) channel.
+     *
+     * When the returned invoice is paid, the configured [LSPS2]-compliant LSP will open a channel
+     * to us, supplying just-in-time inbound liquidity.
+     *
+     * If set, `max_total_lsp_fee_limit_msat` will limit how much fee we allow the LSP to take for opening the
+     * channel to us. We'll use its cheapest offer otherwise.
+     *
+     * We will register the given payment hash and emit a [`PaymentClaimable`] event once
+     * the inbound payment arrives. The check that [`counterparty_skimmed_fee_msat`] is within the limits
+     * is performed *before* emitting the event.
+     *
+     * **Note:** users *MUST* handle this event and claim the payment manually via
+     * [`claim_for_hash`] as soon as they have obtained access to the preimage of the given
+     * payment hash. If they're unable to obtain the preimage, they *MUST* immediately fail the payment via
+     * [`fail_for_hash`].
+     *
+     * [LSPS2]: https://github.com/BitcoinAndLightningLayerSpecs/lsp/blob/main/LSPS2/README.md
+     * [`PaymentClaimable`]: crate::Event::PaymentClaimable
+     * [`claim_for_hash`]: Self::claim_for_hash
+     * [`fail_for_hash`]: Self::fail_for_hash
+     * [`counterparty_skimmed_fee_msat`]: crate::payment::PaymentKind::Bolt11Jit::counterparty_skimmed_fee_msat
+     */
+    @Throws(NodeException::class)override fun `receiveViaJitChannelForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxTotalLspFeeLimitMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice {
             return FfiConverterTypeBolt11Invoice.lift(
     callWithPointer {
     uniffiRustCallWithError(NodeException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel_for_hash(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`maxLspFeeLimitMsat`),FfiConverterTypePaymentHash.lower(`paymentHash`),_status)
+        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`maxTotalLspFeeLimitMsat`),FfiConverterTypePaymentHash.lower(`paymentHash`),_status)
 }
     }
     )
@@ -3964,6 +4695,12 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Send a payment given an invoice.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     @Throws(NodeException::class)override fun `send`(`invoice`: Bolt11Invoice, `routeParameters`: RouteParametersConfig?): PaymentId {
             return FfiConverterTypePaymentId.lift(
     callWithPointer {
@@ -3977,6 +4714,24 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Sends payment probes over all paths of a route that would be used to pay the given invoice.
+     *
+     * This may be used to send "pre-flight" probes, i.e., to train our scorer before conducting
+     * the actual payment. Note this is only useful if there likely is sufficient time for the
+     * probe to settle before sending out the actual payment, e.g., when waiting for user
+     * confirmation in a wallet UI.
+     *
+     * Otherwise, there is a chance the probe could take up some liquidity needed to complete the
+     * actual payment. Users should therefore be cautious and might avoid sending probes if
+     * liquidity is scarce and/or they don't expect the probe to return before they send the
+     * payment. To mitigate this issue, channels with available liquidity less than the required
+     * amount times [`Config::probing_liquidity_limit_multiplier`] won't be used to send
+     * pre-flight probes.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     @Throws(NodeException::class)override fun `sendProbes`(`invoice`: Bolt11Invoice, `routeParameters`: RouteParametersConfig?)
         = 
     callWithPointer {
@@ -3989,6 +4744,18 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Sends payment probes over all paths of a route that would be used to pay the given
+     * zero-value invoice using the given amount.
+     *
+     * This can be used to send pre-flight probes for a so-called "zero-amount" invoice, i.e., an
+     * invoice that leaves the amount paid to be determined by the user.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     *
+     * See [`Self::send_probes`] for more information.
+     */
     @Throws(NodeException::class)override fun `sendProbesUsingAmount`(`invoice`: Bolt11Invoice, `amountMsat`: kotlin.ULong, `routeParameters`: RouteParametersConfig?)
         = 
     callWithPointer {
@@ -4001,6 +4768,17 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
     
 
     
+    /**
+     * Send a payment given an invoice and an amount in millisatoshis.
+     *
+     * This will fail if the amount given is less than the value required by the given invoice.
+     *
+     * This can be used to pay a so-called "zero-amount" invoice, i.e., an invoice that leaves the
+     * amount paid to be determined by the user.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     @Throws(NodeException::class)override fun `sendUsingAmount`(`invoice`: Bolt11Invoice, `amountMsat`: kotlin.ULong, `routeParameters`: RouteParametersConfig?): PaymentId {
             return FfiConverterTypePaymentId.lift(
     callWithPointer {
@@ -4150,50 +4928,181 @@ public object FfiConverterTypeBolt11Payment: FfiConverter<Bolt11Payment, Pointer
 
 public interface Bolt12InvoiceInterface {
     
+    /**
+     * Seconds since the Unix epoch when an invoice should no longer be requested.
+     *
+     * From [`Offer::absolute_expiry`] or [`Refund::absolute_expiry`].
+     *
+     * [`Offer::absolute_expiry`]: lightning::offers::offer::Offer::absolute_expiry
+     */
     fun `absoluteExpirySeconds`(): kotlin.ULong?
     
+    /**
+     * The minimum amount required for a successful payment of a single item.
+     *
+     * From [`Offer::amount`]; `None` if the invoice was created in response to a [`Refund`] or if
+     * the [`Offer`] did not set it.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`Offer::amount`]: lightning::offers::offer::Offer::amount
+     * [`Refund`]: lightning::offers::refund::Refund
+     */
     fun `amount`(): OfferAmount?
     
+    /**
+     * The minimum amount required for a successful payment of the invoice.
+     */
     fun `amountMsats`(): kotlin.ULong
     
-    fun `chain`(): List<kotlin.UByte>
+    /**
+     * The chain that must be used when paying the invoice; selected from [`offer_chains`] if the
+     * invoice originated from an offer.
+     *
+     * From [`InvoiceRequest::chain`] or [`Refund::chain`].
+     *
+     * [`offer_chains`]: lightning::offers::invoice::Bolt12Invoice::offer_chains
+     * [`InvoiceRequest::chain`]: lightning::offers::invoice_request::InvoiceRequest::chain
+     * [`Refund::chain`]: lightning::offers::refund::Refund::chain
+     */
+    fun `chain`(): kotlin.ByteArray
     
+    /**
+     * Duration since the Unix epoch when the invoice was created.
+     */
     fun `createdAt`(): kotlin.ULong
     
-    fun `encode`(): List<kotlin.UByte>
+    /**
+     * Writes `self` out to a `Vec<u8>`.
+     */
+    fun `encode`(): kotlin.ByteArray
     
+    /**
+     * Fallback addresses for paying the invoice on-chain, in order of most-preferred to
+     * least-preferred.
+     */
     fun `fallbackAddresses`(): List<Address>
     
+    /**
+     * A complete description of the purpose of the originating offer or refund.
+     *
+     * From [`Offer::description`] or [`Refund::description`].
+     *
+     * [`Offer::description`]: lightning::offers::offer::Offer::description
+     * [`Refund::description`]: lightning::offers::refund::Refund::description
+     */
     fun `invoiceDescription`(): kotlin.String?
     
+    /**
+     * Whether the invoice has expired.
+     */
     fun `isExpired`(): kotlin.Boolean
     
+    /**
+     * The issuer of the offer or refund.
+     *
+     * From [`Offer::issuer`] or [`Refund::issuer`].
+     *
+     * [`Offer::issuer`]: lightning::offers::offer::Offer::issuer
+     * [`Refund::issuer`]: lightning::offers::refund::Refund::issuer
+     */
     fun `issuer`(): kotlin.String?
     
+    /**
+     * The public key used by the recipient to sign invoices.
+     *
+     * From [`Offer::issuer_signing_pubkey`] and may be `None`; also `None` if the invoice was
+     * created in response to a [`Refund`].
+     *
+     * [`Offer::issuer_signing_pubkey`]: lightning::offers::offer::Offer::issuer_signing_pubkey
+     * [`Refund`]: lightning::offers::refund::Refund
+     */
     fun `issuerSigningPubkey`(): PublicKey?
     
-    fun `metadata`(): List<kotlin.UByte>?
+    /**
+     * Opaque bytes set by the originating [`Offer`].
+     *
+     * From [`Offer::metadata`]; `None` if the invoice was created in response to a [`Refund`] or
+     * if the [`Offer`] did not set it.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`Offer::metadata`]: lightning::offers::offer::Offer::metadata
+     * [`Refund`]: lightning::offers::refund::Refund
+     */
+    fun `metadata`(): kotlin.ByteArray?
     
-    fun `offerChains`(): List<List<kotlin.UByte>>?
+    /**
+     * The chains that may be used when paying a requested invoice.
+     *
+     * From [`Offer::chains`]; `None` if the invoice was created in response to a [`Refund`].
+     *
+     * [`Offer::chains`]: lightning::offers::offer::Offer::chains
+     * [`Refund`]: lightning::offers::refund::Refund
+     */
+    fun `offerChains`(): List<kotlin.ByteArray>?
     
+    /**
+     * A payer-provided note reflected back in the invoice.
+     *
+     * From [`InvoiceRequest::payer_note`] or [`Refund::payer_note`].
+     *
+     * [`Refund::payer_note`]: lightning::offers::refund::Refund::payer_note
+     */
     fun `payerNote`(): kotlin.String?
     
+    /**
+     * A possibly transient pubkey used to sign the invoice request or to send an invoice for a
+     * refund in case there are no [`message_paths`].
+     *
+     * [`message_paths`]: lightning::offers::invoice::Bolt12Invoice
+     */
     fun `payerSigningPubkey`(): PublicKey
     
+    /**
+     * SHA256 hash of the payment preimage that will be given in return for paying the invoice.
+     */
     fun `paymentHash`(): PaymentHash
     
+    /**
+     * The quantity of items requested or refunded for.
+     *
+     * From [`InvoiceRequest::quantity`] or [`Refund::quantity`].
+     *
+     * [`Refund::quantity`]: lightning::offers::refund::Refund::quantity
+     */
     fun `quantity`(): kotlin.ULong?
     
+    /**
+     * When the invoice has expired and therefore should no longer be paid.
+     */
     fun `relativeExpiry`(): kotlin.ULong
     
-    fun `signableHash`(): List<kotlin.UByte>
+    /**
+     * Hash that was used for signing the invoice.
+     */
+    fun `signableHash`(): kotlin.ByteArray
     
+    /**
+     * A typically transient public key corresponding to the key used to sign the invoice.
+     *
+     * If the invoices was created in response to an [`Offer`], then this will be:
+     * - [`Offer::issuer_signing_pubkey`] if it's `Some`, otherwise
+     * - the final blinded node id from a [`BlindedMessagePath`] in [`Offer::paths`] if `None`.
+     *
+     * If the invoice was created in response to a [`Refund`], then it is a valid pubkey chosen by
+     * the recipient.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`Offer::issuer_signing_pubkey`]: lightning::offers::offer::Offer::issuer_signing_pubkey
+     * [`Offer::paths`]: lightning::offers::offer::Offer::paths
+     * [`Refund`]: lightning::offers::refund::Refund
+     */
     fun `signingPubkey`(): PublicKey
     
     companion object
 }
 
-open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
+open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -4274,7 +5183,14 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
         }
     }
 
-    override fun `absoluteExpirySeconds`(): kotlin.ULong? {
+    
+    /**
+     * Seconds since the Unix epoch when an invoice should no longer be requested.
+     *
+     * From [`Offer::absolute_expiry`] or [`Refund::absolute_expiry`].
+     *
+     * [`Offer::absolute_expiry`]: lightning::offers::offer::Offer::absolute_expiry
+     */override fun `absoluteExpirySeconds`(): kotlin.ULong? {
             return FfiConverterOptionalULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4286,7 +5202,17 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `amount`(): OfferAmount? {
+    
+    /**
+     * The minimum amount required for a successful payment of a single item.
+     *
+     * From [`Offer::amount`]; `None` if the invoice was created in response to a [`Refund`] or if
+     * the [`Offer`] did not set it.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`Offer::amount`]: lightning::offers::offer::Offer::amount
+     * [`Refund`]: lightning::offers::refund::Refund
+     */override fun `amount`(): OfferAmount? {
             return FfiConverterOptionalTypeOfferAmount.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4298,7 +5224,10 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `amountMsats`(): kotlin.ULong {
+    
+    /**
+     * The minimum amount required for a successful payment of the invoice.
+     */override fun `amountMsats`(): kotlin.ULong {
             return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4310,8 +5239,18 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `chain`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
+    
+    /**
+     * The chain that must be used when paying the invoice; selected from [`offer_chains`] if the
+     * invoice originated from an offer.
+     *
+     * From [`InvoiceRequest::chain`] or [`Refund::chain`].
+     *
+     * [`offer_chains`]: lightning::offers::invoice::Bolt12Invoice::offer_chains
+     * [`InvoiceRequest::chain`]: lightning::offers::invoice_request::InvoiceRequest::chain
+     * [`Refund::chain`]: lightning::offers::refund::Refund::chain
+     */override fun `chain`(): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_chain(
@@ -4322,7 +5261,10 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `createdAt`(): kotlin.ULong {
+    
+    /**
+     * Duration since the Unix epoch when the invoice was created.
+     */override fun `createdAt`(): kotlin.ULong {
             return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4334,8 +5276,11 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `encode`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
+    
+    /**
+     * Writes `self` out to a `Vec<u8>`.
+     */override fun `encode`(): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_encode(
@@ -4346,7 +5291,11 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `fallbackAddresses`(): List<Address> {
+    
+    /**
+     * Fallback addresses for paying the invoice on-chain, in order of most-preferred to
+     * least-preferred.
+     */override fun `fallbackAddresses`(): List<Address> {
             return FfiConverterSequenceTypeAddress.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4358,7 +5307,15 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `invoiceDescription`(): kotlin.String? {
+    
+    /**
+     * A complete description of the purpose of the originating offer or refund.
+     *
+     * From [`Offer::description`] or [`Refund::description`].
+     *
+     * [`Offer::description`]: lightning::offers::offer::Offer::description
+     * [`Refund::description`]: lightning::offers::refund::Refund::description
+     */override fun `invoiceDescription`(): kotlin.String? {
             return FfiConverterOptionalString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4370,7 +5327,10 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `isExpired`(): kotlin.Boolean {
+    
+    /**
+     * Whether the invoice has expired.
+     */override fun `isExpired`(): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4382,7 +5342,15 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `issuer`(): kotlin.String? {
+    
+    /**
+     * The issuer of the offer or refund.
+     *
+     * From [`Offer::issuer`] or [`Refund::issuer`].
+     *
+     * [`Offer::issuer`]: lightning::offers::offer::Offer::issuer
+     * [`Refund::issuer`]: lightning::offers::refund::Refund::issuer
+     */override fun `issuer`(): kotlin.String? {
             return FfiConverterOptionalString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4394,7 +5362,16 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `issuerSigningPubkey`(): PublicKey? {
+    
+    /**
+     * The public key used by the recipient to sign invoices.
+     *
+     * From [`Offer::issuer_signing_pubkey`] and may be `None`; also `None` if the invoice was
+     * created in response to a [`Refund`].
+     *
+     * [`Offer::issuer_signing_pubkey`]: lightning::offers::offer::Offer::issuer_signing_pubkey
+     * [`Refund`]: lightning::offers::refund::Refund
+     */override fun `issuerSigningPubkey`(): PublicKey? {
             return FfiConverterOptionalTypePublicKey.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4406,8 +5383,18 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `metadata`(): List<kotlin.UByte>? {
-            return FfiConverterOptionalSequenceUByte.lift(
+    
+    /**
+     * Opaque bytes set by the originating [`Offer`].
+     *
+     * From [`Offer::metadata`]; `None` if the invoice was created in response to a [`Refund`] or
+     * if the [`Offer`] did not set it.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`Offer::metadata`]: lightning::offers::offer::Offer::metadata
+     * [`Refund`]: lightning::offers::refund::Refund
+     */override fun `metadata`(): kotlin.ByteArray? {
+            return FfiConverterOptionalByteArray.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_metadata(
@@ -4418,8 +5405,16 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `offerChains`(): List<List<kotlin.UByte>>? {
-            return FfiConverterOptionalSequenceSequenceUByte.lift(
+    
+    /**
+     * The chains that may be used when paying a requested invoice.
+     *
+     * From [`Offer::chains`]; `None` if the invoice was created in response to a [`Refund`].
+     *
+     * [`Offer::chains`]: lightning::offers::offer::Offer::chains
+     * [`Refund`]: lightning::offers::refund::Refund
+     */override fun `offerChains`(): List<kotlin.ByteArray>? {
+            return FfiConverterOptionalSequenceByteArray.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_offer_chains(
@@ -4430,7 +5425,14 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `payerNote`(): kotlin.String? {
+    
+    /**
+     * A payer-provided note reflected back in the invoice.
+     *
+     * From [`InvoiceRequest::payer_note`] or [`Refund::payer_note`].
+     *
+     * [`Refund::payer_note`]: lightning::offers::refund::Refund::payer_note
+     */override fun `payerNote`(): kotlin.String? {
             return FfiConverterOptionalString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4442,7 +5444,13 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `payerSigningPubkey`(): PublicKey {
+    
+    /**
+     * A possibly transient pubkey used to sign the invoice request or to send an invoice for a
+     * refund in case there are no [`message_paths`].
+     *
+     * [`message_paths`]: lightning::offers::invoice::Bolt12Invoice
+     */override fun `payerSigningPubkey`(): PublicKey {
             return FfiConverterTypePublicKey.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4454,7 +5462,10 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `paymentHash`(): PaymentHash {
+    
+    /**
+     * SHA256 hash of the payment preimage that will be given in return for paying the invoice.
+     */override fun `paymentHash`(): PaymentHash {
             return FfiConverterTypePaymentHash.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4466,7 +5477,14 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `quantity`(): kotlin.ULong? {
+    
+    /**
+     * The quantity of items requested or refunded for.
+     *
+     * From [`InvoiceRequest::quantity`] or [`Refund::quantity`].
+     *
+     * [`Refund::quantity`]: lightning::offers::refund::Refund::quantity
+     */override fun `quantity`(): kotlin.ULong? {
             return FfiConverterOptionalULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4478,7 +5496,10 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `relativeExpiry`(): kotlin.ULong {
+    
+    /**
+     * When the invoice has expired and therefore should no longer be paid.
+     */override fun `relativeExpiry`(): kotlin.ULong {
             return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4490,8 +5511,11 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `signableHash`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
+    
+    /**
+     * Hash that was used for signing the invoice.
+     */override fun `signableHash`(): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_signable_hash(
@@ -4502,7 +5526,22 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
     }
     
 
-    override fun `signingPubkey`(): PublicKey {
+    
+    /**
+     * A typically transient public key corresponding to the key used to sign the invoice.
+     *
+     * If the invoices was created in response to an [`Offer`], then this will be:
+     * - [`Offer::issuer_signing_pubkey`] if it's `Some`, otherwise
+     * - the final blinded node id from a [`BlindedMessagePath`] in [`Offer::paths`] if `None`.
+     *
+     * If the invoice was created in response to a [`Refund`], then it is a valid pubkey chosen by
+     * the recipient.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`Offer::issuer_signing_pubkey`]: lightning::offers::offer::Offer::issuer_signing_pubkey
+     * [`Offer::paths`]: lightning::offers::offer::Offer::paths
+     * [`Refund`]: lightning::offers::refund::Refund
+     */override fun `signingPubkey`(): PublicKey {
             return FfiConverterTypePublicKey.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -4661,30 +5700,128 @@ public object FfiConverterTypeBolt12Invoice: FfiConverter<Bolt12Invoice, Pointer
 //
 
 
+/**
+ * A payment handler allowing to create and pay [BOLT 12] offers and refunds.
+ *
+ * Should be retrieved by calling [`Node::bolt12_payment`].
+ *
+ * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+ * [`Node::bolt12_payment`]: crate::Node::bolt12_payment
+ */
 public interface Bolt12PaymentInterface {
     
+    /**
+     * [`BlindedMessagePath`]s for an async recipient to communicate with this node and interactively
+     * build [`Offer`]s and [`StaticInvoice`]s for receiving async payments.
+     *
+     * **Caution**: Async payments support is considered experimental.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`StaticInvoice`]: lightning::offers::static_invoice::StaticInvoice
+     */
     fun `blindedPathsForAsyncRecipient`(`recipientId`: kotlin.ByteArray): kotlin.ByteArray
     
+    /**
+     * Returns a [`Refund`] object that can be used to offer a refund payment of the amount given.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     *
+     * [`Refund`]: lightning::offers::refund::Refund
+     */
     fun `initiateRefund`(`amountMsat`: kotlin.ULong, `expirySecs`: kotlin.UInt, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): Refund
     
+    /**
+     * Returns a payable offer that can be used to request and receive a payment of the amount
+     * given.
+     */
     fun `receive`(`amountMsat`: kotlin.ULong, `description`: kotlin.String, `expirySecs`: kotlin.UInt?, `quantity`: kotlin.ULong?): Offer
     
+    /**
+     * Retrieve an [`Offer`] for receiving async payments as an often-offline recipient.
+     *
+     * Will only return an offer if [`Bolt12Payment::set_paths_to_static_invoice_server`] was called and we succeeded
+     * in interactively building a [`StaticInvoice`] with the static invoice server.
+     *
+     * Useful for posting offers to receive payments later, such as posting an offer on a website.
+     *
+     * **Caution**: Async payments support is considered experimental.
+     *
+     * [`StaticInvoice`]: lightning::offers::static_invoice::StaticInvoice
+     * [`Offer`]: lightning::offers::offer::Offer
+     */
     fun `receiveAsync`(): Offer
     
+    /**
+     * Returns a payable offer that can be used to request and receive a payment for which the
+     * amount is to be determined by the user, also known as a "zero-amount" offer.
+     */
     fun `receiveVariableAmount`(`description`: kotlin.String, `expirySecs`: kotlin.UInt?): Offer
     
+    /**
+     * Requests a refund payment for the given [`Refund`].
+     *
+     * The returned [`Bolt12Invoice`] is for informational purposes only (i.e., isn't needed to
+     * retrieve the refund).
+     *
+     * [`Refund`]: lightning::offers::refund::Refund
+     * [`Bolt12Invoice`]: lightning::offers::invoice::Bolt12Invoice
+     */
     fun `requestRefundPayment`(`refund`: Refund): Bolt12Invoice
     
+    /**
+     * Send a payment given an offer.
+     *
+     * If `payer_note` is `Some` it will be seen by the recipient and reflected back in the invoice
+     * response.
+     *
+     * If `quantity` is `Some` it represents the number of items requested.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     fun `send`(`offer`: Offer, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): PaymentId
     
+    /**
+     * Send a payment given an offer and an amount in millisatoshi.
+     *
+     * This will fail if the amount given is less than the value required by the given offer.
+     *
+     * This can be used to pay a so-called "zero-amount" offers, i.e., an offer that leaves the
+     * amount paid to be determined by the user.
+     *
+     * If `payer_note` is `Some` it will be seen by the recipient and reflected back in the invoice
+     * response.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     fun `sendUsingAmount`(`offer`: Offer, `amountMsat`: kotlin.ULong, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): PaymentId
     
+    /**
+     * Sets the [`BlindedMessagePath`]s that we will use as an async recipient to interactively build [`Offer`]s with a
+     * static invoice server, so the server can serve [`StaticInvoice`]s to payers on our behalf when we're offline.
+     *
+     * **Caution**: Async payments support is considered experimental.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`StaticInvoice`]: lightning::offers::static_invoice::StaticInvoice
+     */
     fun `setPathsToStaticInvoiceServer`(`paths`: kotlin.ByteArray)
     
     companion object
 }
 
-open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
+/**
+ * A payment handler allowing to create and pay [BOLT 12] offers and refunds.
+ *
+ * Should be retrieved by calling [`Node::bolt12_payment`].
+ *
+ * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+ * [`Node::bolt12_payment`]: crate::Node::bolt12_payment
+ */
+open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -4766,6 +5903,15 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     }
 
     
+    /**
+     * [`BlindedMessagePath`]s for an async recipient to communicate with this node and interactively
+     * build [`Offer`]s and [`StaticInvoice`]s for receiving async payments.
+     *
+     * **Caution**: Async payments support is considered experimental.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`StaticInvoice`]: lightning::offers::static_invoice::StaticInvoice
+     */
     @Throws(NodeException::class)override fun `blindedPathsForAsyncRecipient`(`recipientId`: kotlin.ByteArray): kotlin.ByteArray {
             return FfiConverterByteArray.lift(
     callWithPointer {
@@ -4779,6 +5925,14 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     
 
     
+    /**
+     * Returns a [`Refund`] object that can be used to offer a refund payment of the amount given.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     *
+     * [`Refund`]: lightning::offers::refund::Refund
+     */
     @Throws(NodeException::class)override fun `initiateRefund`(`amountMsat`: kotlin.ULong, `expirySecs`: kotlin.UInt, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): Refund {
             return FfiConverterTypeRefund.lift(
     callWithPointer {
@@ -4792,6 +5946,10 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     
 
     
+    /**
+     * Returns a payable offer that can be used to request and receive a payment of the amount
+     * given.
+     */
     @Throws(NodeException::class)override fun `receive`(`amountMsat`: kotlin.ULong, `description`: kotlin.String, `expirySecs`: kotlin.UInt?, `quantity`: kotlin.ULong?): Offer {
             return FfiConverterTypeOffer.lift(
     callWithPointer {
@@ -4805,6 +5963,19 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     
 
     
+    /**
+     * Retrieve an [`Offer`] for receiving async payments as an often-offline recipient.
+     *
+     * Will only return an offer if [`Bolt12Payment::set_paths_to_static_invoice_server`] was called and we succeeded
+     * in interactively building a [`StaticInvoice`] with the static invoice server.
+     *
+     * Useful for posting offers to receive payments later, such as posting an offer on a website.
+     *
+     * **Caution**: Async payments support is considered experimental.
+     *
+     * [`StaticInvoice`]: lightning::offers::static_invoice::StaticInvoice
+     * [`Offer`]: lightning::offers::offer::Offer
+     */
     @Throws(NodeException::class)override fun `receiveAsync`(): Offer {
             return FfiConverterTypeOffer.lift(
     callWithPointer {
@@ -4818,6 +5989,10 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     
 
     
+    /**
+     * Returns a payable offer that can be used to request and receive a payment for which the
+     * amount is to be determined by the user, also known as a "zero-amount" offer.
+     */
     @Throws(NodeException::class)override fun `receiveVariableAmount`(`description`: kotlin.String, `expirySecs`: kotlin.UInt?): Offer {
             return FfiConverterTypeOffer.lift(
     callWithPointer {
@@ -4831,6 +6006,15 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     
 
     
+    /**
+     * Requests a refund payment for the given [`Refund`].
+     *
+     * The returned [`Bolt12Invoice`] is for informational purposes only (i.e., isn't needed to
+     * retrieve the refund).
+     *
+     * [`Refund`]: lightning::offers::refund::Refund
+     * [`Bolt12Invoice`]: lightning::offers::invoice::Bolt12Invoice
+     */
     @Throws(NodeException::class)override fun `requestRefundPayment`(`refund`: Refund): Bolt12Invoice {
             return FfiConverterTypeBolt12Invoice.lift(
     callWithPointer {
@@ -4844,6 +6028,17 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     
 
     
+    /**
+     * Send a payment given an offer.
+     *
+     * If `payer_note` is `Some` it will be seen by the recipient and reflected back in the invoice
+     * response.
+     *
+     * If `quantity` is `Some` it represents the number of items requested.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     @Throws(NodeException::class)override fun `send`(`offer`: Offer, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): PaymentId {
             return FfiConverterTypePaymentId.lift(
     callWithPointer {
@@ -4857,6 +6052,20 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     
 
     
+    /**
+     * Send a payment given an offer and an amount in millisatoshi.
+     *
+     * This will fail if the amount given is less than the value required by the given offer.
+     *
+     * This can be used to pay a so-called "zero-amount" offers, i.e., an offer that leaves the
+     * amount paid to be determined by the user.
+     *
+     * If `payer_note` is `Some` it will be seen by the recipient and reflected back in the invoice
+     * response.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     @Throws(NodeException::class)override fun `sendUsingAmount`(`offer`: Offer, `amountMsat`: kotlin.ULong, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): PaymentId {
             return FfiConverterTypePaymentId.lift(
     callWithPointer {
@@ -4870,6 +6079,15 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
     
 
     
+    /**
+     * Sets the [`BlindedMessagePath`]s that we will use as an async recipient to interactively build [`Offer`]s with a
+     * static invoice server, so the server can serve [`StaticInvoice`]s to payers on our behalf when we're offline.
+     *
+     * **Caution**: Async payments support is considered experimental.
+     *
+     * [`Offer`]: lightning::offers::offer::Offer
+     * [`StaticInvoice`]: lightning::offers::static_invoice::StaticInvoice
+     */
     @Throws(NodeException::class)override fun `setPathsToStaticInvoiceServer`(`paths`: kotlin.ByteArray)
         = 
     callWithPointer {
@@ -5022,11 +6240,13 @@ public interface BuilderInterface {
     
     fun `buildWithFsStore`(`nodeEntropy`: NodeEntropy): Node
     
-    fun `buildWithVssStore`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `lnurlAuthServerUrl`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node
+    fun `buildWithVssStore`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node
     
     fun `buildWithVssStoreAndFixedHeaders`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node
     
     fun `buildWithVssStoreAndHeaderProvider`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `headerProvider`: VssHeaderProvider): Node
+    
+    fun `buildWithVssStoreAndLnurlAuth`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `lnurlAuthServerUrl`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node
     
     fun `setAnnouncementAddresses`(`announcementAddresses`: List<SocketAddress>)
     
@@ -5048,8 +6268,6 @@ public interface BuilderInterface {
     
     fun `setGossipSourceRgs`(`rgsServerUrl`: kotlin.String)
     
-    fun `setGossipSourceRgsWithP2p`(`rgsServerUrl`: kotlin.String)
-    
     fun `setLiquiditySourceLsps1`(`nodeId`: PublicKey, `address`: SocketAddress, `token`: kotlin.String?)
     
     fun `setLiquiditySourceLsps2`(`nodeId`: PublicKey, `address`: SocketAddress, `token`: kotlin.String?)
@@ -5066,6 +6284,8 @@ public interface BuilderInterface {
     
     fun `setStorageDirPath`(`storageDirPath`: kotlin.String)
     
+    fun `setTorConfig`(`torConfig`: TorConfig)
+    
     fun `setWalletBirthdayHeight`(`height`: kotlin.UInt)
     
     fun `setWalletRecoveryMode`()
@@ -5073,7 +6293,8 @@ public interface BuilderInterface {
     companion object
 }
 
-open class Builder: Disposable, AutoCloseable, BuilderInterface {
+open class Builder: Disposable, AutoCloseable, BuilderInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -5188,12 +6409,12 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface {
     
 
     
-    @Throws(BuildException::class)override fun `buildWithVssStore`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `lnurlAuthServerUrl`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node {
+    @Throws(BuildException::class)override fun `buildWithVssStore`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node {
             return FfiConverterTypeNode.lift(
     callWithPointer {
     uniffiRustCallWithError(BuildException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store(
-        it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),FfiConverterString.lower(`vssUrl`),FfiConverterString.lower(`storeId`),FfiConverterString.lower(`lnurlAuthServerUrl`),FfiConverterMapStringString.lower(`fixedHeaders`),_status)
+        it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),FfiConverterString.lower(`vssUrl`),FfiConverterString.lower(`storeId`),FfiConverterMapStringString.lower(`fixedHeaders`),_status)
 }
     }
     )
@@ -5220,6 +6441,19 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface {
     uniffiRustCallWithError(BuildException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_header_provider(
         it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),FfiConverterString.lower(`vssUrl`),FfiConverterString.lower(`storeId`),FfiConverterTypeVssHeaderProvider.lower(`headerProvider`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(BuildException::class)override fun `buildWithVssStoreAndLnurlAuth`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `lnurlAuthServerUrl`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node {
+            return FfiConverterTypeNode.lift(
+    callWithPointer {
+    uniffiRustCallWithError(BuildException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_lnurl_auth(
+        it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),FfiConverterString.lower(`vssUrl`),FfiConverterString.lower(`storeId`),FfiConverterString.lower(`lnurlAuthServerUrl`),FfiConverterMapStringString.lower(`fixedHeaders`),_status)
 }
     }
     )
@@ -5338,17 +6572,6 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface {
     
     
 
-    override fun `setGossipSourceRgsWithP2p`(`rgsServerUrl`: kotlin.String)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_gossip_source_rgs_with_p2p(
-        it, FfiConverterString.lower(`rgsServerUrl`),_status)
-}
-    }
-    
-    
-
     override fun `setLiquiditySourceLsps1`(`nodeId`: PublicKey, `address`: SocketAddress, `token`: kotlin.String?)
         = 
     callWithPointer {
@@ -5434,6 +6657,18 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_storage_dir_path(
         it, FfiConverterString.lower(`storageDirPath`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(BuildException::class)override fun `setTorConfig`(`torConfig`: TorConfig)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(BuildException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_tor_config(
+        it, FfiConverterTypeTorConfig.lower(`torConfig`),_status)
 }
     }
     
@@ -5618,7 +6853,8 @@ public interface FeeRateInterface {
     companion object
 }
 
-open class FeeRate: Disposable, AutoCloseable, FeeRateInterface {
+open class FeeRate: Disposable, AutoCloseable, FeeRateInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -5891,16 +7127,51 @@ public object FfiConverterTypeFeeRate: FfiConverter<FeeRate, Pointer> {
 //
 
 
+/**
+ * A struct containing the two parts of a BIP 353 Human-Readable Name - the user and domain parts.
+ *
+ * The `user` and `domain` parts combined cannot exceed 231 bytes in length;
+ * each DNS label within them must be non-empty and no longer than 63 bytes.
+ *
+ * If you intend to handle non-ASCII `user` or `domain` parts, you must handle [Homograph Attacks]
+ * and do punycode en-/de-coding yourself. This struct will always handle only plain ASCII `user`
+ * and `domain` parts.
+ *
+ * This struct can also be used for LN-Address recipients.
+ *
+ * [Homograph Attacks]: https://en.wikipedia.org/wiki/IDN_homograph_attack
+ */
 public interface HumanReadableNameInterface {
     
+    /**
+     * Gets the `domain` part of this Human-Readable Name
+     */
     fun `domain`(): kotlin.String
     
+    /**
+     * Gets the `user` part of this Human-Readable Name
+     */
     fun `user`(): kotlin.String
     
     companion object
 }
 
-open class HumanReadableName: Disposable, AutoCloseable, HumanReadableNameInterface {
+/**
+ * A struct containing the two parts of a BIP 353 Human-Readable Name - the user and domain parts.
+ *
+ * The `user` and `domain` parts combined cannot exceed 231 bytes in length;
+ * each DNS label within them must be non-empty and no longer than 63 bytes.
+ *
+ * If you intend to handle non-ASCII `user` or `domain` parts, you must handle [Homograph Attacks]
+ * and do punycode en-/de-coding yourself. This struct will always handle only plain ASCII `user`
+ * and `domain` parts.
+ *
+ * This struct can also be used for LN-Address recipients.
+ *
+ * [Homograph Attacks]: https://en.wikipedia.org/wiki/IDN_homograph_attack
+ */
+open class HumanReadableName: Disposable, AutoCloseable, HumanReadableNameInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -5981,7 +7252,10 @@ open class HumanReadableName: Disposable, AutoCloseable, HumanReadableNameInterf
         }
     }
 
-    override fun `domain`(): kotlin.String {
+    
+    /**
+     * Gets the `domain` part of this Human-Readable Name
+     */override fun `domain`(): kotlin.String {
             return FfiConverterString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -5993,7 +7267,10 @@ open class HumanReadableName: Disposable, AutoCloseable, HumanReadableNameInterf
     }
     
 
-    override fun `user`(): kotlin.String {
+    
+    /**
+     * Gets the `user` part of this Human-Readable Name
+     */override fun `user`(): kotlin.String {
             return FfiConverterString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -6006,10 +7283,41 @@ open class HumanReadableName: Disposable, AutoCloseable, HumanReadableNameInterf
     
 
     
+    override fun toString(): String {
+        return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_humanreadablename_uniffi_trait_display(
+        it, _status)
+}
+    }
+    )
+    }
+    
+    
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is HumanReadableName) return false
+        return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_humanreadablename_uniffi_trait_eq_eq(
+        it, FfiConverterTypeHumanReadableName.lower(`other`),_status)
+}
+    }
+    )
+    }
+    
 
     
     companion object {
         
+    /**
+     * Constructs a new [`HumanReadableName`] from the standard encoding - `user`@`domain`.
+     *
+     * If `user` includes the standard BIP 353 ₿ prefix it is automatically removed as required by
+     * BIP 353.
+     */
     @Throws(NodeException::class) fun `fromEncoded`(`encoded`: kotlin.String): HumanReadableName {
             return FfiConverterTypeHumanReadableName.lift(
     uniffiRustCallWithError(NodeException) { _status ->
@@ -6152,16 +7460,52 @@ public object FfiConverterTypeHumanReadableName: FfiConverter<HumanReadableName,
 //
 
 
+/**
+ * A liquidity handler allowing to request channels via the [bLIP-51 / LSPS1] protocol.
+ *
+ * Should be retrieved by calling [`Node::lsps1_liquidity`].
+ *
+ * To open [bLIP-52 / LSPS2] JIT channels, please refer to
+ * [`Bolt11Payment::receive_via_jit_channel`].
+ *
+ * [bLIP-51 / LSPS1]: https://github.com/lightning/blips/blob/master/blip-0051.md
+ * [bLIP-52 / LSPS2]: https://github.com/lightning/blips/blob/master/blip-0052.md
+ * [`Node::lsps1_liquidity`]: crate::Node::lsps1_liquidity
+ * [`Bolt11Payment::receive_via_jit_channel`]: crate::payment::Bolt11Payment::receive_via_jit_channel
+ */
 public interface Lsps1LiquidityInterface {
     
+    /**
+     * Connects to the configured LSP and checks for the status of a previously-placed order.
+     */
     fun `checkOrderStatus`(`orderId`: Lsps1OrderId): Lsps1OrderStatus
     
+    /**
+     * Connects to the configured LSP and places an order for an inbound channel.
+     *
+     * The channel will be opened after one of the returned payment options has successfully been
+     * paid.
+     */
     fun `requestChannel`(`lspBalanceSat`: kotlin.ULong, `clientBalanceSat`: kotlin.ULong, `channelExpiryBlocks`: kotlin.UInt, `announceChannel`: kotlin.Boolean): Lsps1OrderStatus
     
     companion object
 }
 
-open class Lsps1Liquidity: Disposable, AutoCloseable, Lsps1LiquidityInterface {
+/**
+ * A liquidity handler allowing to request channels via the [bLIP-51 / LSPS1] protocol.
+ *
+ * Should be retrieved by calling [`Node::lsps1_liquidity`].
+ *
+ * To open [bLIP-52 / LSPS2] JIT channels, please refer to
+ * [`Bolt11Payment::receive_via_jit_channel`].
+ *
+ * [bLIP-51 / LSPS1]: https://github.com/lightning/blips/blob/master/blip-0051.md
+ * [bLIP-52 / LSPS2]: https://github.com/lightning/blips/blob/master/blip-0052.md
+ * [`Node::lsps1_liquidity`]: crate::Node::lsps1_liquidity
+ * [`Bolt11Payment::receive_via_jit_channel`]: crate::payment::Bolt11Payment::receive_via_jit_channel
+ */
+open class Lsps1Liquidity: Disposable, AutoCloseable, Lsps1LiquidityInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -6243,6 +7587,9 @@ open class Lsps1Liquidity: Disposable, AutoCloseable, Lsps1LiquidityInterface {
     }
 
     
+    /**
+     * Connects to the configured LSP and checks for the status of a previously-placed order.
+     */
     @Throws(NodeException::class)override fun `checkOrderStatus`(`orderId`: Lsps1OrderId): Lsps1OrderStatus {
             return FfiConverterTypeLSPS1OrderStatus.lift(
     callWithPointer {
@@ -6256,6 +7603,12 @@ open class Lsps1Liquidity: Disposable, AutoCloseable, Lsps1LiquidityInterface {
     
 
     
+    /**
+     * Connects to the configured LSP and places an order for an inbound channel.
+     *
+     * The channel will be opened after one of the returned payment options has successfully been
+     * paid.
+     */
     @Throws(NodeException::class)override fun `requestChannel`(`lspBalanceSat`: kotlin.ULong, `clientBalanceSat`: kotlin.ULong, `channelExpiryBlocks`: kotlin.UInt, `announceChannel`: kotlin.Boolean): Lsps1OrderStatus {
             return FfiConverterTypeLSPS1OrderStatus.lift(
     callWithPointer {
@@ -6410,7 +7763,8 @@ public interface LogWriter {
     companion object
 }
 
-open class LogWriterImpl: Disposable, AutoCloseable, LogWriter {
+open class LogWriterImpl: Disposable, AutoCloseable, LogWriter
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -6509,38 +7863,7 @@ open class LogWriterImpl: Disposable, AutoCloseable, LogWriter {
     companion object
     
 }
-// Magic number for the Rust proxy to call using the same mechanism as every other method,
-// to free the callback once it's dropped by Rust.
-internal const val IDX_CALLBACK_FREE = 0
-// Callback return codes
-internal const val UNIFFI_CALLBACK_SUCCESS = 0
-internal const val UNIFFI_CALLBACK_ERROR = 1
-internal const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
 
-/**
- * @suppress
- */
-public abstract class FfiConverterCallbackInterface<CallbackInterface: Any>: FfiConverter<CallbackInterface, Long> {
-    internal val handleMap = UniffiHandleMap<CallbackInterface>()
-
-    internal fun drop(handle: Long) {
-        handleMap.remove(handle)
-    }
-
-    override fun lift(value: Long): CallbackInterface {
-        return handleMap.get(value)
-    }
-
-    override fun read(buf: ByteBuffer) = lift(buf.getLong())
-
-    override fun lower(value: CallbackInterface) = handleMap.insert(value)
-
-    override fun allocationSize(value: CallbackInterface) = 8UL
-
-    override fun write(value: CallbackInterface, buf: ByteBuffer) {
-        buf.putLong(lower(value))
-    }
-}
 
 // Put the implementation in an object so we don't pollute the top-level namespace
 internal object uniffiCallbackInterfaceLogWriter {
@@ -6703,20 +8026,39 @@ public object FfiConverterTypeLogWriter: FfiConverter<LogWriter, Pointer> {
 //
 
 
+/**
+ * Represents the network as nodes and channels between them.
+ */
 public interface NetworkGraphInterface {
     
+    /**
+     * Returns information on a channel with the given id.
+     */
     fun `channel`(`shortChannelId`: kotlin.ULong): ChannelInfo?
     
+    /**
+     * Returns the list of channels in the graph
+     */
     fun `listChannels`(): List<kotlin.ULong>
     
+    /**
+     * Returns the list of nodes in the graph
+     */
     fun `listNodes`(): List<NodeId>
     
+    /**
+     * Returns information on a node with the given id.
+     */
     fun `node`(`nodeId`: NodeId): NodeInfo?
     
     companion object
 }
 
-open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
+/**
+ * Represents the network as nodes and channels between them.
+ */
+open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -6797,7 +8139,10 @@ open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
         }
     }
 
-    override fun `channel`(`shortChannelId`: kotlin.ULong): ChannelInfo? {
+    
+    /**
+     * Returns information on a channel with the given id.
+     */override fun `channel`(`shortChannelId`: kotlin.ULong): ChannelInfo? {
             return FfiConverterOptionalTypeChannelInfo.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -6809,7 +8154,10 @@ open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
     }
     
 
-    override fun `listChannels`(): List<kotlin.ULong> {
+    
+    /**
+     * Returns the list of channels in the graph
+     */override fun `listChannels`(): List<kotlin.ULong> {
             return FfiConverterSequenceULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -6821,7 +8169,10 @@ open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
     }
     
 
-    override fun `listNodes`(): List<NodeId> {
+    
+    /**
+     * Returns the list of nodes in the graph
+     */override fun `listNodes`(): List<NodeId> {
             return FfiConverterSequenceTypeNodeId.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -6833,7 +8184,10 @@ open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
     }
     
 
-    override fun `node`(`nodeId`: NodeId): NodeInfo? {
+    
+    /**
+     * Returns information on a node with the given id.
+     */override fun `node`(`nodeId`: NodeId): NodeInfo? {
             return FfiConverterOptionalTypeNodeInfo.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -6984,8 +8338,6 @@ public interface NodeInterface {
     
     fun `announcementAddresses`(): List<SocketAddress>?
     
-    fun `applyRgsData`(`data`: List<kotlin.UByte>): kotlin.UInt
-    
     fun `bolt11Payment`(): Bolt11Payment
     
     fun `bolt12Payment`(): Bolt12Payment
@@ -7020,6 +8372,8 @@ public interface NodeInterface {
     
     fun `listeningAddresses`(): List<SocketAddress>?
     
+    fun `lnurlAuth`(`lnurl`: kotlin.String)
+    
     fun `lsps1Liquidity`(): Lsps1Liquidity
     
     fun `networkGraph`(): NetworkGraph
@@ -7036,7 +8390,11 @@ public interface NodeInterface {
     
     fun `openAnnouncedChannel`(`nodeId`: PublicKey, `address`: SocketAddress, `channelAmountSats`: kotlin.ULong, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId
     
+    fun `openAnnouncedChannelWithAll`(`nodeId`: PublicKey, `address`: SocketAddress, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId
+    
     fun `openChannel`(`nodeId`: PublicKey, `address`: SocketAddress, `channelAmountSats`: kotlin.ULong, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId
+    
+    fun `openChannelWithAll`(`nodeId`: PublicKey, `address`: SocketAddress, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId
     
     fun `payment`(`paymentId`: PaymentId): PaymentDetails?
     
@@ -7044,13 +8402,11 @@ public interface NodeInterface {
     
     fun `removePayment`(`paymentId`: PaymentId)
     
-    fun `rgsUrl`(): kotlin.String?
-    
-    fun `setTorProxy`(`proxyAddr`: SocketAddress?)
-    
     fun `signMessage`(`msg`: List<kotlin.UByte>): kotlin.String
     
     fun `spliceIn`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `spliceAmountSats`: kotlin.ULong)
+    
+    fun `spliceInWithAll`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey)
     
     fun `spliceOut`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `address`: Address, `spliceAmountSats`: kotlin.ULong)
     
@@ -7083,7 +8439,8 @@ public interface NodeInterface {
     companion object
 }
 
-open class Node: Disposable, AutoCloseable, NodeInterface {
+open class Node: Disposable, AutoCloseable, NodeInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -7170,19 +8527,6 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_announcement_addresses(
         it, _status)
-}
-    }
-    )
-    }
-    
-
-    
-    @Throws(NodeException::class)override fun `applyRgsData`(`data`: List<kotlin.UByte>): kotlin.UInt {
-            return FfiConverterUInt.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_apply_rgs_data(
-        it, FfiConverterSequenceUByte.lower(`data`),_status)
 }
     }
     )
@@ -7393,6 +8737,18 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
     }
     
 
+    
+    @Throws(NodeException::class)override fun `lnurlAuth`(`lnurl`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(NodeException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_lnurl_auth(
+        it, FfiConverterString.lower(`lnurl`),_status)
+}
+    }
+    
+    
+
     override fun `lsps1Liquidity`(): Lsps1Liquidity {
             return FfiConverterTypeLSPS1Liquidity.lift(
     callWithPointer {
@@ -7499,12 +8855,38 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
     
 
     
+    @Throws(NodeException::class)override fun `openAnnouncedChannelWithAll`(`nodeId`: PublicKey, `address`: SocketAddress, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId {
+            return FfiConverterTypeUserChannelId.lift(
+    callWithPointer {
+    uniffiRustCallWithError(NodeException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_open_announced_channel_with_all(
+        it, FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypeSocketAddress.lower(`address`),FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(NodeException::class)override fun `openChannel`(`nodeId`: PublicKey, `address`: SocketAddress, `channelAmountSats`: kotlin.ULong, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId {
             return FfiConverterTypeUserChannelId.lift(
     callWithPointer {
     uniffiRustCallWithError(NodeException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_open_channel(
         it, FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypeSocketAddress.lower(`address`),FfiConverterULong.lower(`channelAmountSats`),FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(NodeException::class)override fun `openChannelWithAll`(`nodeId`: PublicKey, `address`: SocketAddress, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId {
+            return FfiConverterTypeUserChannelId.lift(
+    callWithPointer {
+    uniffiRustCallWithError(NodeException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_open_channel_with_all(
+        it, FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypeSocketAddress.lower(`address`),FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),_status)
 }
     }
     )
@@ -7547,29 +8929,6 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
     
     
 
-    override fun `rgsUrl`(): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_rgs_url(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `setTorProxy`(`proxyAddr`: SocketAddress?)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_set_tor_proxy(
-        it, FfiConverterOptionalTypeSocketAddress.lower(`proxyAddr`),_status)
-}
-    }
-    
-    
-
     override fun `signMessage`(`msg`: List<kotlin.UByte>): kotlin.String {
             return FfiConverterString.lift(
     callWithPointer {
@@ -7589,6 +8948,18 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
     uniffiRustCallWithError(NodeException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_splice_in(
         it, FfiConverterTypeUserChannelId.lower(`userChannelId`),FfiConverterTypePublicKey.lower(`counterpartyNodeId`),FfiConverterULong.lower(`spliceAmountSats`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(NodeException::class)override fun `spliceInWithAll`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(NodeException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_splice_in_with_all(
+        it, FfiConverterTypeUserChannelId.lower(`userChannelId`),FfiConverterTypePublicKey.lower(`counterpartyNodeId`),_status)
 }
     }
     
@@ -7897,12 +9268,25 @@ public object FfiConverterTypeNode: FfiConverter<Node, Pointer> {
 //
 
 
+/**
+ * The node entropy, i.e., the main secret from which all other secrets of the [`Node`] are
+ * derived.
+ *
+ * [`Node`]: crate::Node
+ */
 public interface NodeEntropyInterface {
     
     companion object
 }
 
-open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface {
+/**
+ * The node entropy, i.e., the main secret from which all other secrets of the [`Node`] are
+ * derived.
+ *
+ * [`Node`]: crate::Node
+ */
+open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -7987,7 +9371,13 @@ open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface {
 
     
     companion object {
-         fun `fromBip39Mnemonic`(`mnemonic`: Mnemonic, `passphrase`: kotlin.String?): NodeEntropy {
+        
+    /**
+     * Configures the [`Node`] instance to source its wallet entropy from a [BIP 39] mnemonic.
+     *
+     * [BIP 39]: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
+     * [`Node`]: crate::Node
+     */ fun `fromBip39Mnemonic`(`mnemonic`: Mnemonic, `passphrase`: kotlin.String?): NodeEntropy {
             return FfiConverterTypeNodeEntropy.lift(
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_nodeentropy_from_bip39_mnemonic(
@@ -7998,6 +9388,15 @@ open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface {
     
 
         
+    /**
+     * Configures the [`Node`] instance to source its wallet entropy from the given
+     * [`WALLET_KEYS_SEED_LEN`] seed bytes.
+     *
+     * Will return an error if the length of the given `Vec` is not exactly
+     * [`WALLET_KEYS_SEED_LEN`].
+     *
+     * [`Node`]: crate::Node
+     */
     @Throws(EntropyException::class) fun `fromSeedBytes`(`seedBytes`: kotlin.ByteArray): NodeEntropy {
             return FfiConverterTypeNodeEntropy.lift(
     uniffiRustCallWithError(EntropyException) { _status ->
@@ -8009,6 +9408,14 @@ open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface {
     
 
         
+    /**
+     * Configures the [`Node`] instance to source its wallet entropy from a seed file on disk.
+     *
+     * If the given file does not exist a new random seed file will be generated and
+     * stored at the given location.
+     *
+     * [`Node`]: crate::Node
+     */
     @Throws(EntropyException::class) fun `fromSeedPath`(`seedPath`: kotlin.String): NodeEntropy {
             return FfiConverterTypeNodeEntropy.lift(
     uniffiRustCallWithError(EntropyException) { _status ->
@@ -8151,36 +9558,129 @@ public object FfiConverterTypeNodeEntropy: FfiConverter<NodeEntropy, Pointer> {
 //
 
 
+/**
+ * An `Offer` is a potentially long-lived proposal for payment of a good or service.
+ *
+ * An offer is a precursor to an [`InvoiceRequest`]. A merchant publishes an offer from which a
+ * customer may request an [`Bolt12Invoice`] for a specific quantity and using an amount sufficient
+ * to cover that quantity (i.e., at least `quantity * amount`). See [`Offer::amount`].
+ *
+ * Offers may be denominated in currency other than bitcoin but are ultimately paid using the
+ * latter.
+ *
+ * Through the use of [`BlindedMessagePath`]s, offers provide recipient privacy.
+ *
+ * [`InvoiceRequest`]: lightning::offers::invoice_request::InvoiceRequest
+ * [`Bolt12Invoice`]: lightning::offers::invoice::Bolt12Invoice
+ * [`Offer`]: lightning::offers::Offer:amount
+ */
 public interface OfferInterface {
     
+    /**
+     * Seconds since the Unix epoch when an invoice should no longer be requested.
+     *
+     * If `None`, the offer does not expire.
+     */
     fun `absoluteExpirySeconds`(): kotlin.ULong?
     
+    /**
+     * The minimum amount required for a successful payment of a single item.
+     */
     fun `amount`(): OfferAmount?
     
+    /**
+     * The chains that may be used when paying a requested invoice (e.g., bitcoin mainnet).
+     *
+     * Payments must be denominated in units of the minimal lightning-payable unit (e.g., msats)
+     * for the selected chain.
+     */
     fun `chains`(): List<Network>
     
+    /**
+     * Returns whether a quantity is expected in an [`InvoiceRequest`] for the offer.
+     *
+     * [`InvoiceRequest`]: lightning::offers::invoice_request::InvoiceRequest
+     */
     fun `expectsQuantity`(): kotlin.Boolean
     
+    /**
+     * Returns the id of the offer.
+     */
     fun `id`(): OfferId
     
+    /**
+     * Whether the offer has expired.
+     */
     fun `isExpired`(): kotlin.Boolean
     
+    /**
+     * Returns whether the given quantity is valid for the offer.
+     */
     fun `isValidQuantity`(`quantity`: kotlin.ULong): kotlin.Boolean
     
+    /**
+     * The issuer of the offer, possibly beginning with `user@domain` or `domain`.
+     *
+     * Intended to be displayed to the user but with the caveat that it has not been verified in any way.
+     */
     fun `issuer`(): kotlin.String?
     
+    /**
+     * The public key corresponding to the key used by the recipient to sign invoices.
+     * - If [`Offer::paths`] is empty, MUST be `Some` and contain the recipient's node id for
+     * sending an [`InvoiceRequest`].
+     * - If [`Offer::paths`] is not empty, MAY be `Some` and contain a transient id.
+     * - If `None`, the signing pubkey will be the final blinded node id from the
+     * [`BlindedMessagePath`] in [`Offer::paths`] used to send the [`InvoiceRequest`].
+     *
+     * See also [`Bolt12Invoice::signing_pubkey`].
+     *
+     * [`InvoiceRequest`]: lightning::offers::invoice_request::InvoiceRequest
+     * [`Bolt12Invoice::signing_pubkey`]: lightning::offers::invoice::Bolt12Invoice::signing_pubkey
+     */
     fun `issuerSigningPubkey`(): PublicKey?
     
-    fun `metadata`(): List<kotlin.UByte>?
+    /**
+     * Opaque bytes set by the originator.
+     *
+     * Useful for authentication and validating fields since it is reflected in `invoice_request`
+     * messages along with all the other fields from the `offer`.
+     */
+    fun `metadata`(): kotlin.ByteArray?
     
+    /**
+     * A complete description of the purpose of the payment.
+     *
+     * Intended to be displayed to the user but with the caveat that it has not been verified in any way.
+     */
     fun `offerDescription`(): kotlin.String?
     
+    /**
+     * Returns whether the given chain is supported by the offer.
+     */
     fun `supportsChain`(`chain`: Network): kotlin.Boolean
     
     companion object
 }
 
-open class Offer: Disposable, AutoCloseable, OfferInterface {
+/**
+ * An `Offer` is a potentially long-lived proposal for payment of a good or service.
+ *
+ * An offer is a precursor to an [`InvoiceRequest`]. A merchant publishes an offer from which a
+ * customer may request an [`Bolt12Invoice`] for a specific quantity and using an amount sufficient
+ * to cover that quantity (i.e., at least `quantity * amount`). See [`Offer::amount`].
+ *
+ * Offers may be denominated in currency other than bitcoin but are ultimately paid using the
+ * latter.
+ *
+ * Through the use of [`BlindedMessagePath`]s, offers provide recipient privacy.
+ *
+ * [`InvoiceRequest`]: lightning::offers::invoice_request::InvoiceRequest
+ * [`Bolt12Invoice`]: lightning::offers::invoice::Bolt12Invoice
+ * [`Offer`]: lightning::offers::Offer:amount
+ */
+open class Offer: Disposable, AutoCloseable, OfferInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -8261,7 +9761,12 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
         }
     }
 
-    override fun `absoluteExpirySeconds`(): kotlin.ULong? {
+    
+    /**
+     * Seconds since the Unix epoch when an invoice should no longer be requested.
+     *
+     * If `None`, the offer does not expire.
+     */override fun `absoluteExpirySeconds`(): kotlin.ULong? {
             return FfiConverterOptionalULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8273,7 +9778,10 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `amount`(): OfferAmount? {
+    
+    /**
+     * The minimum amount required for a successful payment of a single item.
+     */override fun `amount`(): OfferAmount? {
             return FfiConverterOptionalTypeOfferAmount.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8285,7 +9793,13 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `chains`(): List<Network> {
+    
+    /**
+     * The chains that may be used when paying a requested invoice (e.g., bitcoin mainnet).
+     *
+     * Payments must be denominated in units of the minimal lightning-payable unit (e.g., msats)
+     * for the selected chain.
+     */override fun `chains`(): List<Network> {
             return FfiConverterSequenceTypeNetwork.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8297,7 +9811,12 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `expectsQuantity`(): kotlin.Boolean {
+    
+    /**
+     * Returns whether a quantity is expected in an [`InvoiceRequest`] for the offer.
+     *
+     * [`InvoiceRequest`]: lightning::offers::invoice_request::InvoiceRequest
+     */override fun `expectsQuantity`(): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8309,7 +9828,10 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `id`(): OfferId {
+    
+    /**
+     * Returns the id of the offer.
+     */override fun `id`(): OfferId {
             return FfiConverterTypeOfferId.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8321,7 +9843,10 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `isExpired`(): kotlin.Boolean {
+    
+    /**
+     * Whether the offer has expired.
+     */override fun `isExpired`(): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8333,7 +9858,10 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `isValidQuantity`(`quantity`: kotlin.ULong): kotlin.Boolean {
+    
+    /**
+     * Returns whether the given quantity is valid for the offer.
+     */override fun `isValidQuantity`(`quantity`: kotlin.ULong): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8345,7 +9873,12 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `issuer`(): kotlin.String? {
+    
+    /**
+     * The issuer of the offer, possibly beginning with `user@domain` or `domain`.
+     *
+     * Intended to be displayed to the user but with the caveat that it has not been verified in any way.
+     */override fun `issuer`(): kotlin.String? {
             return FfiConverterOptionalString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8357,7 +9890,20 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `issuerSigningPubkey`(): PublicKey? {
+    
+    /**
+     * The public key corresponding to the key used by the recipient to sign invoices.
+     * - If [`Offer::paths`] is empty, MUST be `Some` and contain the recipient's node id for
+     * sending an [`InvoiceRequest`].
+     * - If [`Offer::paths`] is not empty, MAY be `Some` and contain a transient id.
+     * - If `None`, the signing pubkey will be the final blinded node id from the
+     * [`BlindedMessagePath`] in [`Offer::paths`] used to send the [`InvoiceRequest`].
+     *
+     * See also [`Bolt12Invoice::signing_pubkey`].
+     *
+     * [`InvoiceRequest`]: lightning::offers::invoice_request::InvoiceRequest
+     * [`Bolt12Invoice::signing_pubkey`]: lightning::offers::invoice::Bolt12Invoice::signing_pubkey
+     */override fun `issuerSigningPubkey`(): PublicKey? {
             return FfiConverterOptionalTypePublicKey.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8369,8 +9915,14 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `metadata`(): List<kotlin.UByte>? {
-            return FfiConverterOptionalSequenceUByte.lift(
+    
+    /**
+     * Opaque bytes set by the originator.
+     *
+     * Useful for authentication and validating fields since it is reflected in `invoice_request`
+     * messages along with all the other fields from the `offer`.
+     */override fun `metadata`(): kotlin.ByteArray? {
+            return FfiConverterOptionalByteArray.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_metadata(
@@ -8381,7 +9933,12 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `offerDescription`(): kotlin.String? {
+    
+    /**
+     * A complete description of the purpose of the payment.
+     *
+     * Intended to be displayed to the user but with the caveat that it has not been verified in any way.
+     */override fun `offerDescription`(): kotlin.String? {
             return FfiConverterOptionalString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8393,7 +9950,10 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
     }
     
 
-    override fun `supportsChain`(`chain`: Network): kotlin.Boolean {
+    
+    /**
+     * Returns whether the given chain is supported by the offer.
+     */override fun `supportsChain`(`chain`: Network): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8577,20 +10137,77 @@ public object FfiConverterTypeOffer: FfiConverter<Offer, Pointer> {
 //
 
 
+/**
+ * A payment handler allowing to send and receive on-chain payments.
+ *
+ * Should be retrieved by calling [`Node::onchain_payment`].
+ *
+ * [`Node::onchain_payment`]: crate::Node::onchain_payment
+ */
 public interface OnchainPaymentInterface {
     
+    /**
+     * Attempt to bump the fee of an unconfirmed transaction using Replace-by-Fee (RBF).
+     *
+     * This creates a new transaction that replaces the original one, increasing the fee by the
+     * specified increment to improve its chances of confirmation.
+     *
+     * The new transaction will have the same outputs as the original but with a
+     * higher fee, resulting in faster confirmation potential.
+     *
+     * Returns the [`Txid`] of the new replacement transaction if successful.
+     */
     fun `bumpFeeRbf`(`paymentId`: PaymentId, `feeRate`: FeeRate?): Txid
     
+    /**
+     * Retrieve a new on-chain/funding address.
+     */
     fun `newAddress`(): Address
     
-    fun `sendAllToAddress`(`address`: Address, `retainReserve`: kotlin.Boolean, `feeRate`: FeeRate?): Txid
+    /**
+     * Send an on-chain payment to the given address, draining the available funds.
+     *
+     * This is useful if you have closed all channels and want to migrate funds to another
+     * on-chain wallet.
+     *
+     * Please note that if `retain_reserves` is set to `false` this will **not** retain any on-chain reserves, which might be potentially
+     * dangerous if you have open Anchor channels for which you can't trust the counterparty to
+     * spend the Anchor output after channel closure. If `retain_reserves` is set to `true`, this
+     * will try to send all spendable onchain funds, i.e.,
+     * [`BalanceDetails::spendable_onchain_balance_sats`].
+     *
+     * If `fee_rate` is set it will be used on the resulting transaction. Otherwise a reasonable
+     * we'll retrieve an estimate from the configured chain source.
+     *
+     * [`BalanceDetails::spendable_onchain_balance_sats`]: crate::balance::BalanceDetails::spendable_onchain_balance_sats
+     */
+    fun `sendAllToAddress`(`address`: Address, `retainReserves`: kotlin.Boolean, `feeRate`: FeeRate?): Txid
     
+    /**
+     * Send an on-chain payment to the given address.
+     *
+     * This will respect any on-chain reserve we need to keep, i.e., won't allow to cut into
+     * [`BalanceDetails::total_anchor_channels_reserve_sats`].
+     *
+     * If `fee_rate` is set it will be used on the resulting transaction. Otherwise we'll retrieve
+     * a reasonable estimate from the configured chain source.
+     *
+     * [`BalanceDetails::total_anchor_channels_reserve_sats`]: crate::BalanceDetails::total_anchor_channels_reserve_sats
+     */
     fun `sendToAddress`(`address`: Address, `amountSats`: kotlin.ULong, `feeRate`: FeeRate?): Txid
     
     companion object
 }
 
-open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
+/**
+ * A payment handler allowing to send and receive on-chain payments.
+ *
+ * Should be retrieved by calling [`Node::onchain_payment`].
+ *
+ * [`Node::onchain_payment`]: crate::Node::onchain_payment
+ */
+open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -8672,6 +10289,17 @@ open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
     }
 
     
+    /**
+     * Attempt to bump the fee of an unconfirmed transaction using Replace-by-Fee (RBF).
+     *
+     * This creates a new transaction that replaces the original one, increasing the fee by the
+     * specified increment to improve its chances of confirmation.
+     *
+     * The new transaction will have the same outputs as the original but with a
+     * higher fee, resulting in faster confirmation potential.
+     *
+     * Returns the [`Txid`] of the new replacement transaction if successful.
+     */
     @Throws(NodeException::class)override fun `bumpFeeRbf`(`paymentId`: PaymentId, `feeRate`: FeeRate?): Txid {
             return FfiConverterTypeTxid.lift(
     callWithPointer {
@@ -8685,6 +10313,9 @@ open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
     
 
     
+    /**
+     * Retrieve a new on-chain/funding address.
+     */
     @Throws(NodeException::class)override fun `newAddress`(): Address {
             return FfiConverterTypeAddress.lift(
     callWithPointer {
@@ -8698,12 +10329,29 @@ open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
     
 
     
-    @Throws(NodeException::class)override fun `sendAllToAddress`(`address`: Address, `retainReserve`: kotlin.Boolean, `feeRate`: FeeRate?): Txid {
+    /**
+     * Send an on-chain payment to the given address, draining the available funds.
+     *
+     * This is useful if you have closed all channels and want to migrate funds to another
+     * on-chain wallet.
+     *
+     * Please note that if `retain_reserves` is set to `false` this will **not** retain any on-chain reserves, which might be potentially
+     * dangerous if you have open Anchor channels for which you can't trust the counterparty to
+     * spend the Anchor output after channel closure. If `retain_reserves` is set to `true`, this
+     * will try to send all spendable onchain funds, i.e.,
+     * [`BalanceDetails::spendable_onchain_balance_sats`].
+     *
+     * If `fee_rate` is set it will be used on the resulting transaction. Otherwise a reasonable
+     * we'll retrieve an estimate from the configured chain source.
+     *
+     * [`BalanceDetails::spendable_onchain_balance_sats`]: crate::balance::BalanceDetails::spendable_onchain_balance_sats
+     */
+    @Throws(NodeException::class)override fun `sendAllToAddress`(`address`: Address, `retainReserves`: kotlin.Boolean, `feeRate`: FeeRate?): Txid {
             return FfiConverterTypeTxid.lift(
     callWithPointer {
     uniffiRustCallWithError(NodeException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address(
-        it, FfiConverterTypeAddress.lower(`address`),FfiConverterBoolean.lower(`retainReserve`),FfiConverterOptionalTypeFeeRate.lower(`feeRate`),_status)
+        it, FfiConverterTypeAddress.lower(`address`),FfiConverterBoolean.lower(`retainReserves`),FfiConverterOptionalTypeFeeRate.lower(`feeRate`),_status)
 }
     }
     )
@@ -8711,6 +10359,17 @@ open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
     
 
     
+    /**
+     * Send an on-chain payment to the given address.
+     *
+     * This will respect any on-chain reserve we need to keep, i.e., won't allow to cut into
+     * [`BalanceDetails::total_anchor_channels_reserve_sats`].
+     *
+     * If `fee_rate` is set it will be used on the resulting transaction. Otherwise we'll retrieve
+     * a reasonable estimate from the configured chain source.
+     *
+     * [`BalanceDetails::total_anchor_channels_reserve_sats`]: crate::BalanceDetails::total_anchor_channels_reserve_sats
+     */
     @Throws(NodeException::class)override fun `sendToAddress`(`address`: Address, `amountSats`: kotlin.ULong, `feeRate`: FeeRate?): Txid {
             return FfiConverterTypeTxid.lift(
     callWithPointer {
@@ -8858,32 +10517,98 @@ public object FfiConverterTypeOnchainPayment: FfiConverter<OnchainPayment, Point
 //
 
 
+/**
+ * A `Refund` is a request to send an [`Bolt12Invoice`] without a preceding [`Offer`].
+ *
+ * Typically, after an invoice is paid, the recipient may publish a refund allowing the sender to
+ * recoup their funds. A refund may be used more generally as an "offer for money", such as with a
+ * bitcoin ATM.
+ *
+ * [`Bolt12Invoice`]: lightning::offers::invoice::Bolt12Invoice
+ * [`Offer`]: lightning::offers::offer::Offer
+ */
 public interface RefundInterface {
     
+    /**
+     * Seconds since the Unix epoch when an invoice should no longer be sent.
+     *
+     * If `None`, the refund does not expire.
+     */
     fun `absoluteExpirySeconds`(): kotlin.ULong?
     
+    /**
+     * The amount to refund in msats (i.e., the minimum lightning-payable unit for [`chain`]).
+     *
+     * [`chain`]: Self::chain
+     */
     fun `amountMsats`(): kotlin.ULong
     
+    /**
+     * A chain that the refund is valid for.
+     */
     fun `chain`(): Network?
     
+    /**
+     * Whether the refund has expired.
+     */
     fun `isExpired`(): kotlin.Boolean
     
+    /**
+     * The issuer of the refund, possibly beginning with `user@domain` or `domain`.
+     *
+     * Intended to be displayed to the user but with the caveat that it has not been verified in any way.
+     */
     fun `issuer`(): kotlin.String?
     
-    fun `payerMetadata`(): List<kotlin.UByte>
+    /**
+     * An unpredictable series of bytes, typically containing information about the derivation of
+     * [`payer_signing_pubkey`].
+     *
+     * [`payer_signing_pubkey`]: Self::payer_signing_pubkey
+     */
+    fun `payerMetadata`(): kotlin.ByteArray
     
+    /**
+     * Payer provided note to include in the invoice.
+     */
     fun `payerNote`(): kotlin.String?
     
+    /**
+     * A public node id to send to in the case where there are no [`paths`].
+     *
+     * Otherwise, a possibly transient pubkey.
+     *
+     * [`paths`]: lightning::offers::refund::Refund::paths
+     */
     fun `payerSigningPubkey`(): PublicKey
     
+    /**
+     * The quantity of an item that refund is for.
+     */
     fun `quantity`(): kotlin.ULong?
     
+    /**
+     * A complete description of the purpose of the refund.
+     *
+     * Intended to be displayed to the user but with the caveat that it has not been verified in any way.
+     */
     fun `refundDescription`(): kotlin.String
     
     companion object
 }
 
-open class Refund: Disposable, AutoCloseable, RefundInterface {
+/**
+ * A `Refund` is a request to send an [`Bolt12Invoice`] without a preceding [`Offer`].
+ *
+ * Typically, after an invoice is paid, the recipient may publish a refund allowing the sender to
+ * recoup their funds. A refund may be used more generally as an "offer for money", such as with a
+ * bitcoin ATM.
+ *
+ * [`Bolt12Invoice`]: lightning::offers::invoice::Bolt12Invoice
+ * [`Offer`]: lightning::offers::offer::Offer
+ */
+open class Refund: Disposable, AutoCloseable, RefundInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -8964,7 +10689,12 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
         }
     }
 
-    override fun `absoluteExpirySeconds`(): kotlin.ULong? {
+    
+    /**
+     * Seconds since the Unix epoch when an invoice should no longer be sent.
+     *
+     * If `None`, the refund does not expire.
+     */override fun `absoluteExpirySeconds`(): kotlin.ULong? {
             return FfiConverterOptionalULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8976,7 +10706,12 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `amountMsats`(): kotlin.ULong {
+    
+    /**
+     * The amount to refund in msats (i.e., the minimum lightning-payable unit for [`chain`]).
+     *
+     * [`chain`]: Self::chain
+     */override fun `amountMsats`(): kotlin.ULong {
             return FfiConverterULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -8988,7 +10723,10 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `chain`(): Network? {
+    
+    /**
+     * A chain that the refund is valid for.
+     */override fun `chain`(): Network? {
             return FfiConverterOptionalTypeNetwork.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -9000,7 +10738,10 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `isExpired`(): kotlin.Boolean {
+    
+    /**
+     * Whether the refund has expired.
+     */override fun `isExpired`(): kotlin.Boolean {
             return FfiConverterBoolean.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -9012,7 +10753,12 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `issuer`(): kotlin.String? {
+    
+    /**
+     * The issuer of the refund, possibly beginning with `user@domain` or `domain`.
+     *
+     * Intended to be displayed to the user but with the caveat that it has not been verified in any way.
+     */override fun `issuer`(): kotlin.String? {
             return FfiConverterOptionalString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -9024,8 +10770,14 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `payerMetadata`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
+    
+    /**
+     * An unpredictable series of bytes, typically containing information about the derivation of
+     * [`payer_signing_pubkey`].
+     *
+     * [`payer_signing_pubkey`]: Self::payer_signing_pubkey
+     */override fun `payerMetadata`(): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_payer_metadata(
@@ -9036,7 +10788,10 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `payerNote`(): kotlin.String? {
+    
+    /**
+     * Payer provided note to include in the invoice.
+     */override fun `payerNote`(): kotlin.String? {
             return FfiConverterOptionalString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -9048,7 +10803,14 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `payerSigningPubkey`(): PublicKey {
+    
+    /**
+     * A public node id to send to in the case where there are no [`paths`].
+     *
+     * Otherwise, a possibly transient pubkey.
+     *
+     * [`paths`]: lightning::offers::refund::Refund::paths
+     */override fun `payerSigningPubkey`(): PublicKey {
             return FfiConverterTypePublicKey.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -9060,7 +10822,10 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `quantity`(): kotlin.ULong? {
+    
+    /**
+     * The quantity of an item that refund is for.
+     */override fun `quantity`(): kotlin.ULong? {
             return FfiConverterOptionalULong.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -9072,7 +10837,12 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
     }
     
 
-    override fun `refundDescription`(): kotlin.String {
+    
+    /**
+     * A complete description of the purpose of the refund.
+     *
+     * Intended to be displayed to the user but with the caveat that it has not been verified in any way.
+     */override fun `refundDescription`(): kotlin.String {
             return FfiConverterString.lift(
     callWithPointer {
     uniffiRustCall() { _status ->
@@ -9256,22 +11026,60 @@ public object FfiConverterTypeRefund: FfiConverter<Refund, Pointer> {
 //
 
 
+/**
+ * A payment handler allowing to send spontaneous ("keysend") payments.
+ *
+ * Should be retrieved by calling [`Node::spontaneous_payment`].
+ *
+ * [`Node::spontaneous_payment`]: crate::Node::spontaneous_payment
+ */
 public interface SpontaneousPaymentInterface {
     
+    /**
+     * Send a spontaneous aka. "keysend", payment.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     fun `send`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `routeParameters`: RouteParametersConfig?): PaymentId
     
+    /**
+     * Sends payment probes over all paths of a route that would be used to pay the given
+     * amount to the given `node_id`.
+     *
+     * See [`Bolt11Payment::send_probes`] for more information.
+     *
+     * [`Bolt11Payment::send_probes`]: crate::payment::Bolt11Payment
+     */
     fun `sendProbes`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey)
     
+    /**
+     * Send a spontaneous payment including a list of custom TLVs.
+     */
     fun `sendWithCustomTlvs`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `routeParameters`: RouteParametersConfig?, `customTlvs`: List<CustomTlvRecord>): PaymentId
     
+    /**
+     * Send a spontaneous payment with custom preimage
+     */
     fun `sendWithPreimage`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `preimage`: PaymentPreimage, `routeParameters`: RouteParametersConfig?): PaymentId
     
+    /**
+     * Send a spontaneous payment with custom preimage including a list of custom TLVs.
+     */
     fun `sendWithPreimageAndCustomTlvs`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `customTlvs`: List<CustomTlvRecord>, `preimage`: PaymentPreimage, `routeParameters`: RouteParametersConfig?): PaymentId
     
     companion object
 }
 
-open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInterface {
+/**
+ * A payment handler allowing to send spontaneous ("keysend") payments.
+ *
+ * Should be retrieved by calling [`Node::spontaneous_payment`].
+ *
+ * [`Node::spontaneous_payment`]: crate::Node::spontaneous_payment
+ */
+open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -9353,6 +11161,12 @@ open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInte
     }
 
     
+    /**
+     * Send a spontaneous aka. "keysend", payment.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     */
     @Throws(NodeException::class)override fun `send`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `routeParameters`: RouteParametersConfig?): PaymentId {
             return FfiConverterTypePaymentId.lift(
     callWithPointer {
@@ -9366,6 +11180,14 @@ open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInte
     
 
     
+    /**
+     * Sends payment probes over all paths of a route that would be used to pay the given
+     * amount to the given `node_id`.
+     *
+     * See [`Bolt11Payment::send_probes`] for more information.
+     *
+     * [`Bolt11Payment::send_probes`]: crate::payment::Bolt11Payment
+     */
     @Throws(NodeException::class)override fun `sendProbes`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey)
         = 
     callWithPointer {
@@ -9378,6 +11200,9 @@ open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInte
     
 
     
+    /**
+     * Send a spontaneous payment including a list of custom TLVs.
+     */
     @Throws(NodeException::class)override fun `sendWithCustomTlvs`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `routeParameters`: RouteParametersConfig?, `customTlvs`: List<CustomTlvRecord>): PaymentId {
             return FfiConverterTypePaymentId.lift(
     callWithPointer {
@@ -9391,6 +11216,9 @@ open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInte
     
 
     
+    /**
+     * Send a spontaneous payment with custom preimage
+     */
     @Throws(NodeException::class)override fun `sendWithPreimage`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `preimage`: PaymentPreimage, `routeParameters`: RouteParametersConfig?): PaymentId {
             return FfiConverterTypePaymentId.lift(
     callWithPointer {
@@ -9404,6 +11232,9 @@ open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInte
     
 
     
+    /**
+     * Send a spontaneous payment with custom preimage including a list of custom TLVs.
+     */
     @Throws(NodeException::class)override fun `sendWithPreimageAndCustomTlvs`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `customTlvs`: List<CustomTlvRecord>, `preimage`: PaymentPreimage, `routeParameters`: RouteParametersConfig?): PaymentId {
             return FfiConverterTypePaymentId.lift(
     callWithPointer {
@@ -9551,16 +11382,343 @@ public object FfiConverterTypeSpontaneousPayment: FfiConverter<SpontaneousPaymen
 //
 
 
+/**
+ * A static invoice used for async payments.
+ *
+ * Static invoices are a special type of BOLT12 invoice where proof of payment is not possible,
+ * as the payment hash is not derived from a preimage known only to the recipient.
+ */
+public interface StaticInvoiceInterface {
+    
+    /**
+     * The amount for a successful payment of the invoice, if specified.
+     */
+    fun `amount`(): OfferAmount?
+    
+    companion object
+}
+
+/**
+ * A static invoice used for async payments.
+ *
+ * Static invoices are a special type of BOLT12 invoice where proof of payment is not possible,
+ * as the payment hash is not derived from a preimage known only to the recipient.
+ */
+open class StaticInvoice: Disposable, AutoCloseable, StaticInvoiceInterface
+{
+
+    constructor(pointer: Pointer) {
+        this.pointer = pointer
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    /**
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noPointer: NoPointer) {
+        this.pointer = null
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    protected val pointer: Pointer?
+    protected val cleanable: UniffiCleaner.Cleanable
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the pointer being freed concurrently.
+        try {
+            return block(this.uniffiClonePointer())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+        override fun run() {
+            pointer?.let { ptr ->
+                uniffiRustCall { status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_free_staticinvoice(ptr, status)
+                }
+            }
+        }
+    }
+
+    fun uniffiClonePointer(): Pointer {
+        return uniffiRustCall() { status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_staticinvoice(pointer!!, status)
+        }
+    }
+
+    
+    /**
+     * The amount for a successful payment of the invoice, if specified.
+     */override fun `amount`(): OfferAmount? {
+            return FfiConverterOptionalTypeOfferAmount.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_staticinvoice_amount(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+    
+    companion object
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeStaticInvoice: FfiConverter<StaticInvoice, Pointer> {
+
+    override fun lower(value: StaticInvoice): Pointer {
+        return value.uniffiClonePointer()
+    }
+
+    override fun lift(value: Pointer): StaticInvoice {
+        return StaticInvoice(value)
+    }
+
+    override fun read(buf: ByteBuffer): StaticInvoice {
+        // The Rust code always writes pointers as 8 bytes, and will
+        // fail to compile if they don't fit.
+        return lift(Pointer(buf.getLong()))
+    }
+
+    override fun allocationSize(value: StaticInvoice) = 8UL
+
+    override fun write(value: StaticInvoice, buf: ByteBuffer) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(lower(value)))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a Pointer/Arc<T>
+// to the live Rust struct on the other side of the FFI.
+//
+// Each instance implements core operations for working with the Rust `Arc<T>` and the
+// Kotlin Pointer to work with the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque pointer to the underlying Rust struct.
+//     Method calls need to read this pointer from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its pointer should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the pointer, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the pointer, but is interrupted
+//      before it can pass the pointer over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read pointer value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * A payment handler that supports creating and paying to [BIP 21] URIs with on-chain, [BOLT 11],
+ * and [BOLT 12] payment options.
+ *
+ * Also supports sending payments to [BIP 353] Human-Readable Names.
+ *
+ * Should be retrieved by calling [`Node::unified_payment`]
+ *
+ * [BIP 21]: https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki
+ * [BIP 353]: https://github.com/bitcoin/bips/blob/master/bip-0353.mediawiki
+ * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+ * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+ * [`Node::unified_payment`]: crate::Node::unified_payment
+ */
 public interface UnifiedPaymentInterface {
     
-    fun `receive`(`amountSats`: kotlin.ULong, `message`: kotlin.String, `expirySec`: kotlin.UInt): kotlin.String
+    /**
+     * Generates a URI with an on-chain address, [BOLT 11] invoice and [BOLT 12] offer.
+     *
+     * The URI allows users to send the payment request allowing the wallet to decide
+     * which payment method to use. This enables a fallback mechanism: older wallets
+     * can always pay using the provided on-chain address, while newer wallets will
+     * typically opt to use the provided BOLT11 invoice or BOLT12 offer.
+     *
+     * The URI will always include an on-chain address. A BOLT11 invoice will be included
+     * unless invoice generation fails, while a BOLT12 offer will only be included when
+     * the node has suitable channels for routing.
+     *
+     * # Parameters
+     * - `amount_sats`: The amount to be received, specified in satoshis.
+     * - `description`: A description or note associated with the payment.
+     * This message is visible to the payer and can provide context or details about the payment.
+     * - `expiry_sec`: The expiration time for the payment, specified in seconds.
+     *
+     * Returns a payable URI that can be used to request and receive a payment of the amount
+     * given. Failure to generate the on-chain address will result in an error return
+     * (`Error::WalletOperationFailed`), while failures in invoice or offer generation will
+     * result in those components being omitted from the URI.
+     *
+     * The generated URI can then be given to a QR code library.
+     *
+     * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+     * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+     */
+    fun `receive`(`amountSats`: kotlin.ULong, `description`: kotlin.String, `expirySec`: kotlin.UInt): kotlin.String
     
+    /**
+     * Sends a payment given a [BIP 21] URI or [BIP 353] Human-Readable Name.
+     *
+     * This method parses the provided URI string and attempts to send the payment. If the URI
+     * has an offer and or invoice, it will try to pay the offer first followed by the invoice.
+     * If they both fail, the on-chain payment will be paid.
+     *
+     * Returns a [`UnifiedPaymentResult`] indicating the outcome of the payment. If an error
+     * occurs, an `Error` is returned detailing the issue encountered.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     *
+     * [BIP 21]: https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki
+     * [BIP 353]: https://github.com/bitcoin/bips/blob/master/bip-0353.mediawiki
+     */
     suspend fun `send`(`uriStr`: kotlin.String, `amountMsat`: kotlin.ULong?, `routeParameters`: RouteParametersConfig?): UnifiedPaymentResult
     
     companion object
 }
 
-open class UnifiedPayment: Disposable, AutoCloseable, UnifiedPaymentInterface {
+/**
+ * A payment handler that supports creating and paying to [BIP 21] URIs with on-chain, [BOLT 11],
+ * and [BOLT 12] payment options.
+ *
+ * Also supports sending payments to [BIP 353] Human-Readable Names.
+ *
+ * Should be retrieved by calling [`Node::unified_payment`]
+ *
+ * [BIP 21]: https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki
+ * [BIP 353]: https://github.com/bitcoin/bips/blob/master/bip-0353.mediawiki
+ * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+ * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+ * [`Node::unified_payment`]: crate::Node::unified_payment
+ */
+open class UnifiedPayment: Disposable, AutoCloseable, UnifiedPaymentInterface
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -9642,12 +11800,40 @@ open class UnifiedPayment: Disposable, AutoCloseable, UnifiedPaymentInterface {
     }
 
     
-    @Throws(NodeException::class)override fun `receive`(`amountSats`: kotlin.ULong, `message`: kotlin.String, `expirySec`: kotlin.UInt): kotlin.String {
+    /**
+     * Generates a URI with an on-chain address, [BOLT 11] invoice and [BOLT 12] offer.
+     *
+     * The URI allows users to send the payment request allowing the wallet to decide
+     * which payment method to use. This enables a fallback mechanism: older wallets
+     * can always pay using the provided on-chain address, while newer wallets will
+     * typically opt to use the provided BOLT11 invoice or BOLT12 offer.
+     *
+     * The URI will always include an on-chain address. A BOLT11 invoice will be included
+     * unless invoice generation fails, while a BOLT12 offer will only be included when
+     * the node has suitable channels for routing.
+     *
+     * # Parameters
+     * - `amount_sats`: The amount to be received, specified in satoshis.
+     * - `description`: A description or note associated with the payment.
+     * This message is visible to the payer and can provide context or details about the payment.
+     * - `expiry_sec`: The expiration time for the payment, specified in seconds.
+     *
+     * Returns a payable URI that can be used to request and receive a payment of the amount
+     * given. Failure to generate the on-chain address will result in an error return
+     * (`Error::WalletOperationFailed`), while failures in invoice or offer generation will
+     * result in those components being omitted from the URI.
+     *
+     * The generated URI can then be given to a QR code library.
+     *
+     * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+     * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+     */
+    @Throws(NodeException::class)override fun `receive`(`amountSats`: kotlin.ULong, `description`: kotlin.String, `expirySec`: kotlin.UInt): kotlin.String {
             return FfiConverterString.lift(
     callWithPointer {
     uniffiRustCallWithError(NodeException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_unifiedpayment_receive(
-        it, FfiConverterULong.lower(`amountSats`),FfiConverterString.lower(`message`),FfiConverterUInt.lower(`expirySec`),_status)
+        it, FfiConverterULong.lower(`amountSats`),FfiConverterString.lower(`description`),FfiConverterUInt.lower(`expirySec`),_status)
 }
     }
     )
@@ -9655,6 +11841,22 @@ open class UnifiedPayment: Disposable, AutoCloseable, UnifiedPaymentInterface {
     
 
     
+    /**
+     * Sends a payment given a [BIP 21] URI or [BIP 353] Human-Readable Name.
+     *
+     * This method parses the provided URI string and attempts to send the payment. If the URI
+     * has an offer and or invoice, it will try to pay the offer first followed by the invoice.
+     * If they both fail, the on-chain payment will be paid.
+     *
+     * Returns a [`UnifiedPaymentResult`] indicating the outcome of the payment. If an error
+     * occurs, an `Error` is returned detailing the issue encountered.
+     *
+     * If `route_parameters` are provided they will override the default as well as the
+     * node-wide parameters configured via [`Config::route_parameters`] on a per-field basis.
+     *
+     * [BIP 21]: https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki
+     * [BIP 353]: https://github.com/bitcoin/bips/blob/master/bip-0353.mediawiki
+     */
     @Throws(NodeException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `send`(`uriStr`: kotlin.String, `amountMsat`: kotlin.ULong?, `routeParameters`: RouteParametersConfig?) : UnifiedPaymentResult {
@@ -9810,14 +12012,15 @@ public object FfiConverterTypeUnifiedPayment: FfiConverter<UnifiedPayment, Point
 //
 
 
-public interface VssHeaderProviderInterface {
+public interface VssHeaderProvider {
     
     suspend fun `getHeaders`(`request`: List<kotlin.UByte>): Map<kotlin.String, kotlin.String>
     
     companion object
 }
 
-open class VssHeaderProvider: Disposable, AutoCloseable, VssHeaderProviderInterface {
+open class VssHeaderProviderImpl: Disposable, AutoCloseable, VssHeaderProvider
+{
 
     constructor(pointer: Pointer) {
         this.pointer = pointer
@@ -9927,17 +12130,76 @@ open class VssHeaderProvider: Disposable, AutoCloseable, VssHeaderProviderInterf
     
 }
 
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceVssHeaderProvider {
+    internal object `getHeaders`: UniffiCallbackInterfaceVssHeaderProviderMethod0 {
+        override fun callback(`uniffiHandle`: Long,`request`: RustBuffer.ByValue,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutReturn`: UniffiForeignFuture,) {
+            val uniffiObj = FfiConverterTypeVssHeaderProvider.handleMap.get(uniffiHandle)
+            val makeCall = suspend { ->
+                uniffiObj.`getHeaders`(
+                    FfiConverterSequenceUByte.lift(`request`),
+                )
+            }
+            val uniffiHandleSuccess = { returnValue: Map<kotlin.String, kotlin.String> ->
+                val uniffiResult = UniffiForeignFutureStructRustBuffer.UniffiByValue(
+                    FfiConverterMapStringString.lower(returnValue),
+                    UniffiRustCallStatus.ByValue()
+                )
+                uniffiResult.write()
+                uniffiFutureCallback.callback(uniffiCallbackData, uniffiResult)
+            }
+            val uniffiHandleError = { callStatus: UniffiRustCallStatus.ByValue ->
+                uniffiFutureCallback.callback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureStructRustBuffer.UniffiByValue(
+                        RustBuffer.ByValue(),
+                        callStatus,
+                    ),
+                )
+            }
+
+            uniffiOutReturn.uniffiSetValue(
+                uniffiTraitInterfaceCallAsyncWithError(
+                    makeCall,
+                    uniffiHandleSuccess,
+                    uniffiHandleError,
+                    { e: VssHeaderProviderException -> FfiConverterTypeVssHeaderProviderError.lower(e) }
+                )
+            )
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeVssHeaderProvider.handleMap.remove(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceVssHeaderProvider.UniffiByValue(
+        `getHeaders`,
+        uniffiFree,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_ldk_node_fn_init_callback_vtable_vssheaderprovider(vtable)
+    }
+}
+
 /**
  * @suppress
  */
 public object FfiConverterTypeVssHeaderProvider: FfiConverter<VssHeaderProvider, Pointer> {
+    internal val handleMap = UniffiHandleMap<VssHeaderProvider>()
 
     override fun lower(value: VssHeaderProvider): Pointer {
-        return value.uniffiClonePointer()
+        return Pointer(handleMap.insert(value))
     }
 
     override fun lift(value: Pointer): VssHeaderProvider {
-        return VssHeaderProvider(value)
+        return VssHeaderProviderImpl(value)
     }
 
     override fun read(buf: ByteBuffer): VssHeaderProvider {
@@ -9957,8 +12219,68 @@ public object FfiConverterTypeVssHeaderProvider: FfiConverter<VssHeaderProvider,
 
 
 
+/**
+ * Configuration options pertaining to 'Anchor' channels, i.e., channels for which the
+ * `option_anchors_zero_fee_htlc_tx` channel type is negotiated.
+ *
+ * Prior to the introduction of Anchor channels, the on-chain fees paying for the transactions
+ * issued on channel closure were pre-determined and locked-in at the time of the channel
+ * opening. This required to estimate what fee rate would be sufficient to still have the
+ * closing transactions be spendable on-chain (i.e., not be considered dust). This legacy
+ * design of pre-anchor channels proved inadequate in the unpredictable, often turbulent, fee
+ * markets we experience today.
+ *
+ * In contrast, Anchor channels allow to determine an adequate fee rate *at the time of channel
+ * closure*, making them much more robust in the face of fee spikes. In turn, they require to
+ * maintain a reserve of on-chain funds to have the channel closure transactions confirmed
+ * on-chain, at least if the channel counterparty can't be trusted to do this for us.
+ *
+ * See [BOLT 3] for more technical details on Anchor channels.
+ *
+ *
+ * ### Defaults
+ *
+ * | Parameter                  | Value  |
+ * |----------------------------|--------|
+ * | `trusted_peers_no_reserve` | []     |
+ * | `per_channel_reserve_sats` | 25000  |
+ *
+ *
+ * [BOLT 3]: https://github.com/lightning/bolts/blob/master/03-transactions.md#htlc-timeout-and-htlc-success-transactions
+ */
 data class AnchorChannelsConfig (
+    /**
+     * A list of peers that we trust to get the required channel closing transactions confirmed
+     * on-chain.
+     *
+     * Channels with these peers won't count towards the retained on-chain reserve and we won't
+     * take any action to get the required channel closing transactions confirmed ourselves.
+     *
+     * **Note:** Trusting the channel counterparty to take the necessary actions to get the
+     * required Anchor spending transactions confirmed on-chain is potentially insecure
+     * as the channel may not be closed if they refuse to do so.
+     */
     var `trustedPeersNoReserve`: List<PublicKey>, 
+    /**
+     * The amount of satoshis per anchors-negotiated channel with an untrusted peer that we keep
+     * as an emergency reserve in our on-chain wallet.
+     *
+     * This allows for having the required Anchor output spending and HTLC transactions confirmed
+     * when the channel is closed.
+     *
+     * If the channel peer is not marked as trusted via
+     * [`AnchorChannelsConfig::trusted_peers_no_reserve`], we will always try to spend the Anchor
+     * outputs with *any* on-chain funds available, i.e., the total reserve value as well as any
+     * spendable funds available in the on-chain wallet. Therefore, this per-channel multiplier is
+     * really a emergency reserve that we maintain at all time to reduce reduce the risk of
+     * insufficient funds at time of a channel closure. To this end, we will refuse to open
+     * outbound or accept inbound channels if we don't have sufficient on-chain funds available to
+     * cover the additional reserve requirement.
+     *
+     * **Note:** Depending on the fee market at the time of closure, this reserve amount might or
+     * might not suffice to successfully spend the Anchor output and have the HTLC transactions
+     * confirmed on-chain, i.e., you may want to adjust this value accordingly.
+     */
     var `perChannelReserveSats`: kotlin.ULong
 ) {
     
@@ -9989,9 +12311,35 @@ public object FfiConverterTypeAnchorChannelsConfig: FfiConverterRustBuffer<Ancho
 
 
 
+/**
+ * Options related to background syncing the Lightning and on-chain wallets.
+ *
+ * ### Defaults
+ *
+ * | Parameter                              | Value              |
+ * |----------------------------------------|--------------------|
+ * | `onchain_wallet_sync_interval_secs`    | 80                 |
+ * | `lightning_wallet_sync_interval_secs`  | 30                 |
+ * | `fee_rate_cache_update_interval_secs`  | 600                |
+ */
 data class BackgroundSyncConfig (
+    /**
+     * The time in-between background sync attempts of the onchain wallet, in seconds.
+     *
+     * **Note:** A minimum of 10 seconds is enforced when background syncing is enabled.
+     */
     var `onchainWalletSyncIntervalSecs`: kotlin.ULong, 
+    /**
+     * The time in-between background sync attempts of the LDK wallet, in seconds.
+     *
+     * **Note:** A minimum of 10 seconds is enforced when background syncing is enabled.
+     */
     var `lightningWalletSyncIntervalSecs`: kotlin.ULong, 
+    /**
+     * The time in-between background update attempts to our fee rate cache, in seconds.
+     *
+     * **Note:** A minimum of 10 seconds is enforced when background syncing is enabled.
+     */
     var `feeRateCacheUpdateIntervalSecs`: kotlin.ULong
 ) {
     
@@ -10025,12 +12373,68 @@ public object FfiConverterTypeBackgroundSyncConfig: FfiConverterRustBuffer<Backg
 
 
 
+/**
+ * Details of the known available balances returned by [`Node::list_balances`].
+ *
+ * [`Node::list_balances`]: crate::Node::list_balances
+ */
 data class BalanceDetails (
+    /**
+     * The total balance of our on-chain wallet.
+     */
     var `totalOnchainBalanceSats`: kotlin.ULong, 
+    /**
+     * The currently spendable balance of our on-chain wallet.
+     *
+     * This includes any sufficiently confirmed funds, minus
+     * [`total_anchor_channels_reserve_sats`].
+     *
+     * [`total_anchor_channels_reserve_sats`]: Self::total_anchor_channels_reserve_sats
+     */
     var `spendableOnchainBalanceSats`: kotlin.ULong, 
+    /**
+     * The share of our total balance that we retain as an emergency reserve to (hopefully) be
+     * able to spend the Anchor outputs when one of our channels is closed.
+     */
     var `totalAnchorChannelsReserveSats`: kotlin.ULong, 
+    /**
+     * The total balance that we would be able to claim across all our Lightning channels.
+     *
+     * Note this excludes balances that we are unsure if we are able to claim (e.g., as we are
+     * waiting for a preimage or for a timeout to expire). These balances will however be included
+     * as [`MaybePreimageClaimableHTLC`] and
+     * [`MaybeTimeoutClaimableHTLC`] in [`lightning_balances`].
+     *
+     * [`MaybePreimageClaimableHTLC`]: LightningBalance::MaybePreimageClaimableHTLC
+     * [`MaybeTimeoutClaimableHTLC`]: LightningBalance::MaybeTimeoutClaimableHTLC
+     * [`lightning_balances`]: Self::lightning_balances
+     */
     var `totalLightningBalanceSats`: kotlin.ULong, 
+    /**
+     * A detailed list of all known Lightning balances that would be claimable on channel closure.
+     *
+     * Note that less than the listed amounts are spendable over lightning as further reserve
+     * restrictions apply. Please refer to [`ChannelDetails::outbound_capacity_msat`] and
+     * [`ChannelDetails::next_outbound_htlc_limit_msat`] as returned by [`Node::list_channels`]
+     * for a better approximation of the spendable amounts.
+     *
+     * [`ChannelDetails::outbound_capacity_msat`]: crate::ChannelDetails::outbound_capacity_msat
+     * [`ChannelDetails::next_outbound_htlc_limit_msat`]: crate::ChannelDetails::next_outbound_htlc_limit_msat
+     * [`Node::list_channels`]: crate::Node::list_channels
+     */
     var `lightningBalances`: List<LightningBalance>, 
+    /**
+     * A detailed list of balances currently being swept from the Lightning to the on-chain
+     * wallet.
+     *
+     * These are balances resulting from channel closures that may have been encumbered by a
+     * delay, but are now being claimed and useable once sufficiently confirmed on-chain.
+     *
+     * Note that, depending on the sync status of the wallets, swept balances listed here might or
+     * might not already be accounted for in [`total_onchain_balance_sats`].
+     *
+     * [`total_onchain_balance_sats`]: Self::total_onchain_balance_sats
+     */
     var `pendingBalancesFromChannelClosures`: List<PendingSweepBalance>
 ) {
     
@@ -10105,12 +12509,57 @@ public object FfiConverterTypeBestBlock: FfiConverterRustBuffer<BestBlock> {
 
 
 
+/**
+ * Options which apply on a per-channel basis and may change at runtime or based on negotiation
+ * with our counterparty.
+ */
 data class ChannelConfig (
+    /**
+     * Amount (in millionths of a satoshi) charged per satoshi for payments forwarded outbound
+     * over the channel.
+     * This may be allowed to change at runtime in a later update, however doing so must result in
+     * update messages sent to notify all nodes of our updated relay fee.
+     *
+     * Please refer to [`LdkChannelConfig`] for further details.
+     */
     var `forwardingFeeProportionalMillionths`: kotlin.UInt, 
+    /**
+     * Amount (in milli-satoshi) charged for payments forwarded outbound over the channel, in
+     * excess of [`ChannelConfig::forwarding_fee_proportional_millionths`].
+     * This may be allowed to change at runtime in a later update, however doing so must result in
+     * update messages sent to notify all nodes of our updated relay fee.
+     *
+     * Please refer to [`LdkChannelConfig`] for further details.
+     */
     var `forwardingFeeBaseMsat`: kotlin.UInt, 
+    /**
+     * The difference in the CLTV value between incoming HTLCs and an outbound HTLC forwarded over
+     * the channel this config applies to.
+     *
+     * Please refer to [`LdkChannelConfig`] for further details.
+     */
     var `cltvExpiryDelta`: kotlin.UShort, 
+    /**
+     * Limit our total exposure to potential loss to on-chain fees on close, including in-flight
+     * HTLCs which are burned to fees as they are too small to claim on-chain and fees on
+     * commitment transaction(s) broadcasted by our counterparty in excess of our own fee estimate.
+     *
+     * Please refer to [`LdkChannelConfig`] for further details.
+     */
     var `maxDustHtlcExposure`: MaxDustHtlcExposure, 
+    /**
+     * The additional fee we're willing to pay to avoid waiting for the counterparty's
+     * `to_self_delay` to reclaim funds.
+     *
+     * Please refer to [`LdkChannelConfig`] for further details.
+     */
     var `forceCloseAvoidanceMaxFeeSatoshis`: kotlin.ULong, 
+    /**
+     * If set, allows this channel's counterparty to skim an additional fee off this node's inbound
+     * HTLCs. Useful for liquidity providers to offload on-chain channel costs to end users.
+     *
+     * Please refer to [`LdkChannelConfig`] for further details.
+     */
     var `acceptUnderpayingHtlcs`: kotlin.Boolean
 ) {
     
@@ -10153,38 +12602,251 @@ public object FfiConverterTypeChannelConfig: FfiConverterRustBuffer<ChannelConfi
 
 
 
+/**
+ * Details of a channel as returned by [`Node::list_channels`].
+ *
+ * When a channel is spliced, most fields continue to refer to the original pre-splice channel
+ * state until the splice transaction reaches sufficient confirmations to be locked (and we
+ * exchange `splice_locked` messages with our peer). See individual fields for details.
+ *
+ * [`Node::list_channels`]: crate::Node::list_channels
+ */
 data class ChannelDetails (
+    /**
+     * The channel's ID (prior to initial channel setup this is a random 32 bytes, thereafter it
+     * is derived from channel funding or key material).
+     *
+     * Note that this means this value is *not* persistent - it can change once during the
+     * lifetime of the channel.
+     */
     var `channelId`: ChannelId, 
+    /**
+     * The node ID of our the channel's counterparty.
+     */
     var `counterpartyNodeId`: PublicKey, 
+    /**
+     * The channel's funding transaction output, if we've negotiated the funding transaction with
+     * our counterparty already.
+     *
+     * When a channel is spliced, this continues to refer to the original pre-splice channel
+     * state until the splice transaction reaches sufficient confirmations to be locked (and we
+     * exchange `splice_locked` messages with our peer).
+     */
     var `fundingTxo`: OutPoint?, 
+    /**
+     * The witness script that is used to lock the channel's funding output to commitment transactions.
+     *
+     * This field will be `None` if we have not negotiated the funding transaction with our
+     * counterparty already.
+     *
+     * When a channel is spliced, this continues to refer to the original pre-splice channel
+     * state until the splice transaction reaches sufficient confirmations to be locked (and we
+     * exchange `splice_locked` messages with our peer).
+     */
     var `fundingRedeemScript`: ScriptBuf?, 
+    /**
+     * The position of the funding transaction in the chain. None if the funding transaction has
+     * not yet been confirmed and the channel fully opened.
+     *
+     * Note that if [`inbound_scid_alias`] is set, it will be used for invoices and inbound
+     * payments instead of this.
+     *
+     * For channels with [`confirmations_required`] set to `Some(0)`, [`outbound_scid_alias`] may
+     * be used in place of this in outbound routes.
+     *
+     * When a channel is spliced, this continues to refer to the original pre-splice channel state
+     * until the splice transaction reaches sufficient confirmations to be locked (and we exchange
+     * `splice_locked` messages with our peer).
+     *
+     * [`inbound_scid_alias`]: Self::inbound_scid_alias
+     * [`outbound_scid_alias`]: Self::outbound_scid_alias
+     * [`confirmations_required`]: Self::confirmations_required
+     */
     var `shortChannelId`: kotlin.ULong?, 
+    /**
+     * An optional [`short_channel_id`] alias for this channel, randomly generated by us and
+     * usable in place of [`short_channel_id`] to reference the channel in outbound routes when
+     * the channel has not yet been confirmed (as long as [`confirmations_required`] is
+     * `Some(0)`).
+     *
+     * This will be `None` as long as the channel is not available for routing outbound payments.
+     *
+     * When a channel is spliced, this continues to refer to the original pre-splice channel
+     * state until the splice transaction reaches sufficient confirmations to be locked (and we
+     * exchange `splice_locked` messages with our peer).
+     *
+     * [`short_channel_id`]: Self::short_channel_id
+     * [`confirmations_required`]: Self::confirmations_required
+     */
     var `outboundScidAlias`: kotlin.ULong?, 
+    /**
+     * An optional [`short_channel_id`] alias for this channel, randomly generated by our
+     * counterparty and usable in place of [`short_channel_id`] in invoice route hints. Our
+     * counterparty will recognize the alias provided here in place of the [`short_channel_id`]
+     * when they see a payment to be routed to us.
+     *
+     * Our counterparty may choose to rotate this value at any time, though will always recognize
+     * previous values for inbound payment forwarding.
+     *
+     * [`short_channel_id`]: Self::short_channel_id
+     */
     var `inboundScidAlias`: kotlin.ULong?, 
+    /**
+     * The value, in satoshis, of this channel as it appears in the funding output.
+     *
+     * When a channel is spliced, this continues to refer to the original pre-splice channel
+     * state until the splice transaction reaches sufficient confirmations to be locked (and we
+     * exchange `splice_locked` messages with our peer).
+     */
     var `channelValueSats`: kotlin.ULong, 
+    /**
+     * The value, in satoshis, that must always be held as a reserve in the channel for us. This
+     * value ensures that if we broadcast a revoked state, our counterparty can punish us by
+     * claiming at least this value on chain.
+     *
+     * This value is not included in [`outbound_capacity_msat`] as it can never be spent.
+     *
+     * This value will be `None` for outbound channels until the counterparty accepts the channel.
+     *
+     * [`outbound_capacity_msat`]: Self::outbound_capacity_msat
+     */
     var `unspendablePunishmentReserve`: kotlin.ULong?, 
+    /**
+     * The local `user_channel_id` of this channel.
+     */
     var `userChannelId`: UserChannelId, 
+    /**
+     * The currently negotiated fee rate denominated in satoshi per 1000 weight units,
+     * which is applied to commitment and HTLC transactions.
+     */
     var `feerateSatPer1000Weight`: kotlin.UInt, 
+    /**
+     * The available outbound capacity for sending HTLCs to the remote peer.
+     *
+     * The amount does not include any pending HTLCs which are not yet resolved (and, thus, whose
+     * balance is not available for inclusion in new outbound HTLCs). This further does not include
+     * any pending outgoing HTLCs which are awaiting some other resolution to be sent.
+     */
     var `outboundCapacityMsat`: kotlin.ULong, 
+    /**
+     * The available inbound capacity for receiving HTLCs from the remote peer.
+     *
+     * The amount does not include any pending HTLCs which are not yet resolved
+     * (and, thus, whose balance is not available for inclusion in new inbound HTLCs). This further
+     * does not include any pending incoming HTLCs which are awaiting some other resolution to be
+     * sent.
+     */
     var `inboundCapacityMsat`: kotlin.ULong, 
+    /**
+     * The number of required confirmations on the funding transactions before the funding is
+     * considered "locked". The amount is selected by the channel fundee.
+     *
+     * The value will be `None` for outbound channels until the counterparty accepts the channel.
+     */
     var `confirmationsRequired`: kotlin.UInt?, 
+    /**
+     * The current number of confirmations on the funding transaction.
+     */
     var `confirmations`: kotlin.UInt?, 
+    /**
+     * Returns `true` if the channel was initiated (and therefore funded) by us.
+     */
     var `isOutbound`: kotlin.Boolean, 
+    /**
+     * Returns `true` if both parties have exchanged `channel_ready` messages, and the channel is
+     * not currently being shut down. Both parties exchange `channel_ready` messages upon
+     * independently verifying that the required confirmations count provided by
+     * `confirmations_required` has been reached.
+     */
     var `isChannelReady`: kotlin.Boolean, 
+    /**
+     * Returns `true` if the channel (a) `channel_ready` messages have been exchanged, (b) the
+     * peer is connected, and (c) the channel is not currently negotiating shutdown.
+     *
+     * This is a strict superset of `is_channel_ready`.
+     */
     var `isUsable`: kotlin.Boolean, 
+    /**
+     * Returns `true` if this channel is (or will be) publicly-announced
+     */
     var `isAnnounced`: kotlin.Boolean, 
+    /**
+     * The difference in the CLTV value between incoming HTLCs and an outbound HTLC forwarded over
+     * the channel.
+     */
     var `cltvExpiryDelta`: kotlin.UShort?, 
+    /**
+     * The value, in satoshis, that must always be held in the channel for our counterparty. This
+     * value ensures that if our counterparty broadcasts a revoked state, we can punish them by
+     * claiming at least this value on chain.
+     *
+     * This value is not included in [`inbound_capacity_msat`] as it can never be spent.
+     *
+     * [`inbound_capacity_msat`]: ChannelDetails::inbound_capacity_msat
+     */
     var `counterpartyUnspendablePunishmentReserve`: kotlin.ULong, 
+    /**
+     * The smallest value HTLC (in msat) the remote peer will accept, for this channel.
+     *
+     * This field is only `None` before we have received either the `OpenChannel` or
+     * `AcceptChannel` message from the remote peer.
+     */
     var `counterpartyOutboundHtlcMinimumMsat`: kotlin.ULong?, 
+    /**
+     * The largest value HTLC (in msat) the remote peer currently will accept, for this channel.
+     */
     var `counterpartyOutboundHtlcMaximumMsat`: kotlin.ULong?, 
+    /**
+     * Base routing fee in millisatoshis.
+     */
     var `counterpartyForwardingInfoFeeBaseMsat`: kotlin.UInt?, 
+    /**
+     * Proportional fee, in millionths of a satoshi the channel will charge per transferred satoshi.
+     */
     var `counterpartyForwardingInfoFeeProportionalMillionths`: kotlin.UInt?, 
+    /**
+     * The minimum difference in CLTV expiry between an ingoing HTLC and its outgoing counterpart,
+     * such that the outgoing HTLC is forwardable to this counterparty.
+     */
     var `counterpartyForwardingInfoCltvExpiryDelta`: kotlin.UShort?, 
+    /**
+     * The available outbound capacity for sending a single HTLC to the remote peer. This is
+     * similar to [`ChannelDetails::outbound_capacity_msat`] but it may be further restricted by
+     * the current state and per-HTLC limit(s). This is intended for use when routing, allowing us
+     * to use a limit as close as possible to the HTLC limit we can currently send.
+     *
+     * See also [`ChannelDetails::next_outbound_htlc_minimum_msat`] and
+     * [`ChannelDetails::outbound_capacity_msat`].
+     */
     var `nextOutboundHtlcLimitMsat`: kotlin.ULong, 
+    /**
+     * The minimum value for sending a single HTLC to the remote peer. This is the equivalent of
+     * [`ChannelDetails::next_outbound_htlc_limit_msat`] but represents a lower-bound, rather than
+     * an upper-bound. This is intended for use when routing, allowing us to ensure we pick a
+     * route which is valid.
+     */
     var `nextOutboundHtlcMinimumMsat`: kotlin.ULong, 
+    /**
+     * The number of blocks (after our commitment transaction confirms) that we will need to wait
+     * until we can claim our funds after we force-close the channel. During this time our
+     * counterparty is allowed to punish us if we broadcasted a stale state. If our counterparty
+     * force-closes the channel and broadcasts a commitment transaction we do not have to wait any
+     * time to claim our non-HTLC-encumbered funds.
+     *
+     * This value will be `None` for outbound channels until the counterparty accepts the channel.
+     */
     var `forceCloseSpendDelay`: kotlin.UShort?, 
+    /**
+     * The smallest value HTLC (in msat) we will accept, for this channel.
+     */
     var `inboundHtlcMinimumMsat`: kotlin.ULong, 
+    /**
+     * The largest value HTLC (in msat) we currently will accept, for this channel.
+     */
     var `inboundHtlcMaximumMsat`: kotlin.ULong?, 
+    /**
+     * Set of configurable parameters that affect channel operation.
+     */
     var `config`: ChannelConfig
 ) {
     
@@ -10305,11 +12967,33 @@ public object FfiConverterTypeChannelDetails: FfiConverterRustBuffer<ChannelDeta
 
 
 
+/**
+ * Details about a channel (both directions).
+ *
+ * Received within a channel announcement.
+ *
+ * This is a simplified version of LDK's `ChannelInfo` for bindings.
+ */
 data class ChannelInfo (
+    /**
+     * Source node of the first direction of a channel
+     */
     var `nodeOne`: NodeId, 
+    /**
+     * Details about the first direction of a channel
+     */
     var `oneToTwo`: ChannelUpdateInfo?, 
+    /**
+     * Source node of the second direction of a channel
+     */
     var `nodeTwo`: NodeId, 
+    /**
+     * Details about the second direction of a channel
+     */
     var `twoToOne`: ChannelUpdateInfo?, 
+    /**
+     * The channel capacity as seen on-chain, if chain lookup is available.
+     */
     var `capacitySats`: kotlin.ULong?
 ) {
     
@@ -10349,12 +13033,36 @@ public object FfiConverterTypeChannelInfo: FfiConverterRustBuffer<ChannelInfo> {
 
 
 
+/**
+ * Details about one direction of a channel as received within a `ChannelUpdate`.
+ *
+ * This is a simplified version of LDK's `ChannelUpdateInfo` for bindings.
+ */
 data class ChannelUpdateInfo (
+    /**
+     * When the last update to the channel direction was issued.
+     * Value is opaque, as set in the announcement.
+     */
     var `lastUpdate`: kotlin.UInt, 
+    /**
+     * Whether the channel can be currently used for payments (in this one direction).
+     */
     var `enabled`: kotlin.Boolean, 
+    /**
+     * The difference in CLTV values that you must have when routing through this channel.
+     */
     var `cltvExpiryDelta`: kotlin.UShort, 
+    /**
+     * The minimum value, which must be relayed to the next hop via the channel
+     */
     var `htlcMinimumMsat`: kotlin.ULong, 
+    /**
+     * The maximum value which may be relayed to the next hop via the channel.
+     */
     var `htlcMaximumMsat`: kotlin.ULong, 
+    /**
+     * Fees charged when the channel is used for routing
+     */
     var `fees`: RoutingFees
 ) {
     
@@ -10397,16 +13105,120 @@ public object FfiConverterTypeChannelUpdateInfo: FfiConverterRustBuffer<ChannelU
 
 
 
+/**
+ * Represents the configuration of an [`Node`] instance.
+ *
+ * ### Defaults
+ *
+ * | Parameter                              | Value              |
+ * |----------------------------------------|--------------------|
+ * | `storage_dir_path`                     | /tmp/ldk_node/     |
+ * | `log_dir_path`                         | None               |
+ * | `network`                              | Bitcoin            |
+ * | `listening_addresses`                  | None               |
+ * | `node_alias`                           | None               |
+ * | `default_cltv_expiry_delta`            | 144                |
+ * | `onchain_wallet_sync_interval_secs`    | 80                 |
+ * | `wallet_sync_interval_secs`            | 30                 |
+ * | `fee_rate_cache_update_interval_secs`  | 600                |
+ * | `trusted_peers_0conf`                  | []                 |
+ * | `probing_liquidity_limit_multiplier`   | 3                  |
+ * | `log_level`                            | Debug              |
+ * | `anchor_channels_config`               | Some(..)           |
+ * | `route_parameters`                     | None               |
+ * | `tor_config`                           | None               |
+ *
+ * See [`AnchorChannelsConfig`] and [`RouteParametersConfig`] for more information regarding their
+ * respective default values.
+ *
+ * [`Node`]: crate::Node
+ */
 data class Config (
+    /**
+     * The path where the underlying LDK and BDK persist their data.
+     */
     var `storageDirPath`: kotlin.String, 
+    /**
+     * The used Bitcoin network.
+     */
     var `network`: Network, 
+    /**
+     * The addresses on which the node will listen for incoming connections.
+     *
+     * **Note**: We will only allow opening and accepting public channels if the `node_alias` and the
+     * `listening_addresses` are set.
+     */
     var `listeningAddresses`: List<SocketAddress>?, 
+    /**
+     * The addresses which the node will announce to the gossip network that it accepts connections on.
+     *
+     * **Note**: If unset, the [`listening_addresses`] will be used as the list of addresses to announce.
+     *
+     * [`listening_addresses`]: Config::listening_addresses
+     */
     var `announcementAddresses`: List<SocketAddress>?, 
+    /**
+     * The node alias that will be used when broadcasting announcements to the gossip network.
+     *
+     * The provided alias must be a valid UTF-8 string and no longer than 32 bytes in total.
+     *
+     * **Note**: We will only allow opening and accepting public channels if the `node_alias` and the
+     * `listening_addresses` are set.
+     */
     var `nodeAlias`: NodeAlias?, 
+    /**
+     * A list of peers that we allow to establish zero confirmation channels to us.
+     *
+     * **Note:** Allowing payments via zero-confirmation channels is potentially insecure if the
+     * funding transaction ends up never being confirmed on-chain. Zero-confirmation channels
+     * should therefore only be accepted from trusted peers.
+     */
     var `trustedPeers0conf`: List<PublicKey>, 
+    /**
+     * The liquidity factor by which we filter the outgoing channels used for sending probes.
+     *
+     * Channels with available liquidity less than the required amount times this value won't be
+     * used to send pre-flight probes.
+     */
     var `probingLiquidityLimitMultiplier`: kotlin.ULong, 
+    /**
+     * Configuration options pertaining to Anchor channels, i.e., channels for which the
+     * `option_anchors_zero_fee_htlc_tx` channel type is negotiated.
+     *
+     * Please refer to [`AnchorChannelsConfig`] for further information on Anchor channels.
+     *
+     * If set to `Some`, we'll try to open new channels with Anchors enabled, i.e., new channels
+     * will be negotiated with the `option_anchors_zero_fee_htlc_tx` channel type if supported by
+     * the counterparty. Note that this won't prevent us from opening non-Anchor channels if the
+     * counterparty doesn't support `option_anchors_zero_fee_htlc_tx`. If set to `None`, new
+     * channels will be negotiated with the legacy `option_static_remotekey` channel type only.
+     *
+     * **Note:** If set to `None` *after* some Anchor channels have already been
+     * opened, no dedicated emergency on-chain reserve will be maintained for these channels,
+     * which can be dangerous if only insufficient funds are available at the time of channel
+     * closure. We *will* however still try to get the Anchor spending transactions confirmed
+     * on-chain with the funds available.
+     */
     var `anchorChannelsConfig`: AnchorChannelsConfig?, 
-    var `routeParameters`: RouteParametersConfig?
+    /**
+     * Configuration options for payment routing and pathfinding.
+     *
+     * Setting the [`RouteParametersConfig`] provides flexibility to customize how payments are routed,
+     * including setting limits on routing fees, CLTV expiry, and channel utilization.
+     *
+     * **Note:** If unset, default parameters will be used, and you will be able to override the
+     * parameters on a per-payment basis in the corresponding method calls.
+     */
+    var `routeParameters`: RouteParametersConfig?, 
+    /**
+     * Configuration options for enabling peer connections via the Tor network.
+     *
+     * Setting [`TorConfig`] enables connecting to peers with OnionV3 addresses. No other connections
+     * are routed via Tor. Please refer to [`TorConfig`] for further information.
+     *
+     * **Note**: If unset, connecting to peer OnionV3 addresses will fail.
+     */
+    var `torConfig`: TorConfig?
 ) {
     
     companion object
@@ -10427,6 +13239,7 @@ public object FfiConverterTypeConfig: FfiConverterRustBuffer<Config> {
             FfiConverterULong.read(buf),
             FfiConverterOptionalTypeAnchorChannelsConfig.read(buf),
             FfiConverterOptionalTypeRouteParametersConfig.read(buf),
+            FfiConverterOptionalTypeTorConfig.read(buf),
         )
     }
 
@@ -10439,7 +13252,8 @@ public object FfiConverterTypeConfig: FfiConverterRustBuffer<Config> {
             FfiConverterSequenceTypePublicKey.allocationSize(value.`trustedPeers0conf`) +
             FfiConverterULong.allocationSize(value.`probingLiquidityLimitMultiplier`) +
             FfiConverterOptionalTypeAnchorChannelsConfig.allocationSize(value.`anchorChannelsConfig`) +
-            FfiConverterOptionalTypeRouteParametersConfig.allocationSize(value.`routeParameters`)
+            FfiConverterOptionalTypeRouteParametersConfig.allocationSize(value.`routeParameters`) +
+            FfiConverterOptionalTypeTorConfig.allocationSize(value.`torConfig`)
     )
 
     override fun write(value: Config, buf: ByteBuffer) {
@@ -10452,14 +13266,24 @@ public object FfiConverterTypeConfig: FfiConverterRustBuffer<Config> {
             FfiConverterULong.write(value.`probingLiquidityLimitMultiplier`, buf)
             FfiConverterOptionalTypeAnchorChannelsConfig.write(value.`anchorChannelsConfig`, buf)
             FfiConverterOptionalTypeRouteParametersConfig.write(value.`routeParameters`, buf)
+            FfiConverterOptionalTypeTorConfig.write(value.`torConfig`, buf)
     }
 }
 
 
 
+/**
+ * Custom TLV entry.
+ */
 data class CustomTlvRecord (
+    /**
+     * Type number.
+     */
     var `typeNum`: kotlin.ULong, 
-    var `value`: List<kotlin.UByte>
+    /**
+     * Serialized value.
+     */
+    var `value`: kotlin.ByteArray
 ) {
     
     companion object
@@ -10472,25 +13296,42 @@ public object FfiConverterTypeCustomTlvRecord: FfiConverterRustBuffer<CustomTlvR
     override fun read(buf: ByteBuffer): CustomTlvRecord {
         return CustomTlvRecord(
             FfiConverterULong.read(buf),
-            FfiConverterSequenceUByte.read(buf),
+            FfiConverterByteArray.read(buf),
         )
     }
 
     override fun allocationSize(value: CustomTlvRecord) = (
             FfiConverterULong.allocationSize(value.`typeNum`) +
-            FfiConverterSequenceUByte.allocationSize(value.`value`)
+            FfiConverterByteArray.allocationSize(value.`value`)
     )
 
     override fun write(value: CustomTlvRecord, buf: ByteBuffer) {
             FfiConverterULong.write(value.`typeNum`, buf)
-            FfiConverterSequenceUByte.write(value.`value`, buf)
+            FfiConverterByteArray.write(value.`value`, buf)
     }
 }
 
 
 
+/**
+ * Configuration for syncing with an Electrum backend.
+ *
+ * Background syncing is enabled by default, using the default values specified in
+ * [`BackgroundSyncConfig`].
+ */
 data class ElectrumSyncConfig (
+    /**
+     * Background sync configuration.
+     *
+     * If set to `None`, background syncing will be disabled. Users will need to manually
+     * sync via [`Node::sync_wallets`] for the wallets and fee rate updates.
+     *
+     * [`Node::sync_wallets`]: crate::Node::sync_wallets
+     */
     var `backgroundSyncConfig`: BackgroundSyncConfig?, 
+    /**
+     * Sync timeouts configuration.
+     */
     var `timeoutsConfig`: SyncTimeoutsConfig
 ) {
     
@@ -10521,8 +13362,25 @@ public object FfiConverterTypeElectrumSyncConfig: FfiConverterRustBuffer<Electru
 
 
 
+/**
+ * Configuration for syncing with an Esplora backend.
+ *
+ * Background syncing is enabled by default, using the default values specified in
+ * [`BackgroundSyncConfig`].
+ */
 data class EsploraSyncConfig (
+    /**
+     * Background sync configuration.
+     *
+     * If set to `None`, background syncing will be disabled. Users will need to manually
+     * sync via [`Node::sync_wallets`] for the wallets and fee rate updates.
+     *
+     * [`Node::sync_wallets`]: crate::Node::sync_wallets
+     */
     var `backgroundSyncConfig`: BackgroundSyncConfig?, 
+    /**
+     * Sync timeouts configuration.
+     */
     var `timeoutsConfig`: SyncTimeoutsConfig
 ) {
     
@@ -10553,8 +13411,23 @@ public object FfiConverterTypeEsploraSyncConfig: FfiConverterRustBuffer<EsploraS
 
 
 
+/**
+ * Limits applying to how much fee we allow an LSP to deduct from the payment amount.
+ *
+ * See [`LdkChannelConfig::accept_underpaying_htlcs`] for more information.
+ *
+ * [`LdkChannelConfig::accept_underpaying_htlcs`]: lightning::util::config::ChannelConfig::accept_underpaying_htlcs
+ */
 data class LspFeeLimits (
+    /**
+     * The maximal total amount we allow any configured LSP withhold from us when forwarding the
+     * payment.
+     */
     var `maxTotalOpeningFeeMsat`: kotlin.ULong?, 
+    /**
+     * The maximal proportional fee, in parts-per-million millisatoshi, we allow any configured
+     * LSP withhold from us when forwarding the payment.
+     */
     var `maxProportionalOpeningFeePpmMsat`: kotlin.ULong?
 ) {
     
@@ -10585,27 +13458,42 @@ public object FfiConverterTypeLSPFeeLimits: FfiConverterRustBuffer<LspFeeLimits>
 
 
 
+/**
+ * A Lightning payment using BOLT 11.
+ */
 data class Lsps1Bolt11PaymentInfo (
+    /**
+     * Indicates the current state of the payment.
+     */
     var `state`: Lsps1PaymentState, 
+    /**
+     * The datetime when the payment option expires.
+     */
     var `expiresAt`: LspsDateTime, 
+    /**
+     * The total fee the LSP will charge to open this channel in satoshi.
+     */
     var `feeTotalSat`: kotlin.ULong, 
+    /**
+     * The amount the client needs to pay to have the requested channel openend.
+     */
     var `orderTotalSat`: kotlin.ULong, 
+    /**
+     * A BOLT11 invoice the client can pay to have to channel opened.
+     */
     var `invoice`: Bolt11Invoice
 ) : Disposable {
     
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
         
-        Disposable.destroy(this.`state`)
-    
-        Disposable.destroy(this.`expiresAt`)
-    
-        Disposable.destroy(this.`feeTotalSat`)
-    
-        Disposable.destroy(this.`orderTotalSat`)
-    
-        Disposable.destroy(this.`invoice`)
-    
+    Disposable.destroy(
+        this.`state`,
+        this.`expiresAt`,
+        this.`feeTotalSat`,
+        this.`orderTotalSat`,
+        this.`invoice`
+    )
     }
     
     companion object
@@ -10680,36 +13568,60 @@ public object FfiConverterTypeLSPS1ChannelInfo: FfiConverterRustBuffer<Lsps1Chan
 
 
 
+/**
+ * An onchain payment.
+ */
 data class Lsps1OnchainPaymentInfo (
+    /**
+     * Indicates the current state of the payment.
+     */
     var `state`: Lsps1PaymentState, 
+    /**
+     * The datetime when the payment option expires.
+     */
     var `expiresAt`: LspsDateTime, 
+    /**
+     * The total fee the LSP will charge to open this channel in satoshi.
+     */
     var `feeTotalSat`: kotlin.ULong, 
+    /**
+     * The amount the client needs to pay to have the requested channel opened.
+     */
     var `orderTotalSat`: kotlin.ULong, 
+    /**
+     * An on-chain address the client can send [`Self::order_total_sat`] to have the channel
+     * opened.
+     */
     var `address`: Address, 
+    /**
+     * The minimum number of block confirmations that are required for the on-chain payment to be
+     * considered confirmed.
+     */
     var `minOnchainPaymentConfirmations`: kotlin.UShort?, 
+    /**
+     * The minimum fee rate for the on-chain payment in case the client wants the payment to be
+     * confirmed without a confirmation.
+     */
     var `minFeeFor0conf`: FeeRate, 
+    /**
+     * The address where the LSP will send the funds if the order fails.
+     */
     var `refundOnchainAddress`: Address?
 ) : Disposable {
     
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
         
-        Disposable.destroy(this.`state`)
-    
-        Disposable.destroy(this.`expiresAt`)
-    
-        Disposable.destroy(this.`feeTotalSat`)
-    
-        Disposable.destroy(this.`orderTotalSat`)
-    
-        Disposable.destroy(this.`address`)
-    
-        Disposable.destroy(this.`minOnchainPaymentConfirmations`)
-    
-        Disposable.destroy(this.`minFeeFor0conf`)
-    
-        Disposable.destroy(this.`refundOnchainAddress`)
-    
+    Disposable.destroy(
+        this.`state`,
+        this.`expiresAt`,
+        this.`feeTotalSat`,
+        this.`orderTotalSat`,
+        this.`address`,
+        this.`minOnchainPaymentConfirmations`,
+        this.`minFeeFor0conf`,
+        this.`refundOnchainAddress`
+    )
     }
     
     companion object
@@ -10819,14 +13731,12 @@ data class Lsps1OrderStatus (
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
         
-        Disposable.destroy(this.`orderId`)
-    
-        Disposable.destroy(this.`orderParams`)
-    
-        Disposable.destroy(this.`paymentOptions`)
-    
-        Disposable.destroy(this.`channelState`)
-    
+    Disposable.destroy(
+        this.`orderId`,
+        this.`orderParams`,
+        this.`paymentOptions`,
+        this.`channelState`
+    )
     }
     
     companion object
@@ -10863,17 +13773,23 @@ public object FfiConverterTypeLSPS1OrderStatus: FfiConverterRustBuffer<Lsps1Orde
 
 
 data class Lsps1PaymentInfo (
+    /**
+     * A Lightning payment using BOLT 11.
+     */
     var `bolt11`: Lsps1Bolt11PaymentInfo?, 
+    /**
+     * An onchain payment.
+     */
     var `onchain`: Lsps1OnchainPaymentInfo?
 ) : Disposable {
     
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
         
-        Disposable.destroy(this.`bolt11`)
-    
-        Disposable.destroy(this.`onchain`)
-    
+    Disposable.destroy(
+        this.`bolt11`,
+        this.`onchain`
+    )
     }
     
     companion object
@@ -10903,16 +13819,75 @@ public object FfiConverterTypeLSPS1PaymentInfo: FfiConverterRustBuffer<Lsps1Paym
 
 
 
+/**
+ * Represents the configuration of the LSPS2 service.
+ *
+ * See [bLIP-52 / LSPS2] for more information.
+ *
+ * [bLIP-52 / LSPS2]: https://github.com/lightning/blips/blob/master/blip-0052.md
+ */
 data class Lsps2ServiceConfig (
+    /**
+     * A token we may require to be sent by the clients.
+     *
+     * If set, only requests matching this token will be accepted.
+     */
     var `requireToken`: kotlin.String?, 
+    /**
+     * Indicates whether the LSPS service will be announced via the gossip network.
+     */
     var `advertiseService`: kotlin.Boolean, 
+    /**
+     * The fee we withhold for the channel open from the initial payment.
+     *
+     * This fee is proportional to the client-requested amount, in parts-per-million.
+     */
     var `channelOpeningFeePpm`: kotlin.UInt, 
+    /**
+     * The proportional overprovisioning for the channel.
+     *
+     * This determines, in parts-per-million, how much value we'll provision on top of the amount
+     * we need to forward the payment to the client.
+     *
+     * For example, setting this to `100_000` will result in a channel being opened that is 10%
+     * larger than then the to-be-forwarded amount (i.e., client-requested amount minus the
+     * channel opening fee fee).
+     */
     var `channelOverProvisioningPpm`: kotlin.UInt, 
+    /**
+     * The minimum fee required for opening a channel.
+     */
     var `minChannelOpeningFeeMsat`: kotlin.ULong, 
+    /**
+     * The minimum number of blocks after confirmation we promise to keep the channel open.
+     */
     var `minChannelLifetime`: kotlin.UInt, 
+    /**
+     * The maximum number of blocks that the client is allowed to set its `to_self_delay` parameter.
+     */
     var `maxClientToSelfDelay`: kotlin.UInt, 
+    /**
+     * The minimum payment size that we will accept when opening a channel.
+     */
     var `minPaymentSizeMsat`: kotlin.ULong, 
+    /**
+     * The maximum payment size that we will accept when opening a channel.
+     */
     var `maxPaymentSizeMsat`: kotlin.ULong, 
+    /**
+     * Use the 'client-trusts-LSP' trust model.
+     *
+     * When set, the service will delay *broadcasting* the JIT channel's funding transaction until
+     * the client claimed sufficient HTLC parts to pay for the channel open.
+     *
+     * Note this will render the flow incompatible with clients utilizing the 'LSP-trust-client'
+     * trust model, i.e., in turn delay *claiming* any HTLCs until they see the funding
+     * transaction in the mempool.
+     *
+     * Please refer to [`bLIP-52`] for more information.
+     *
+     * [`bLIP-52`]: https://github.com/lightning/blips/blob/master/blip-0052.md#trust-models
+     */
     var `clientTrustsLsp`: kotlin.Boolean
 ) {
     
@@ -10967,13 +13942,42 @@ public object FfiConverterTypeLSPS2ServiceConfig: FfiConverterRustBuffer<Lsps2Se
 
 
 
+/**
+ * A unit of logging output with metadata to enable filtering `module_path`,
+ * `file`, and `line` to inform on log's source.
+ *
+ * This version is used when the `uniffi` feature is enabled.
+ * It is similar to the non-`uniffi` version, but it omits the lifetime parameter
+ * for the `LogRecord`, as the Uniffi-exposed interface cannot handle lifetimes.
+ */
 data class LogRecord (
+    /**
+     * The verbosity level of the message.
+     */
     var `level`: LogLevel, 
+    /**
+     * The message body.
+     */
     var `args`: kotlin.String, 
+    /**
+     * The module path of the message.
+     */
     var `modulePath`: kotlin.String, 
+    /**
+     * The line containing the message.
+     */
     var `line`: kotlin.UInt, 
+    /**
+     * The node id of the peer pertaining to the logged record.
+     */
     var `peerId`: PublicKey?, 
+    /**
+     * The channel id of the channel pertaining to the logged record.
+     */
     var `channelId`: ChannelId?, 
+    /**
+     * The payment hash pertaining to the logged record.
+     */
     var `paymentHash`: PaymentHash?
 ) {
     
@@ -11019,9 +14023,26 @@ public object FfiConverterTypeLogRecord: FfiConverterRustBuffer<LogRecord> {
 
 
 
+/**
+ * Information received in the latest node_announcement from this node.
+ *
+ * This is a simplified version of LDK's `NodeAnnouncementInfo` for bindings.
+ */
 data class NodeAnnouncementInfo (
+    /**
+     * When the last known update to the node state was issued.
+     * Value is opaque, as set in the announcement.
+     */
     var `lastUpdate`: kotlin.UInt, 
+    /**
+     * Moniker assigned to the node.
+     * May be invalid or malicious (eg control chars),
+     * should not be exposed to the user.
+     */
     var `alias`: kotlin.String, 
+    /**
+     * List of addresses on which this node is reachable
+     */
     var `addresses`: List<SocketAddress>
 ) {
     
@@ -11055,8 +14076,21 @@ public object FfiConverterTypeNodeAnnouncementInfo: FfiConverterRustBuffer<NodeA
 
 
 
+/**
+ * Details about a node in the network, known from the network announcement.
+ *
+ * This is a simplified version of LDK's `NodeInfo` for bindings.
+ */
 data class NodeInfo (
+    /**
+     * All valid channels a node has announced
+     */
     var `channels`: List<kotlin.ULong>, 
+    /**
+     * More information about a node from node_announcement.
+     * Optional because we store a Node entry after learning about it from
+     * a channel announcement, but before receiving a node announcement.
+     */
     var `announcementInfo`: NodeAnnouncementInfo?
 ) {
     
@@ -11087,14 +14121,56 @@ public object FfiConverterTypeNodeInfo: FfiConverterRustBuffer<NodeInfo> {
 
 
 
+/**
+ * Represents the status of the [`Node`].
+ */
 data class NodeStatus (
+    /**
+     * Indicates whether the [`Node`] is running.
+     */
     var `isRunning`: kotlin.Boolean, 
+    /**
+     * The best block to which our Lightning wallet is currently synced.
+     */
     var `currentBestBlock`: BestBlock, 
+    /**
+     * The timestamp, in seconds since start of the UNIX epoch, when we last successfully synced
+     * our Lightning wallet to the chain tip.
+     *
+     * Will be `None` if the wallet hasn't been synced yet.
+     */
     var `latestLightningWalletSyncTimestamp`: kotlin.ULong?, 
+    /**
+     * The timestamp, in seconds since start of the UNIX epoch, when we last successfully synced
+     * our on-chain wallet to the chain tip.
+     *
+     * Will be `None` if the wallet hasn't been synced yet.
+     */
     var `latestOnchainWalletSyncTimestamp`: kotlin.ULong?, 
+    /**
+     * The timestamp, in seconds since start of the UNIX epoch, when we last successfully update
+     * our fee rate cache.
+     *
+     * Will be `None` if the cache hasn't been updated yet.
+     */
     var `latestFeeRateCacheUpdateTimestamp`: kotlin.ULong?, 
+    /**
+     * The timestamp, in seconds since start of the UNIX epoch, when the last rapid gossip sync
+     * (RGS) snapshot we successfully applied was generated.
+     *
+     * Will be `None` if RGS isn't configured or the snapshot hasn't been updated yet.
+     */
     var `latestRgsSnapshotTimestamp`: kotlin.ULong?, 
+    /**
+     * The timestamp, in seconds since start of the UNIX epoch, when we last successfully merged external scores.
+     */
     var `latestPathfindingScoresSyncTimestamp`: kotlin.ULong?, 
+    /**
+     * The timestamp, in seconds since start of the UNIX epoch, when we last broadcasted a node
+     * announcement.
+     *
+     * Will be `None` if we have no public channels or we haven't broadcasted yet.
+     */
     var `latestNodeAnnouncementBroadcastTimestamp`: kotlin.ULong?
 ) {
     
@@ -11175,13 +14251,44 @@ public object FfiConverterTypeOutPoint: FfiConverterRustBuffer<OutPoint> {
 
 
 
+/**
+ * Represents a payment.
+ */
 data class PaymentDetails (
+    /**
+     * The identifier of this payment.
+     */
     var `id`: PaymentId, 
+    /**
+     * The kind of the payment.
+     */
     var `kind`: PaymentKind, 
+    /**
+     * The amount transferred.
+     *
+     * Will be `None` for variable-amount payments until we receive them.
+     */
     var `amountMsat`: kotlin.ULong?, 
+    /**
+     * The fees that were paid for this payment.
+     *
+     * For Lightning payments, this will only be updated for outbound payments once they
+     * succeeded.
+     *
+     * Will be `None` for Lightning payments made with LDK Node v0.4.x and earlier.
+     */
     var `feePaidMsat`: kotlin.ULong?, 
+    /**
+     * The direction of the payment.
+     */
     var `direction`: PaymentDirection, 
+    /**
+     * The status of the payment.
+     */
     var `status`: PaymentStatus, 
+    /**
+     * The timestamp, in seconds since start of the UNIX epoch, when this entry was last updated.
+     */
     var `latestUpdateTimestamp`: kotlin.ULong
 ) {
     
@@ -11271,11 +14378,32 @@ public object FfiConverterTypePaymentPathInfo: FfiConverterRustBuffer<PaymentPat
 
 
 
+/**
+ * Details of a known Lightning peer as returned by [`Node::list_peers`].
+ *
+ * [`Node::list_peers`]: crate::Node::list_peers
+ */
 data class PeerDetails (
+    /**
+     * The node ID of the peer.
+     */
     var `nodeId`: PublicKey, 
+    /**
+     * The network address of the peer.
+     */
     var `address`: SocketAddress, 
+    /**
+     * Indicates whether we'll try to reconnect to this peer after restarts.
+     */
     var `isPersisted`: kotlin.Boolean, 
+    /**
+     * Indicates whether we currently have an active connection with the peer.
+     */
     var `isConnected`: kotlin.Boolean, 
+    /**
+     * Indicates whether the peer supports anchor channels (zero-fee HTLC anchors).
+     * Only available when the peer is connected (feature bits exchanged).
+     */
     var `supportsAnchors`: kotlin.Boolean
 ) {
     
@@ -11315,13 +14443,37 @@ public object FfiConverterTypePeerDetails: FfiConverterRustBuffer<PeerDetails> {
 
 
 
+/**
+ * A channel descriptor for a hop along a payment path.
+ *
+ * While this generally comes from BOLT 11's `r` field, this struct includes more fields than are
+ * available in BOLT 11.
+ */
 data class RouteHintHop (
+    /**
+     * The node_id of the non-target end of the route
+     */
     var `srcNodeId`: PublicKey, 
+    /**
+     * The short_channel_id of this channel
+     */
     var `shortChannelId`: kotlin.ULong, 
+    /**
+     * The fees which must be paid to use this channel
+     */
+    var `fees`: RoutingFees, 
+    /**
+     * The difference in CLTV values between this node and the next node.
+     */
     var `cltvExpiryDelta`: kotlin.UShort, 
+    /**
+     * The minimum value, in msat, which must be relayed to the next hop.
+     */
     var `htlcMinimumMsat`: kotlin.ULong?, 
-    var `htlcMaximumMsat`: kotlin.ULong?, 
-    var `fees`: RoutingFees
+    /**
+     * The maximum value in msat available for routing with a single HTLC.
+     */
+    var `htlcMaximumMsat`: kotlin.ULong?
 ) {
     
     companion object
@@ -11335,29 +14487,29 @@ public object FfiConverterTypeRouteHintHop: FfiConverterRustBuffer<RouteHintHop>
         return RouteHintHop(
             FfiConverterTypePublicKey.read(buf),
             FfiConverterULong.read(buf),
+            FfiConverterTypeRoutingFees.read(buf),
             FfiConverterUShort.read(buf),
             FfiConverterOptionalULong.read(buf),
             FfiConverterOptionalULong.read(buf),
-            FfiConverterTypeRoutingFees.read(buf),
         )
     }
 
     override fun allocationSize(value: RouteHintHop) = (
             FfiConverterTypePublicKey.allocationSize(value.`srcNodeId`) +
             FfiConverterULong.allocationSize(value.`shortChannelId`) +
+            FfiConverterTypeRoutingFees.allocationSize(value.`fees`) +
             FfiConverterUShort.allocationSize(value.`cltvExpiryDelta`) +
             FfiConverterOptionalULong.allocationSize(value.`htlcMinimumMsat`) +
-            FfiConverterOptionalULong.allocationSize(value.`htlcMaximumMsat`) +
-            FfiConverterTypeRoutingFees.allocationSize(value.`fees`)
+            FfiConverterOptionalULong.allocationSize(value.`htlcMaximumMsat`)
     )
 
     override fun write(value: RouteHintHop, buf: ByteBuffer) {
             FfiConverterTypePublicKey.write(value.`srcNodeId`, buf)
             FfiConverterULong.write(value.`shortChannelId`, buf)
+            FfiConverterTypeRoutingFees.write(value.`fees`, buf)
             FfiConverterUShort.write(value.`cltvExpiryDelta`, buf)
             FfiConverterOptionalULong.write(value.`htlcMinimumMsat`, buf)
             FfiConverterOptionalULong.write(value.`htlcMaximumMsat`, buf)
-            FfiConverterTypeRoutingFees.write(value.`fees`, buf)
     }
 }
 
@@ -11475,11 +14627,39 @@ public object FfiConverterTypeRoutingFees: FfiConverterRustBuffer<RoutingFees> {
 
 
 
+/**
+ * Timeout-related parameters for syncing the Lightning and on-chain wallets.
+ *
+ * ### Defaults
+ *
+ * | Parameter                              | Value              |
+ * |----------------------------------------|--------------------|
+ * | `onchain_wallet_sync_timeout_secs`     | 60                 |
+ * | `lightning_wallet_sync_timeout_secs`   | 30                 |
+ * | `fee_rate_cache_update_timeout_secs`   | 10                 |
+ * | `tx_broadcast_timeout_secs`            | 10                 |
+ * | `per_request_timeout_secs`             | 10                 |
+ */
 data class SyncTimeoutsConfig (
+    /**
+     * The timeout after which we abort syncing the onchain wallet.
+     */
     var `onchainWalletSyncTimeoutSecs`: kotlin.ULong, 
+    /**
+     * The timeout after which we abort syncing the LDK wallet.
+     */
     var `lightningWalletSyncTimeoutSecs`: kotlin.ULong, 
+    /**
+     * The timeout after which we abort updating the fee rate cache.
+     */
     var `feeRateCacheUpdateTimeoutSecs`: kotlin.ULong, 
+    /**
+     * The timeout after which we abort broadcasting a transaction.
+     */
     var `txBroadcastTimeoutSecs`: kotlin.ULong, 
+    /**
+     * The per-request timeout after which we abort a single Electrum or Esplora API request.
+     */
     var `perRequestTimeoutSecs`: kotlin.UByte
 ) {
     
@@ -11514,6 +14694,51 @@ public object FfiConverterTypeSyncTimeoutsConfig: FfiConverterRustBuffer<SyncTim
             FfiConverterULong.write(value.`feeRateCacheUpdateTimeoutSecs`, buf)
             FfiConverterULong.write(value.`txBroadcastTimeoutSecs`, buf)
             FfiConverterUByte.write(value.`perRequestTimeoutSecs`, buf)
+    }
+}
+
+
+
+/**
+ * Configuration for connecting to peers via the Tor Network.
+ */
+data class TorConfig (
+    /**
+     * Tor daemon SOCKS proxy address. Connections to OnionV3 peers will always be made
+     * via this proxy. When `route_all_traffic` is set, clearnet peer connections and
+     * HTTP calls (RGS gossip sync, pathfinding scoring) are also routed through Tor.
+     */
+    var `proxyAddress`: SocketAddress, 
+    /**
+     * If true, route ALL outbound traffic through the Tor SOCKS proxy, including
+     * clearnet peer connections (via exit nodes) and HTTP requests (RGS, scoring).
+     * Default: false (only .onion peer connections use the proxy).
+     */
+    var `routeAllTraffic`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeTorConfig: FfiConverterRustBuffer<TorConfig> {
+    override fun read(buf: ByteBuffer): TorConfig {
+        return TorConfig(
+            FfiConverterTypeSocketAddress.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: TorConfig) = (
+            FfiConverterTypeSocketAddress.allocationSize(value.`proxyAddress`) +
+            FfiConverterBoolean.allocationSize(value.`routeAllTraffic`)
+    )
+
+    override fun write(value: TorConfig, buf: ByteBuffer) {
+            FfiConverterTypeSocketAddress.write(value.`proxyAddress`, buf)
+            FfiConverterBoolean.write(value.`routeAllTraffic`, buf)
     }
 }
 
@@ -11659,10 +14884,23 @@ public object FfiConverterTypeWatchtowerMonitorInfo: FfiConverterRustBuffer<Watc
 
 
 
+/**
+ * The role of the node in an asynchronous payments context.
+ *
+ * See <https://github.com/lightning/bolts/pull/1149> for more information about the async payments protocol.
+ */
 
 enum class AsyncPaymentsRole {
     
+    /**
+     * Node acts a client in an async payments context. This means that if possible, it will instruct its peers to hold
+     * HTLCs for it, so that it can go offline.
+     */
     CLIENT,
+    /**
+     * Node acts as a server in an async payments context. This means that it will hold async payments HTLCs and onion
+     * messages for its peers.
+     */
     SERVER;
     companion object
 }
@@ -11721,15 +14959,31 @@ public object FfiConverterTypeBalanceSource: FfiConverterRustBuffer<BalanceSourc
 
 
 
+/**
+ * Represents the description of an invoice which has to be either a directly included string or
+ * a hash of a description provided out of band.
+ */
 sealed class Bolt11InvoiceDescription {
     
-    data class Hash(
-        val `hash`: kotlin.String) : Bolt11InvoiceDescription() {
+    /**
+     * Contains a full description.
+     */
+    data class Direct(
+        /**
+         * Description of what the invoice is for
+         */
+        val `description`: kotlin.String) : Bolt11InvoiceDescription() {
         companion object
     }
     
-    data class Direct(
-        val `description`: kotlin.String) : Bolt11InvoiceDescription() {
+    /**
+     * Contains a hash.
+     */
+    data class Hash(
+        /**
+         * Hash of the description of what the invoice is for
+         */
+        val `hash`: kotlin.String) : Bolt11InvoiceDescription() {
         companion object
     }
     
@@ -11744,10 +14998,10 @@ sealed class Bolt11InvoiceDescription {
 public object FfiConverterTypeBolt11InvoiceDescription : FfiConverterRustBuffer<Bolt11InvoiceDescription>{
     override fun read(buf: ByteBuffer): Bolt11InvoiceDescription {
         return when(buf.getInt()) {
-            1 -> Bolt11InvoiceDescription.Hash(
+            1 -> Bolt11InvoiceDescription.Direct(
                 FfiConverterString.read(buf),
                 )
-            2 -> Bolt11InvoiceDescription.Direct(
+            2 -> Bolt11InvoiceDescription.Hash(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -11755,13 +15009,6 @@ public object FfiConverterTypeBolt11InvoiceDescription : FfiConverterRustBuffer<
     }
 
     override fun allocationSize(value: Bolt11InvoiceDescription) = when(value) {
-        is Bolt11InvoiceDescription.Hash -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterString.allocationSize(value.`hash`)
-            )
-        }
         is Bolt11InvoiceDescription.Direct -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
@@ -11769,18 +15016,25 @@ public object FfiConverterTypeBolt11InvoiceDescription : FfiConverterRustBuffer<
                 + FfiConverterString.allocationSize(value.`description`)
             )
         }
+        is Bolt11InvoiceDescription.Hash -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`hash`)
+            )
+        }
     }
 
     override fun write(value: Bolt11InvoiceDescription, buf: ByteBuffer) {
         when(value) {
-            is Bolt11InvoiceDescription.Hash -> {
+            is Bolt11InvoiceDescription.Direct -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`hash`, buf)
+                FfiConverterString.write(value.`description`, buf)
                 Unit
             }
-            is Bolt11InvoiceDescription.Direct -> {
+            is Bolt11InvoiceDescription.Hash -> {
                 buf.putInt(2)
-                FfiConverterString.write(value.`description`, buf)
+                FfiConverterString.write(value.`hash`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -11793,40 +15047,160 @@ public object FfiConverterTypeBolt11InvoiceDescription : FfiConverterRustBuffer<
 
 
 
-sealed class BuildException(message: String): kotlin.Exception(message) {
-        
-        class InvalidSystemTime(message: String) : BuildException(message)
-        
-        class InvalidChannelMonitor(message: String) : BuildException(message)
-        
-        class InvalidListeningAddresses(message: String) : BuildException(message)
-        
-        class InvalidAnnouncementAddresses(message: String) : BuildException(message)
-        
-        class InvalidNodeAlias(message: String) : BuildException(message)
-        
-        class RuntimeSetupFailed(message: String) : BuildException(message)
-        
-        class ReadFailed(message: String) : BuildException(message)
-        
-        class WriteFailed(message: String) : BuildException(message)
-        
-        class StoragePathAccessFailed(message: String) : BuildException(message)
-        
-        class KvStoreSetupFailed(message: String) : BuildException(message)
-        
-        class WalletSetupFailed(message: String) : BuildException(message)
-        
-        class LoggerSetupFailed(message: String) : BuildException(message)
-        
-        class NetworkMismatch(message: String) : BuildException(message)
-        
-        class AsyncPaymentsConfigMismatch(message: String) : BuildException(message)
-        
+/**
+ * An error encountered during building a [`Node`].
+ *
+ * [`Node`]: crate::Node
+ */
+sealed class BuildException: kotlin.Exception() {
+    
+    /**
+     * The current system time is invalid, clocks might have gone backwards.
+     */
+    class InvalidSystemTime(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The a read channel monitor is invalid.
+     */
+    class InvalidChannelMonitor(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The given listening addresses are invalid, e.g. too many were passed.
+     */
+    class InvalidListeningAddresses(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The given announcement addresses are invalid, e.g. too many were passed.
+     */
+    class InvalidAnnouncementAddresses(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The given tor proxy address is invalid, e.g. an onion address was passed.
+     */
+    class InvalidTorProxyAddress(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The provided alias is invalid.
+     */
+    class InvalidNodeAlias(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * An attempt to setup a runtime has failed.
+     */
+    class RuntimeSetupFailed(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * We failed to read data from the [`KVStore`].
+     *
+     * [`KVStore`]: lightning::util::persist::KVStoreSync
+     */
+    class ReadFailed(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * We failed to write data to the [`KVStore`].
+     *
+     * [`KVStore`]: lightning::util::persist::KVStoreSync
+     */
+    class WriteFailed(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * We failed to access the given `storage_dir_path`.
+     */
+    class StoragePathAccessFailed(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * We failed to setup our [`KVStore`].
+     *
+     * [`KVStore`]: lightning::util::persist::KVStoreSync
+     */
+    class KvStoreSetupFailed(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * We failed to setup the onchain wallet.
+     */
+    class WalletSetupFailed(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * We failed to setup the logger.
+     */
+    class LoggerSetupFailed(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The given network does not match the node's previously configured network.
+     */
+    class NetworkMismatch(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The role of the node in an asynchronous payments context is not compatible with the current configuration.
+     */
+    class AsyncPaymentsConfigMismatch(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<BuildException> {
         override fun lift(error_buf: RustBuffer.ByValue): BuildException = FfiConverterTypeBuildError.lift(error_buf)
     }
+
+    
 }
 
 /**
@@ -11835,28 +15209,90 @@ sealed class BuildException(message: String): kotlin.Exception(message) {
 public object FfiConverterTypeBuildError : FfiConverterRustBuffer<BuildException> {
     override fun read(buf: ByteBuffer): BuildException {
         
-            return when(buf.getInt()) {
-            1 -> BuildException.InvalidSystemTime(FfiConverterString.read(buf))
-            2 -> BuildException.InvalidChannelMonitor(FfiConverterString.read(buf))
-            3 -> BuildException.InvalidListeningAddresses(FfiConverterString.read(buf))
-            4 -> BuildException.InvalidAnnouncementAddresses(FfiConverterString.read(buf))
-            5 -> BuildException.InvalidNodeAlias(FfiConverterString.read(buf))
-            6 -> BuildException.RuntimeSetupFailed(FfiConverterString.read(buf))
-            7 -> BuildException.ReadFailed(FfiConverterString.read(buf))
-            8 -> BuildException.WriteFailed(FfiConverterString.read(buf))
-            9 -> BuildException.StoragePathAccessFailed(FfiConverterString.read(buf))
-            10 -> BuildException.KvStoreSetupFailed(FfiConverterString.read(buf))
-            11 -> BuildException.WalletSetupFailed(FfiConverterString.read(buf))
-            12 -> BuildException.LoggerSetupFailed(FfiConverterString.read(buf))
-            13 -> BuildException.NetworkMismatch(FfiConverterString.read(buf))
-            14 -> BuildException.AsyncPaymentsConfigMismatch(FfiConverterString.read(buf))
+
+        return when(buf.getInt()) {
+            1 -> BuildException.InvalidSystemTime()
+            2 -> BuildException.InvalidChannelMonitor()
+            3 -> BuildException.InvalidListeningAddresses()
+            4 -> BuildException.InvalidAnnouncementAddresses()
+            5 -> BuildException.InvalidTorProxyAddress()
+            6 -> BuildException.InvalidNodeAlias()
+            7 -> BuildException.RuntimeSetupFailed()
+            8 -> BuildException.ReadFailed()
+            9 -> BuildException.WriteFailed()
+            10 -> BuildException.StoragePathAccessFailed()
+            11 -> BuildException.KvStoreSetupFailed()
+            12 -> BuildException.WalletSetupFailed()
+            13 -> BuildException.LoggerSetupFailed()
+            14 -> BuildException.NetworkMismatch()
+            15 -> BuildException.AsyncPaymentsConfigMismatch()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
-        
     }
 
     override fun allocationSize(value: BuildException): ULong {
-        return 4UL
+        return when(value) {
+            is BuildException.InvalidSystemTime -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.InvalidChannelMonitor -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.InvalidListeningAddresses -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.InvalidAnnouncementAddresses -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.InvalidTorProxyAddress -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.InvalidNodeAlias -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.RuntimeSetupFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.ReadFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.WriteFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.StoragePathAccessFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.KvStoreSetupFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.WalletSetupFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.LoggerSetupFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.NetworkMismatch -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is BuildException.AsyncPaymentsConfigMismatch -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+        }
     }
 
     override fun write(value: BuildException, buf: ByteBuffer) {
@@ -11877,44 +15313,48 @@ public object FfiConverterTypeBuildError : FfiConverterRustBuffer<BuildException
                 buf.putInt(4)
                 Unit
             }
-            is BuildException.InvalidNodeAlias -> {
+            is BuildException.InvalidTorProxyAddress -> {
                 buf.putInt(5)
                 Unit
             }
-            is BuildException.RuntimeSetupFailed -> {
+            is BuildException.InvalidNodeAlias -> {
                 buf.putInt(6)
                 Unit
             }
-            is BuildException.ReadFailed -> {
+            is BuildException.RuntimeSetupFailed -> {
                 buf.putInt(7)
                 Unit
             }
-            is BuildException.WriteFailed -> {
+            is BuildException.ReadFailed -> {
                 buf.putInt(8)
                 Unit
             }
-            is BuildException.StoragePathAccessFailed -> {
+            is BuildException.WriteFailed -> {
                 buf.putInt(9)
                 Unit
             }
-            is BuildException.KvStoreSetupFailed -> {
+            is BuildException.StoragePathAccessFailed -> {
                 buf.putInt(10)
                 Unit
             }
-            is BuildException.WalletSetupFailed -> {
+            is BuildException.KvStoreSetupFailed -> {
                 buf.putInt(11)
                 Unit
             }
-            is BuildException.LoggerSetupFailed -> {
+            is BuildException.WalletSetupFailed -> {
                 buf.putInt(12)
                 Unit
             }
-            is BuildException.NetworkMismatch -> {
+            is BuildException.LoggerSetupFailed -> {
                 buf.putInt(13)
                 Unit
             }
-            is BuildException.AsyncPaymentsConfigMismatch -> {
+            is BuildException.NetworkMismatch -> {
                 buf.putInt(14)
+                Unit
+            }
+            is BuildException.AsyncPaymentsConfigMismatch -> {
+                buf.putInt(15)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -11924,61 +15364,156 @@ public object FfiConverterTypeBuildError : FfiConverterRustBuffer<BuildException
 
 
 
+/**
+ * The reason the channel was closed. See individual variants for more details.
+ */
 sealed class ClosureReason {
     
+    /**
+     * Closure generated from receiving a peer error message.
+     *
+     * Our counterparty may have broadcasted their latest commitment state, and we have
+     * as well.
+     */
     data class CounterpartyForceClosed(
+        /**
+         * The error which the peer sent us.
+         *
+         * Be careful about printing the peer_msg, a well-crafted message could exploit
+         * a security vulnerability in the terminal emulator or the logging subsystem.
+         */
         val `peerMsg`: UntrustedString) : ClosureReason() {
         companion object
     }
     
+    /**
+     * Closure generated from a force close initiated by us.
+     */
     data class HolderForceClosed(
+        /**
+         * Whether or not the latest transaction was broadcasted when the channel was force
+         * closed.
+         *
+         * This will be set to `Some(true)` for any channels closed after their funding
+         * transaction was (or might have been) broadcasted, and `Some(false)` for any channels
+         * closed prior to their funding transaction being broadcasted.
+         */
         val `broadcastedLatestTxn`: kotlin.Boolean?, 
+        /**
+         * The error message provided when initiating the force close.
+         */
         val `message`: kotlin.String) : ClosureReason() {
         companion object
     }
     
+    /**
+     * The channel was closed after negotiating a cooperative close and we've now broadcasted
+     * the cooperative close transaction. Note the shutdown may have been initiated by us.
+     */
     object LegacyCooperativeClosure : ClosureReason()
     
     
+    /**
+     * The channel was closed after negotiating a cooperative close and we've now broadcasted
+     * the cooperative close transaction. This indicates that the shutdown was initiated by our
+     * counterparty.
+     *
+     * In rare cases where we initiated closure immediately prior to shutting down without
+     * persisting, this value may be provided for channels we initiated closure for.
+     */
     object CounterpartyInitiatedCooperativeClosure : ClosureReason()
     
     
+    /**
+     * The channel was closed after negotiating a cooperative close and we've now broadcasted
+     * the cooperative close transaction. This indicates that the shutdown was initiated by us.
+     */
     object LocallyInitiatedCooperativeClosure : ClosureReason()
     
     
+    /**
+     * A commitment transaction was confirmed on chain, closing the channel. Most likely this
+     * commitment transaction came from our counterparty, but it may also have come from
+     * a copy of our own channel monitor.
+     */
     object CommitmentTxConfirmed : ClosureReason()
     
     
+    /**
+     * The funding transaction failed to confirm in a timely manner on an inbound channel or the
+     * counterparty failed to fund the channel in a timely manner.
+     */
     object FundingTimedOut : ClosureReason()
     
     
+    /**
+     * Closure generated from processing an event, likely a HTLC forward/relay/reception.
+     */
     data class ProcessingError(
+        /**
+         * A developer-readable error message which we generated.
+         */
         val `err`: kotlin.String) : ClosureReason() {
         companion object
     }
     
+    /**
+     * The peer disconnected prior to funding completing. In this case the spec mandates that we
+     * forget the channel entirely - we can attempt again if the peer reconnects.
+     */
     object DisconnectedPeer : ClosureReason()
     
     
+    /**
+     * Closure generated during deserialization if the channel monitor is newer than
+     * the channel manager deserialized.
+     */
     object OutdatedChannelManager : ClosureReason()
     
     
+    /**
+     * The counterparty requested a cooperative close of a channel that had not been funded yet.
+     * The channel has been immediately closed.
+     */
     object CounterpartyCoopClosedUnfundedChannel : ClosureReason()
     
     
+    /**
+     * We requested a cooperative close of a channel that had not been funded yet.
+     * The channel has been immediately closed.
+     */
     object LocallyCoopClosedUnfundedChannel : ClosureReason()
     
     
+    /**
+     * Another channel in the same funding batch closed before the funding transaction
+     * was ready to be broadcast.
+     */
     object FundingBatchClosure : ClosureReason()
     
     
+    /**
+     * One of our HTLCs timed out in a channel, causing us to force close the channel.
+     */
     data class HtlCsTimedOut(
+        /**
+         * The payment hash of an HTLC that timed out.
+         */
         val `paymentHash`: PaymentHash?) : ClosureReason() {
         companion object
     }
     
+    /**
+     * Our peer provided a feerate which violated our required minimum.
+     */
     data class PeerFeerateTooLow(
+        /**
+         * The feerate on our channel set by our peer.
+         */
         val `peerFeerateSatPerKw`: kotlin.UInt, 
+        /**
+         * The required feerate we enforce.
+         */
         val `requiredFeerateSatPerKw`: kotlin.UInt) : ClosureReason() {
         companion object
     }
@@ -12202,15 +15737,33 @@ public object FfiConverterTypeClosureReason : FfiConverterRustBuffer<ClosureReas
 
 
 
+/**
+ * Represents the confirmation status of a transaction.
+ */
 sealed class ConfirmationStatus {
     
+    /**
+     * The transaction is confirmed in the best chain.
+     */
     data class Confirmed(
+        /**
+         * The hash of the block in which the transaction was confirmed.
+         */
         val `blockHash`: BlockHash, 
+        /**
+         * The height under which the block was confirmed.
+         */
         val `height`: kotlin.UInt, 
+        /**
+         * The timestamp, in seconds since start of the UNIX epoch, when this entry was last updated.
+         */
         val `timestamp`: kotlin.ULong) : ConfirmationStatus() {
         companion object
     }
     
+    /**
+     * The transaction is unconfirmed.
+     */
     object Unconfirmed : ConfirmationStatus()
     
     
@@ -12309,16 +15862,35 @@ public object FfiConverterTypeCurrency: FfiConverterRustBuffer<Currency> {
 
 
 
-sealed class EntropyException(message: String): kotlin.Exception(message) {
-        
-        class InvalidSeedBytes(message: String) : EntropyException(message)
-        
-        class InvalidSeedFile(message: String) : EntropyException(message)
-        
+/**
+ * An error that could arise during [`NodeEntropy`] construction.
+ */
+sealed class EntropyException: kotlin.Exception() {
+    
+    /**
+     * The given seed bytes are invalid, e.g., have invalid length.
+     */
+    class InvalidSeedBytes(
+        ) : EntropyException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The given seed file is invalid, e.g., has invalid length, or could not be read.
+     */
+    class InvalidSeedFile(
+        ) : EntropyException() {
+        override val message
+            get() = ""
+    }
+    
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<EntropyException> {
         override fun lift(error_buf: RustBuffer.ByValue): EntropyException = FfiConverterTypeEntropyError.lift(error_buf)
     }
+
+    
 }
 
 /**
@@ -12327,16 +15899,25 @@ sealed class EntropyException(message: String): kotlin.Exception(message) {
 public object FfiConverterTypeEntropyError : FfiConverterRustBuffer<EntropyException> {
     override fun read(buf: ByteBuffer): EntropyException {
         
-            return when(buf.getInt()) {
-            1 -> EntropyException.InvalidSeedBytes(FfiConverterString.read(buf))
-            2 -> EntropyException.InvalidSeedFile(FfiConverterString.read(buf))
+
+        return when(buf.getInt()) {
+            1 -> EntropyException.InvalidSeedBytes()
+            2 -> EntropyException.InvalidSeedFile()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
-        
     }
 
     override fun allocationSize(value: EntropyException): ULong {
-        return 4UL
+        return when(value) {
+            is EntropyException.InvalidSeedBytes -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is EntropyException.InvalidSeedFile -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+        }
     }
 
     override fun write(value: EntropyException, buf: ByteBuffer) {
@@ -12356,96 +15937,472 @@ public object FfiConverterTypeEntropyError : FfiConverterRustBuffer<EntropyExcep
 
 
 
-sealed class Event {
+/**
+ * An event emitted by [`Node`], which should be handled by the user.
+ *
+ * [`Node`]: [`crate::Node`]
+ */
+sealed class Event: Disposable  {
     
+    /**
+     * A sent payment was successful.
+     */
     data class PaymentSuccessful(
+        /**
+         * A local identifier used to track the payment.
+         *
+         * Will only be `None` for events serialized with LDK Node v0.2.1 or prior.
+         */
         val `paymentId`: PaymentId?, 
+        /**
+         * The hash of the payment.
+         */
         val `paymentHash`: PaymentHash, 
+        /**
+         * The preimage to the `payment_hash`.
+         *
+         * Note that this serves as a payment receipt.
+         *
+         * Will only be `None` for events serialized with LDK Node v0.4.2 or prior.
+         */
         val `paymentPreimage`: PaymentPreimage?, 
-        val `feePaidMsat`: kotlin.ULong?) : Event() {
+        /**
+         * The total fee which was spent at intermediate hops in this payment.
+         */
+        val `feePaidMsat`: kotlin.ULong?, 
+        /**
+         * The BOLT12 invoice that was paid.
+         *
+         * This is useful for proof of payment. A third party can verify that the payment was made
+         * by checking that the `payment_hash` in the invoice matches `sha256(payment_preimage)`.
+         *
+         * Will be `None` for non-BOLT12 payments.
+         *
+         * Note that static invoices (indicated by [`PaidBolt12Invoice::StaticInvoice`], used for
+         * async payments) do not support proof of payment as the payment hash is not derived
+         * from a preimage known only to the recipient.
+         */
+        val `bolt12Invoice`: PaidBolt12Invoice?) : Event() {
         companion object
     }
     
+    /**
+     * A sent payment has failed.
+     */
     data class PaymentFailed(
+        /**
+         * A local identifier used to track the payment.
+         *
+         * Will only be `None` for events serialized with LDK Node v0.2.1 or prior.
+         */
         val `paymentId`: PaymentId?, 
+        /**
+         * The hash of the payment.
+         *
+         * This will be `None` if the payment failed before receiving an invoice when paying a
+         * BOLT12 [`Offer`].
+         *
+         * [`Offer`]: lightning::offers::offer::Offer
+         */
         val `paymentHash`: PaymentHash?, 
+        /**
+         * The reason why the payment failed.
+         *
+         * This will be `None` for events serialized by LDK Node v0.2.1 and prior.
+         */
         val `reason`: PaymentFailureReason?) : Event() {
         companion object
     }
     
+    /**
+     * A payment has been received.
+     */
     data class PaymentReceived(
+        /**
+         * A local identifier used to track the payment.
+         *
+         * Will only be `None` for events serialized with LDK Node v0.2.1 or prior.
+         */
         val `paymentId`: PaymentId?, 
+        /**
+         * The hash of the payment.
+         */
         val `paymentHash`: PaymentHash, 
+        /**
+         * The value, in thousandths of a satoshi, that has been received.
+         */
         val `amountMsat`: kotlin.ULong, 
+        /**
+         * Custom TLV records received on the payment
+         */
         val `customRecords`: List<CustomTlvRecord>) : Event() {
         companion object
     }
     
-    data class PaymentClaimable(
-        val `paymentId`: PaymentId, 
-        val `paymentHash`: PaymentHash, 
-        val `claimableAmountMsat`: kotlin.ULong, 
-        val `claimDeadline`: kotlin.UInt?, 
-        val `customRecords`: List<CustomTlvRecord>) : Event() {
-        companion object
-    }
-    
+    /**
+     * A payment has been forwarded.
+     */
     data class PaymentForwarded(
+        /**
+         * The channel id of the incoming channel between the previous node and us.
+         */
         val `prevChannelId`: ChannelId, 
+        /**
+         * The channel id of the outgoing channel between the next node and us.
+         */
         val `nextChannelId`: ChannelId, 
+        /**
+         * The `user_channel_id` of the incoming channel between the previous node and us.
+         *
+         * Will only be `None` for events serialized with LDK Node v0.3.0 or prior.
+         */
         val `prevUserChannelId`: UserChannelId?, 
+        /**
+         * The `user_channel_id` of the outgoing channel between the next node and us.
+         *
+         * This will be `None` if the payment was settled via an on-chain transaction. See the
+         * caveat described for the `total_fee_earned_msat` field.
+         */
         val `nextUserChannelId`: UserChannelId?, 
+        /**
+         * The node id of the previous node.
+         *
+         * This is only `None` for HTLCs received prior to LDK Node v0.5 or for events serialized by
+         * versions prior to v0.5.
+         */
         val `prevNodeId`: PublicKey?, 
+        /**
+         * The node id of the next node.
+         *
+         * This is only `None` for HTLCs received prior to LDK Node v0.5 or for events serialized by
+         * versions prior to v0.5.
+         */
         val `nextNodeId`: PublicKey?, 
+        /**
+         * The total fee, in milli-satoshis, which was earned as a result of the payment.
+         *
+         * Note that if we force-closed the channel over which we forwarded an HTLC while the HTLC
+         * was pending, the amount the next hop claimed will have been rounded down to the nearest
+         * whole satoshi. Thus, the fee calculated here may be higher than expected as we still
+         * claimed the full value in millisatoshis from the source. In this case,
+         * `claim_from_onchain_tx` will be set.
+         *
+         * If the channel which sent us the payment has been force-closed, we will claim the funds
+         * via an on-chain transaction. In that case we do not yet know the on-chain transaction
+         * fees which we will spend and will instead set this to `None`.
+         */
         val `totalFeeEarnedMsat`: kotlin.ULong?, 
+        /**
+         * The share of the total fee, in milli-satoshis, which was withheld in addition to the
+         * forwarding fee.
+         *
+         * This will only be `Some` if we forwarded an intercepted HTLC with less than the
+         * expected amount. This means our counterparty accepted to receive less than the invoice
+         * amount.
+         *
+         * The caveat described above the `total_fee_earned_msat` field applies here as well.
+         */
         val `skimmedFeeMsat`: kotlin.ULong?, 
+        /**
+         * If this is `true`, the forwarded HTLC was claimed by our counterparty via an on-chain
+         * transaction.
+         */
         val `claimFromOnchainTx`: kotlin.Boolean, 
+        /**
+         * The final amount forwarded, in milli-satoshis, after the fee is deducted.
+         *
+         * The caveat described above the `total_fee_earned_msat` field applies here as well.
+         */
         val `outboundAmountForwardedMsat`: kotlin.ULong?) : Event() {
         companion object
     }
     
+    /**
+     * A payment for a previously-registered payment hash has been received.
+     *
+     * This needs to be manually claimed by supplying the correct preimage to [`claim_for_hash`].
+     *
+     * If the provided parameters don't match the expectations or the preimage can't be
+     * retrieved in time, should be failed-back via [`fail_for_hash`].
+     *
+     * Note claiming will necessarily fail after the `claim_deadline` has been reached.
+     *
+     * [`claim_for_hash`]: crate::payment::Bolt11Payment::claim_for_hash
+     * [`fail_for_hash`]: crate::payment::Bolt11Payment::fail_for_hash
+     */
+    data class PaymentClaimable(
+        /**
+         * A local identifier used to track the payment.
+         */
+        val `paymentId`: PaymentId, 
+        /**
+         * The hash of the payment.
+         */
+        val `paymentHash`: PaymentHash, 
+        /**
+         * The value, in thousandths of a satoshi, that is claimable.
+         */
+        val `claimableAmountMsat`: kotlin.ULong, 
+        /**
+         * The block height at which this payment will be failed back and will no longer be
+         * eligible for claiming.
+         */
+        val `claimDeadline`: kotlin.UInt?, 
+        /**
+         * Custom TLV records attached to the payment
+         */
+        val `customRecords`: List<CustomTlvRecord>) : Event() {
+        companion object
+    }
+    
+    /**
+     * A channel has been created and is pending confirmation on-chain.
+     */
     data class ChannelPending(
+        /**
+         * The `channel_id` of the channel.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The `user_channel_id` of the channel.
+         */
         val `userChannelId`: UserChannelId, 
+        /**
+         * The `temporary_channel_id` this channel used to be known by during channel establishment.
+         */
         val `formerTemporaryChannelId`: ChannelId, 
+        /**
+         * The `node_id` of the channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The outpoint of the channel's funding transaction.
+         */
         val `fundingTxo`: OutPoint) : Event() {
         companion object
     }
     
+    /**
+     * A channel is ready to be used.
+     *
+     * This event is emitted when:
+     * - A new channel has been established and is ready for use
+     * - An existing channel has been spliced and is ready with the new funding output
+     */
     data class ChannelReady(
+        /**
+         * The `channel_id` of the channel.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The `user_channel_id` of the channel.
+         */
         val `userChannelId`: UserChannelId, 
+        /**
+         * The `node_id` of the channel counterparty.
+         *
+         * This will be `None` for events serialized by LDK Node v0.1.0 and prior.
+         */
         val `counterpartyNodeId`: PublicKey?, 
+        /**
+         * The outpoint of the channel's funding transaction.
+         *
+         * This represents the channel's current funding output, which may change when the
+         * channel is spliced. For spliced channels, this will contain the new funding output
+         * from the confirmed splice transaction.
+         *
+         * This will be `None` for events serialized by LDK Node v0.6.0 and prior.
+         */
         val `fundingTxo`: OutPoint?) : Event() {
         companion object
     }
     
+    /**
+     * A channel has been closed.
+     */
     data class ChannelClosed(
+        /**
+         * The `channel_id` of the channel.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The `user_channel_id` of the channel.
+         */
         val `userChannelId`: UserChannelId, 
+        /**
+         * The `node_id` of the channel counterparty.
+         *
+         * This will be `None` for events serialized by LDK Node v0.1.0 and prior.
+         */
         val `counterpartyNodeId`: PublicKey?, 
+        /**
+         * This will be `None` for events serialized by LDK Node v0.2.1 and prior.
+         */
         val `reason`: ClosureReason?) : Event() {
         companion object
     }
     
+    /**
+     * A channel splice is pending confirmation on-chain.
+     */
     data class SplicePending(
+        /**
+         * The `channel_id` of the channel.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The `user_channel_id` of the channel.
+         */
         val `userChannelId`: UserChannelId, 
+        /**
+         * The `node_id` of the channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The outpoint of the channel's splice funding transaction.
+         */
         val `newFundingTxo`: OutPoint) : Event() {
         companion object
     }
     
+    /**
+     * A channel splice has failed.
+     */
     data class SpliceFailed(
+        /**
+         * The `channel_id` of the channel.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The `user_channel_id` of the channel.
+         */
         val `userChannelId`: UserChannelId, 
+        /**
+         * The `node_id` of the channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The outpoint of the channel's splice funding transaction, if one was created.
+         */
         val `abandonedFundingTxo`: OutPoint?) : Event() {
         companion object
     }
     
 
+    
+    @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
+    override fun destroy() {
+        when(this) {
+            is Event.PaymentSuccessful -> {
+                
+    Disposable.destroy(
+        this.`paymentId`,
+        this.`paymentHash`,
+        this.`paymentPreimage`,
+        this.`feePaidMsat`,
+        this.`bolt12Invoice`
+    )
+                
+            }
+            is Event.PaymentFailed -> {
+                
+    Disposable.destroy(
+        this.`paymentId`,
+        this.`paymentHash`,
+        this.`reason`
+    )
+                
+            }
+            is Event.PaymentReceived -> {
+                
+    Disposable.destroy(
+        this.`paymentId`,
+        this.`paymentHash`,
+        this.`amountMsat`,
+        this.`customRecords`
+    )
+                
+            }
+            is Event.PaymentForwarded -> {
+                
+    Disposable.destroy(
+        this.`prevChannelId`,
+        this.`nextChannelId`,
+        this.`prevUserChannelId`,
+        this.`nextUserChannelId`,
+        this.`prevNodeId`,
+        this.`nextNodeId`,
+        this.`totalFeeEarnedMsat`,
+        this.`skimmedFeeMsat`,
+        this.`claimFromOnchainTx`,
+        this.`outboundAmountForwardedMsat`
+    )
+                
+            }
+            is Event.PaymentClaimable -> {
+                
+    Disposable.destroy(
+        this.`paymentId`,
+        this.`paymentHash`,
+        this.`claimableAmountMsat`,
+        this.`claimDeadline`,
+        this.`customRecords`
+    )
+                
+            }
+            is Event.ChannelPending -> {
+                
+    Disposable.destroy(
+        this.`channelId`,
+        this.`userChannelId`,
+        this.`formerTemporaryChannelId`,
+        this.`counterpartyNodeId`,
+        this.`fundingTxo`
+    )
+                
+            }
+            is Event.ChannelReady -> {
+                
+    Disposable.destroy(
+        this.`channelId`,
+        this.`userChannelId`,
+        this.`counterpartyNodeId`,
+        this.`fundingTxo`
+    )
+                
+            }
+            is Event.ChannelClosed -> {
+                
+    Disposable.destroy(
+        this.`channelId`,
+        this.`userChannelId`,
+        this.`counterpartyNodeId`,
+        this.`reason`
+    )
+                
+            }
+            is Event.SplicePending -> {
+                
+    Disposable.destroy(
+        this.`channelId`,
+        this.`userChannelId`,
+        this.`counterpartyNodeId`,
+        this.`newFundingTxo`
+    )
+                
+            }
+            is Event.SpliceFailed -> {
+                
+    Disposable.destroy(
+        this.`channelId`,
+        this.`userChannelId`,
+        this.`counterpartyNodeId`,
+        this.`abandonedFundingTxo`
+    )
+                
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
     
     companion object
 }
@@ -12461,6 +16418,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterTypePaymentHash.read(buf),
                 FfiConverterOptionalTypePaymentPreimage.read(buf),
                 FfiConverterOptionalULong.read(buf),
+                FfiConverterOptionalTypePaidBolt12Invoice.read(buf),
                 )
             2 -> Event.PaymentFailed(
                 FfiConverterOptionalTypePaymentId.read(buf),
@@ -12473,14 +16431,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterULong.read(buf),
                 FfiConverterSequenceTypeCustomTlvRecord.read(buf),
                 )
-            4 -> Event.PaymentClaimable(
-                FfiConverterTypePaymentId.read(buf),
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterOptionalUInt.read(buf),
-                FfiConverterSequenceTypeCustomTlvRecord.read(buf),
-                )
-            5 -> Event.PaymentForwarded(
+            4 -> Event.PaymentForwarded(
                 FfiConverterTypeChannelId.read(buf),
                 FfiConverterTypeChannelId.read(buf),
                 FfiConverterOptionalTypeUserChannelId.read(buf),
@@ -12491,6 +16442,13 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterOptionalULong.read(buf),
                 FfiConverterBoolean.read(buf),
                 FfiConverterOptionalULong.read(buf),
+                )
+            5 -> Event.PaymentClaimable(
+                FfiConverterTypePaymentId.read(buf),
+                FfiConverterTypePaymentHash.read(buf),
+                FfiConverterULong.read(buf),
+                FfiConverterOptionalUInt.read(buf),
+                FfiConverterSequenceTypeCustomTlvRecord.read(buf),
                 )
             6 -> Event.ChannelPending(
                 FfiConverterTypeChannelId.read(buf),
@@ -12536,6 +16494,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
                 + FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`paymentPreimage`)
                 + FfiConverterOptionalULong.allocationSize(value.`feePaidMsat`)
+                + FfiConverterOptionalTypePaidBolt12Invoice.allocationSize(value.`bolt12Invoice`)
             )
         }
         is Event.PaymentFailed -> {
@@ -12557,17 +16516,6 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 + FfiConverterSequenceTypeCustomTlvRecord.allocationSize(value.`customRecords`)
             )
         }
-        is Event.PaymentClaimable -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypePaymentId.allocationSize(value.`paymentId`)
-                + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
-                + FfiConverterULong.allocationSize(value.`claimableAmountMsat`)
-                + FfiConverterOptionalUInt.allocationSize(value.`claimDeadline`)
-                + FfiConverterSequenceTypeCustomTlvRecord.allocationSize(value.`customRecords`)
-            )
-        }
         is Event.PaymentForwarded -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
@@ -12582,6 +16530,17 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 + FfiConverterOptionalULong.allocationSize(value.`skimmedFeeMsat`)
                 + FfiConverterBoolean.allocationSize(value.`claimFromOnchainTx`)
                 + FfiConverterOptionalULong.allocationSize(value.`outboundAmountForwardedMsat`)
+            )
+        }
+        is Event.PaymentClaimable -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypePaymentId.allocationSize(value.`paymentId`)
+                + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
+                + FfiConverterULong.allocationSize(value.`claimableAmountMsat`)
+                + FfiConverterOptionalUInt.allocationSize(value.`claimDeadline`)
+                + FfiConverterSequenceTypeCustomTlvRecord.allocationSize(value.`customRecords`)
             )
         }
         is Event.ChannelPending -> {
@@ -12645,6 +16604,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterTypePaymentHash.write(value.`paymentHash`, buf)
                 FfiConverterOptionalTypePaymentPreimage.write(value.`paymentPreimage`, buf)
                 FfiConverterOptionalULong.write(value.`feePaidMsat`, buf)
+                FfiConverterOptionalTypePaidBolt12Invoice.write(value.`bolt12Invoice`, buf)
                 Unit
             }
             is Event.PaymentFailed -> {
@@ -12662,17 +16622,8 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterSequenceTypeCustomTlvRecord.write(value.`customRecords`, buf)
                 Unit
             }
-            is Event.PaymentClaimable -> {
-                buf.putInt(4)
-                FfiConverterTypePaymentId.write(value.`paymentId`, buf)
-                FfiConverterTypePaymentHash.write(value.`paymentHash`, buf)
-                FfiConverterULong.write(value.`claimableAmountMsat`, buf)
-                FfiConverterOptionalUInt.write(value.`claimDeadline`, buf)
-                FfiConverterSequenceTypeCustomTlvRecord.write(value.`customRecords`, buf)
-                Unit
-            }
             is Event.PaymentForwarded -> {
-                buf.putInt(5)
+                buf.putInt(4)
                 FfiConverterTypeChannelId.write(value.`prevChannelId`, buf)
                 FfiConverterTypeChannelId.write(value.`nextChannelId`, buf)
                 FfiConverterOptionalTypeUserChannelId.write(value.`prevUserChannelId`, buf)
@@ -12683,6 +16634,15 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterOptionalULong.write(value.`skimmedFeeMsat`, buf)
                 FfiConverterBoolean.write(value.`claimFromOnchainTx`, buf)
                 FfiConverterOptionalULong.write(value.`outboundAmountForwardedMsat`, buf)
+                Unit
+            }
+            is Event.PaymentClaimable -> {
+                buf.putInt(5)
+                FfiConverterTypePaymentId.write(value.`paymentId`, buf)
+                FfiConverterTypePaymentHash.write(value.`paymentHash`, buf)
+                FfiConverterULong.write(value.`claimableAmountMsat`, buf)
+                FfiConverterOptionalUInt.write(value.`claimDeadline`, buf)
+                FfiConverterSequenceTypeCustomTlvRecord.write(value.`customRecords`, buf)
                 Unit
             }
             is Event.ChannelPending -> {
@@ -12765,61 +16725,243 @@ public object FfiConverterTypeLSPS1PaymentState: FfiConverterRustBuffer<Lsps1Pay
 
 
 
+/**
+ * Details about the status of a known Lightning balance.
+ */
 sealed class LightningBalance {
     
+    /**
+     * The channel is not yet closed (or the commitment or closing transaction has not yet
+     * appeared in a block). The given balance is claimable (less on-chain fees) if the channel is
+     * force-closed now. Values do not take into account any pending splices and are only based
+     * on the confirmed state of the channel.
+     */
     data class ClaimableOnChannelClose(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The identifier of our channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The amount available to claim, in satoshis, excluding the on-chain fees which will be
+         * required to do so.
+         */
         val `amountSatoshis`: kotlin.ULong, 
+        /**
+         * The transaction fee we pay for the closing commitment transaction. This amount is not
+         * included in the `amount_satoshis` value.
+         *
+         * Note that if this channel is inbound (and thus our counterparty pays the commitment
+         * transaction fee) this value will be zero. For channels created prior to LDK Node 0.4
+         * the channel is always treated as outbound (and thus this value is never zero).
+         */
         val `transactionFeeSatoshis`: kotlin.ULong, 
+        /**
+         * The amount of millisatoshis which has been burned to fees from HTLCs which are outbound
+         * from us and are related to a payment which was sent by us. This is the sum of the
+         * millisatoshis part of all HTLCs which are otherwise represented by
+         * [`LightningBalance::MaybeTimeoutClaimableHTLC`] with their
+         * [`LightningBalance::MaybeTimeoutClaimableHTLC::outbound_payment`] flag set, as well as
+         * any dust HTLCs which would otherwise be represented the same.
+         *
+         * This amount (rounded up to a whole satoshi value) will not be included in `amount_satoshis`.
+         */
         val `outboundPaymentHtlcRoundedMsat`: kotlin.ULong, 
+        /**
+         * The amount of millisatoshis which has been burned to fees from HTLCs which are outbound
+         * from us and are related to a forwarded HTLC. This is the sum of the millisatoshis part
+         * of all HTLCs which are otherwise represented by
+         * [`LightningBalance::MaybeTimeoutClaimableHTLC`] with their
+         * [`LightningBalance::MaybeTimeoutClaimableHTLC::outbound_payment`] flag *not* set, as
+         * well as any dust HTLCs which would otherwise be represented the same.
+         *
+         * This amount (rounded up to a whole satoshi value) will not be included in `amount_satoshis`.
+         */
         val `outboundForwardedHtlcRoundedMsat`: kotlin.ULong, 
+        /**
+         * The amount of millisatoshis which has been burned to fees from HTLCs which are inbound
+         * to us and for which we know the preimage. This is the sum of the millisatoshis part of
+         * all HTLCs which would be represented by [`LightningBalance::ContentiousClaimable`] on
+         * channel close, but whose current value is included in `amount_satoshis`, as well as any
+         * dust HTLCs which would otherwise be represented the same.
+         *
+         * This amount (rounded up to a whole satoshi value) will not be included in the counterparty's
+         * `amount_satoshis`.
+         */
         val `inboundClaimingHtlcRoundedMsat`: kotlin.ULong, 
+        /**
+         * The amount of millisatoshis which has been burned to fees from HTLCs which are inbound
+         * to us and for which we do not know the preimage. This is the sum of the millisatoshis
+         * part of all HTLCs which would be represented by
+         * [`LightningBalance::MaybePreimageClaimableHTLC`] on channel close, as well as any dust
+         * HTLCs which would otherwise be represented the same.
+         *
+         * This amount (rounded up to a whole satoshi value) will not be included in the
+         * counterparty's `amount_satoshis`.
+         */
         val `inboundHtlcRoundedMsat`: kotlin.ULong) : LightningBalance() {
         companion object
     }
     
+    /**
+     * The channel has been closed, and the given balance is ours but awaiting confirmations until
+     * we consider it spendable.
+     */
     data class ClaimableAwaitingConfirmations(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The identifier of our channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The amount available to claim, in satoshis, possibly excluding the on-chain fees which
+         * were spent in broadcasting the transaction.
+         */
         val `amountSatoshis`: kotlin.ULong, 
+        /**
+         * The height at which an [`Event::SpendableOutputs`] event will be generated for this
+         * amount.
+         *
+         * [`Event::SpendableOutputs`]: lightning::events::Event::SpendableOutputs
+         */
         val `confirmationHeight`: kotlin.UInt, 
+        /**
+         * Whether this balance is a result of cooperative close, a force-close, or an HTLC.
+         */
         val `source`: BalanceSource) : LightningBalance() {
         companion object
     }
     
+    /**
+     * The channel has been closed, and the given balance should be ours but awaiting spending
+     * transaction confirmation. If the spending transaction does not confirm in time, it is
+     * possible our counterparty can take the funds by broadcasting an HTLC timeout on-chain.
+     *
+     * Once the spending transaction confirms, before it has reached enough confirmations to be
+     * considered safe from chain reorganizations, the balance will instead be provided via
+     * [`LightningBalance::ClaimableAwaitingConfirmations`].
+     */
     data class ContentiousClaimable(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The identifier of our channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The amount available to claim, in satoshis, excluding the on-chain fees which will be
+         * required to do so.
+         */
         val `amountSatoshis`: kotlin.ULong, 
+        /**
+         * The height at which the counterparty may be able to claim the balance if we have not
+         * done so.
+         */
         val `timeoutHeight`: kotlin.UInt, 
+        /**
+         * The payment hash that locks this HTLC.
+         */
         val `paymentHash`: PaymentHash, 
+        /**
+         * The preimage that can be used to claim this HTLC.
+         */
         val `paymentPreimage`: PaymentPreimage) : LightningBalance() {
         companion object
     }
     
+    /**
+     * HTLCs which we sent to our counterparty which are claimable after a timeout (less on-chain
+     * fees) if the counterparty does not know the preimage for the HTLCs. These are somewhat
+     * likely to be claimed by our counterparty before we do.
+     */
     data class MaybeTimeoutClaimableHtlc(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The identifier of our channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The amount potentially available to claim, in satoshis, excluding the on-chain fees
+         * which will be required to do so.
+         */
         val `amountSatoshis`: kotlin.ULong, 
+        /**
+         * The height at which we will be able to claim the balance if our counterparty has not
+         * done so.
+         */
         val `claimableHeight`: kotlin.UInt, 
+        /**
+         * The payment hash whose preimage our counterparty needs to claim this HTLC.
+         */
         val `paymentHash`: PaymentHash, 
+        /**
+         * Indicates whether this HTLC represents a payment which was sent outbound from us.
+         */
         val `outboundPayment`: kotlin.Boolean) : LightningBalance() {
         companion object
     }
     
+    /**
+     * HTLCs which we received from our counterparty which are claimable with a preimage which we
+     * do not currently have. This will only be claimable if we receive the preimage from the node
+     * to which we forwarded this HTLC before the timeout.
+     */
     data class MaybePreimageClaimableHtlc(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The identifier of our channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The amount potentially available to claim, in satoshis, excluding the on-chain fees
+         * which will be required to do so.
+         */
         val `amountSatoshis`: kotlin.ULong, 
+        /**
+         * The height at which our counterparty will be able to claim the balance if we have not
+         * yet received the preimage and claimed it ourselves.
+         */
         val `expiryHeight`: kotlin.UInt, 
+        /**
+         * The payment hash whose preimage we need to claim this HTLC.
+         */
         val `paymentHash`: PaymentHash) : LightningBalance() {
         companion object
     }
     
+    /**
+     * The channel has been closed, and our counterparty broadcasted a revoked commitment
+     * transaction.
+     *
+     * Thus, we're able to claim all outputs in the commitment transaction, one of which has the
+     * following amount.
+     */
     data class CounterpartyRevokedOutputClaimable(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId, 
+        /**
+         * The identifier of our channel counterparty.
+         */
         val `counterpartyNodeId`: PublicKey, 
+        /**
+         * The amount, in satoshis, of the output which we can claim.
+         */
         val `amountSatoshis`: kotlin.ULong) : LightningBalance() {
         companion object
     }
@@ -13057,14 +17199,35 @@ public object FfiConverterTypeLogLevel: FfiConverterRustBuffer<LogLevel> {
 
 
 
+/**
+ * Options for how to set the max dust exposure allowed on a channel.
+ *
+ * See [`LdkChannelConfig::max_dust_htlc_exposure`] for details.
+ */
 sealed class MaxDustHtlcExposure {
     
+    /**
+     * This sets a fixed limit on the total dust exposure in millisatoshis.
+     *
+     * Please refer to [`LdkMaxDustHTLCExposure`] for further details.
+     */
     data class FixedLimit(
+        /**
+         * The fixed limit, in millisatoshis.
+         */
         val `limitMsat`: kotlin.ULong) : MaxDustHtlcExposure() {
         companion object
     }
     
+    /**
+     * This sets a multiplier on the feerate to determine the maximum allowed dust exposure.
+     *
+     * Please refer to [`LdkMaxDustHTLCExposure`] for further details.
+     */
     data class FeeRateMultiplier(
+        /**
+         * The applied fee rate multiplier.
+         */
         val `multiplier`: kotlin.ULong) : MaxDustHtlcExposure() {
         companion object
     }
@@ -13277,6 +17440,12 @@ sealed class NodeException(message: String): kotlin.Exception(message) {
         
         class HrnParsingFailed(message: String) : NodeException(message)
         
+        class LnurlAuthFailed(message: String) : NodeException(message)
+        
+        class LnurlAuthTimeout(message: String) : NodeException(message)
+        
+        class InvalidLnurl(message: String) : NodeException(message)
+        
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<NodeException> {
         override fun lift(error_buf: RustBuffer.ByValue): NodeException = FfiConverterTypeNodeError.lift(error_buf)
@@ -13347,6 +17516,9 @@ public object FfiConverterTypeNodeError : FfiConverterRustBuffer<NodeException> 
             55 -> NodeException.InvalidBlindedPaths(FfiConverterString.read(buf))
             56 -> NodeException.AsyncPaymentServicesDisabled(FfiConverterString.read(buf))
             57 -> NodeException.HrnParsingFailed(FfiConverterString.read(buf))
+            58 -> NodeException.LnurlAuthFailed(FfiConverterString.read(buf))
+            59 -> NodeException.LnurlAuthTimeout(FfiConverterString.read(buf))
+            60 -> NodeException.InvalidLnurl(FfiConverterString.read(buf))
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
         
@@ -13586,6 +17758,18 @@ public object FfiConverterTypeNodeError : FfiConverterRustBuffer<NodeException> 
                 buf.putInt(57)
                 Unit
             }
+            is NodeException.LnurlAuthFailed -> {
+                buf.putInt(58)
+                Unit
+            }
+            is NodeException.LnurlAuthTimeout -> {
+                buf.putInt(59)
+                Unit
+            }
+            is NodeException.InvalidLnurl -> {
+                buf.putInt(60)
+                Unit
+            }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 
@@ -13667,10 +17851,121 @@ public object FfiConverterTypeOfferAmount : FfiConverterRustBuffer<OfferAmount>{
 
 
 
+/**
+ * The BOLT12 invoice that was paid, surfaced in [`Event::PaymentSuccessful`].
+ *
+ * [`Event::PaymentSuccessful`]: crate::Event::PaymentSuccessful
+ */
+sealed class PaidBolt12Invoice: Disposable  {
+    
+    /**
+     * The BOLT12 invoice, allowing the user to perform proof of payment.
+     */
+    data class Bolt12(
+        val v1: Bolt12Invoice) : PaidBolt12Invoice() {
+        companion object
+    }
+    
+    /**
+     * The static invoice, used in async payments, where the user cannot perform proof of
+     * payment.
+     */
+    data class Static(
+        val v1: StaticInvoice) : PaidBolt12Invoice() {
+        companion object
+    }
+    
+
+    
+    @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
+    override fun destroy() {
+        when(this) {
+            is PaidBolt12Invoice.Bolt12 -> {
+                
+    Disposable.destroy(
+        this.v1
+    )
+                
+            }
+            is PaidBolt12Invoice.Static -> {
+                
+    Disposable.destroy(
+        this.v1
+    )
+                
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePaidBolt12Invoice : FfiConverterRustBuffer<PaidBolt12Invoice>{
+    override fun read(buf: ByteBuffer): PaidBolt12Invoice {
+        return when(buf.getInt()) {
+            1 -> PaidBolt12Invoice.Bolt12(
+                FfiConverterTypeBolt12Invoice.read(buf),
+                )
+            2 -> PaidBolt12Invoice.Static(
+                FfiConverterTypeStaticInvoice.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: PaidBolt12Invoice) = when(value) {
+        is PaidBolt12Invoice.Bolt12 -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeBolt12Invoice.allocationSize(value.v1)
+            )
+        }
+        is PaidBolt12Invoice.Static -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeStaticInvoice.allocationSize(value.v1)
+            )
+        }
+    }
+
+    override fun write(value: PaidBolt12Invoice, buf: ByteBuffer) {
+        when(value) {
+            is PaidBolt12Invoice.Bolt12 -> {
+                buf.putInt(1)
+                FfiConverterTypeBolt12Invoice.write(value.v1, buf)
+                Unit
+            }
+            is PaidBolt12Invoice.Static -> {
+                buf.putInt(2)
+                FfiConverterTypeStaticInvoice.write(value.v1, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * Represents the direction of a payment.
+ */
 
 enum class PaymentDirection {
     
+    /**
+     * The payment is inbound.
+     */
     INBOUND,
+    /**
+     * The payment is outbound.
+     */
     OUTBOUND;
     companion object
 }
@@ -13735,51 +18030,180 @@ public object FfiConverterTypePaymentFailureReason: FfiConverterRustBuffer<Payme
 
 
 
+/**
+ * Represents the kind of a payment.
+ */
 sealed class PaymentKind {
     
+    /**
+     * An on-chain payment.
+     *
+     * Payments of this kind will be considered pending until the respective transaction has
+     * reached [`ANTI_REORG_DELAY`] confirmations on-chain.
+     *
+     * [`ANTI_REORG_DELAY`]: lightning::chain::channelmonitor::ANTI_REORG_DELAY
+     */
     data class Onchain(
+        /**
+         * The transaction identifier of this payment.
+         */
         val `txid`: Txid, 
+        /**
+         * The confirmation status of this payment.
+         */
         val `status`: ConfirmationStatus) : PaymentKind() {
         companion object
     }
     
+    /**
+     * A [BOLT 11] payment.
+     *
+     * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+     */
     data class Bolt11(
+        /**
+         * The payment hash, i.e., the hash of the `preimage`.
+         */
         val `hash`: PaymentHash, 
+        /**
+         * The pre-image used by the payment.
+         */
         val `preimage`: PaymentPreimage?, 
+        /**
+         * The secret used by the payment.
+         */
         val `secret`: PaymentSecret?) : PaymentKind() {
         companion object
     }
     
+    /**
+     * A [BOLT 11] payment intended to open an [bLIP-52 / LSPS 2] just-in-time channel.
+     *
+     * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+     * [bLIP-52 / LSPS2]: https://github.com/lightning/blips/blob/master/blip-0052.md
+     */
     data class Bolt11Jit(
+        /**
+         * The payment hash, i.e., the hash of the `preimage`.
+         */
         val `hash`: PaymentHash, 
+        /**
+         * The pre-image used by the payment.
+         */
         val `preimage`: PaymentPreimage?, 
+        /**
+         * The secret used by the payment.
+         */
         val `secret`: PaymentSecret?, 
+        /**
+         * The value, in thousands of a satoshi, that was deducted from this payment as an extra
+         * fee taken by our channel counterparty.
+         *
+         * Will only be `Some` once we received the payment. Will always be `None` for LDK Node
+         * v0.4 and prior.
+         */
         val `counterpartySkimmedFeeMsat`: kotlin.ULong?, 
+        /**
+         * Limits applying to how much fee we allow an LSP to deduct from the payment amount.
+         *
+         * Allowing them to deduct this fee from the first inbound payment will pay for the LSP's
+         * channel opening fees.
+         *
+         * See [`LdkChannelConfig::accept_underpaying_htlcs`] for more information.
+         *
+         * [`LdkChannelConfig::accept_underpaying_htlcs`]: lightning::util::config::ChannelConfig::accept_underpaying_htlcs
+         */
         val `lspFeeLimits`: LspFeeLimits) : PaymentKind() {
         companion object
     }
     
+    /**
+     * A [BOLT 12] 'offer' payment, i.e., a payment for an [`Offer`].
+     *
+     * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+     * [`Offer`]: crate::lightning::offers::offer::Offer
+     */
     data class Bolt12Offer(
+        /**
+         * The payment hash, i.e., the hash of the `preimage`.
+         */
         val `hash`: PaymentHash?, 
+        /**
+         * The pre-image used by the payment.
+         */
         val `preimage`: PaymentPreimage?, 
+        /**
+         * The secret used by the payment.
+         */
         val `secret`: PaymentSecret?, 
+        /**
+         * The ID of the offer this payment is for.
+         */
         val `offerId`: OfferId, 
+        /**
+         * The payer note for the payment.
+         *
+         * Truncated to [`PAYER_NOTE_LIMIT`] characters.
+         *
+         * This will always be `None` for payments serialized with version `v0.3.0`.
+         *
+         * [`PAYER_NOTE_LIMIT`]: lightning::offers::invoice_request::PAYER_NOTE_LIMIT
+         */
         val `payerNote`: UntrustedString?, 
+        /**
+         * The quantity of an item requested in the offer.
+         *
+         * This will always be `None` for payments serialized with version `v0.3.0`.
+         */
         val `quantity`: kotlin.ULong?) : PaymentKind() {
         companion object
     }
     
+    /**
+     * A [BOLT 12] 'refund' payment, i.e., a payment for a [`Refund`].
+     *
+     * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+     * [`Refund`]: lightning::offers::refund::Refund
+     */
     data class Bolt12Refund(
+        /**
+         * The payment hash, i.e., the hash of the `preimage`.
+         */
         val `hash`: PaymentHash?, 
+        /**
+         * The pre-image used by the payment.
+         */
         val `preimage`: PaymentPreimage?, 
+        /**
+         * The secret used by the payment.
+         */
         val `secret`: PaymentSecret?, 
+        /**
+         * The payer note for the refund payment.
+         *
+         * This will always be `None` for payments serialized with version `v0.3.0`.
+         */
         val `payerNote`: UntrustedString?, 
+        /**
+         * The quantity of an item that the refund is for.
+         *
+         * This will always be `None` for payments serialized with version `v0.3.0`.
+         */
         val `quantity`: kotlin.ULong?) : PaymentKind() {
         companion object
     }
     
+    /**
+     * A spontaneous ("keysend") payment.
+     */
     data class Spontaneous(
+        /**
+         * The payment hash, i.e., the hash of the `preimage`.
+         */
         val `hash`: PaymentHash, 
+        /**
+         * The pre-image used by the payment.
+         */
         val `preimage`: PaymentPreimage?) : PaymentKind() {
         companion object
     }
@@ -13984,11 +18408,23 @@ public object FfiConverterTypePaymentPathStatus: FfiConverterRustBuffer<PaymentP
 
 
 
+/**
+ * Represents the current status of a payment.
+ */
 
 enum class PaymentStatus {
     
+    /**
+     * The payment is still pending.
+     */
     PENDING,
+    /**
+     * The payment succeeded.
+     */
     SUCCEEDED,
+    /**
+     * The payment failed.
+     */
     FAILED;
     companion object
 }
@@ -14015,27 +18451,78 @@ public object FfiConverterTypePaymentStatus: FfiConverterRustBuffer<PaymentStatu
 
 
 
+/**
+ * Details about the status of a known balance currently being swept to our on-chain wallet.
+ */
 sealed class PendingSweepBalance {
     
+    /**
+     * The spendable output is about to be swept, but a spending transaction has yet to be generated and
+     * broadcast.
+     */
     data class PendingBroadcast(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId?, 
+        /**
+         * The amount, in satoshis, of the output being swept.
+         */
         val `amountSatoshis`: kotlin.ULong) : PendingSweepBalance() {
         companion object
     }
     
+    /**
+     * A spending transaction has been generated and broadcast and is awaiting confirmation
+     * on-chain.
+     */
     data class BroadcastAwaitingConfirmation(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId?, 
+        /**
+         * The best height when we last broadcast a transaction spending the output being swept.
+         */
         val `latestBroadcastHeight`: kotlin.UInt, 
+        /**
+         * The identifier of the transaction spending the swept output we last broadcast.
+         */
         val `latestSpendingTxid`: Txid, 
+        /**
+         * The amount, in satoshis, of the output being swept.
+         */
         val `amountSatoshis`: kotlin.ULong) : PendingSweepBalance() {
         companion object
     }
     
+    /**
+     * A spending transaction has been confirmed on-chain and is awaiting threshold confirmations.
+     *
+     * It will be pruned after reaching [`PRUNE_DELAY_BLOCKS`] confirmations.
+     *
+     * [`PRUNE_DELAY_BLOCKS`]: lightning::util::sweep::PRUNE_DELAY_BLOCKS
+     */
     data class AwaitingThresholdConfirmations(
+        /**
+         * The identifier of the channel this balance belongs to.
+         */
         val `channelId`: ChannelId?, 
+        /**
+         * The identifier of the confirmed transaction spending the swept output.
+         */
         val `latestSpendingTxid`: Txid, 
+        /**
+         * The hash of the block in which the spending transaction was confirmed.
+         */
         val `confirmationHash`: BlockHash, 
+        /**
+         * The height at which the spending transaction was confirmed.
+         */
         val `confirmationHeight`: kotlin.UInt, 
+        /**
+         * The amount, in satoshis, of the output being swept.
+         */
         val `amountSatoshis`: kotlin.ULong) : PendingSweepBalance() {
         companion object
     }
@@ -14137,19 +18624,53 @@ public object FfiConverterTypePendingSweepBalance : FfiConverterRustBuffer<Pendi
 
 
 
+/**
+ * Represents the result of a payment made using a [BIP 21] URI or a [BIP 353] Human-Readable Name.
+ *
+ * After a successful on-chain transaction, the transaction ID ([`Txid`]) is returned.
+ * For BOLT11 and BOLT12 payments, the corresponding [`PaymentId`] is returned.
+ *
+ * [BIP 21]: https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki
+ * [BIP 353]: https://github.com/bitcoin/bips/blob/master/bip-0353.mediawiki
+ * [`PaymentId`]: lightning::ln::channelmanager::PaymentId
+ * [`Txid`]: bitcoin::hash_types::Txid
+ */
 sealed class UnifiedPaymentResult {
     
+    /**
+     * An on-chain payment.
+     */
     data class Onchain(
+        /**
+         * The transaction ID (txid) of the on-chain payment.
+         */
         val `txid`: Txid) : UnifiedPaymentResult() {
         companion object
     }
     
+    /**
+     * A [BOLT 11] payment.
+     *
+     * [BOLT 11]: https://github.com/lightning/bolts/blob/master/11-payment-encoding.md
+     */
     data class Bolt11(
+        /**
+         * The payment ID for the BOLT11 invoice.
+         */
         val `paymentId`: PaymentId) : UnifiedPaymentResult() {
         companion object
     }
     
+    /**
+     * A [BOLT 12] offer payment, i.e., a payment for an [`Offer`].
+     *
+     * [BOLT 12]: https://github.com/lightning/bolts/blob/master/12-offer-encoding.md
+     * [`Offer`]: crate::lightning::offers::offer::Offer
+     */
     data class Bolt12(
+        /**
+         * The payment ID for the BOLT12 offer.
+         */
         val `paymentId`: PaymentId) : UnifiedPaymentResult() {
         companion object
     }
@@ -14229,20 +18750,73 @@ public object FfiConverterTypeUnifiedPaymentResult : FfiConverterRustBuffer<Unif
 
 
 
-sealed class VssHeaderProviderException(message: String): kotlin.Exception(message) {
+/**
+ * Errors around providing headers for each VSS request.
+ */
+sealed class VssHeaderProviderException: kotlin.Exception() {
+    
+    /**
+     * Invalid data was encountered.
+     */
+    class InvalidData(
         
-        class InvalidData(message: String) : VssHeaderProviderException(message)
+        /**
+         * The error message.
+         */
+        val `error`: kotlin.String
+        ) : VssHeaderProviderException() {
+        override val message
+            get() = "error=${ `error` }"
+    }
+    
+    /**
+     * An external request failed.
+     */
+    class RequestException(
         
-        class RequestException(message: String) : VssHeaderProviderException(message)
+        /**
+         * The error message.
+         */
+        val `error`: kotlin.String
+        ) : VssHeaderProviderException() {
+        override val message
+            get() = "error=${ `error` }"
+    }
+    
+    /**
+     * Authorization was refused.
+     */
+    class AuthorizationException(
         
-        class AuthorizationException(message: String) : VssHeaderProviderException(message)
+        /**
+         * The error message.
+         */
+        val `error`: kotlin.String
+        ) : VssHeaderProviderException() {
+        override val message
+            get() = "error=${ `error` }"
+    }
+    
+    /**
+     * An application-level error occurred specific to the header provider functionality.
+     */
+    class InternalException(
         
-        class InternalException(message: String) : VssHeaderProviderException(message)
-        
+        /**
+         * The error message.
+         */
+        val `error`: kotlin.String
+        ) : VssHeaderProviderException() {
+        override val message
+            get() = "error=${ `error` }"
+    }
+    
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<VssHeaderProviderException> {
         override fun lift(error_buf: RustBuffer.ByValue): VssHeaderProviderException = FfiConverterTypeVssHeaderProviderError.lift(error_buf)
     }
+
+    
 }
 
 /**
@@ -14251,36 +18825,69 @@ sealed class VssHeaderProviderException(message: String): kotlin.Exception(messa
 public object FfiConverterTypeVssHeaderProviderError : FfiConverterRustBuffer<VssHeaderProviderException> {
     override fun read(buf: ByteBuffer): VssHeaderProviderException {
         
-            return when(buf.getInt()) {
-            1 -> VssHeaderProviderException.InvalidData(FfiConverterString.read(buf))
-            2 -> VssHeaderProviderException.RequestException(FfiConverterString.read(buf))
-            3 -> VssHeaderProviderException.AuthorizationException(FfiConverterString.read(buf))
-            4 -> VssHeaderProviderException.InternalException(FfiConverterString.read(buf))
+
+        return when(buf.getInt()) {
+            1 -> VssHeaderProviderException.InvalidData(
+                FfiConverterString.read(buf),
+                )
+            2 -> VssHeaderProviderException.RequestException(
+                FfiConverterString.read(buf),
+                )
+            3 -> VssHeaderProviderException.AuthorizationException(
+                FfiConverterString.read(buf),
+                )
+            4 -> VssHeaderProviderException.InternalException(
+                FfiConverterString.read(buf),
+                )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
-        
     }
 
     override fun allocationSize(value: VssHeaderProviderException): ULong {
-        return 4UL
+        return when(value) {
+            is VssHeaderProviderException.InvalidData -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`error`)
+            )
+            is VssHeaderProviderException.RequestException -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`error`)
+            )
+            is VssHeaderProviderException.AuthorizationException -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`error`)
+            )
+            is VssHeaderProviderException.InternalException -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`error`)
+            )
+        }
     }
 
     override fun write(value: VssHeaderProviderException, buf: ByteBuffer) {
         when(value) {
             is VssHeaderProviderException.InvalidData -> {
                 buf.putInt(1)
+                FfiConverterString.write(value.`error`, buf)
                 Unit
             }
             is VssHeaderProviderException.RequestException -> {
                 buf.putInt(2)
+                FfiConverterString.write(value.`error`, buf)
                 Unit
             }
             is VssHeaderProviderException.AuthorizationException -> {
                 buf.putInt(3)
+                FfiConverterString.write(value.`error`, buf)
                 Unit
             }
             is VssHeaderProviderException.InternalException -> {
                 buf.putInt(4)
+                FfiConverterString.write(value.`error`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -14290,13 +18897,31 @@ public object FfiConverterTypeVssHeaderProviderError : FfiConverterRustBuffer<Vs
 
 
 
+/**
+ * Supported BIP39 mnemonic word counts for entropy generation.
+ */
 
 enum class WordCount {
     
+    /**
+     * 12-word mnemonic (128-bit entropy)
+     */
     WORDS12,
+    /**
+     * 15-word mnemonic (160-bit entropy)
+     */
     WORDS15,
+    /**
+     * 18-word mnemonic (192-bit entropy)
+     */
     WORDS18,
+    /**
+     * 21-word mnemonic (224-bit entropy)
+     */
     WORDS21,
+    /**
+     * 24-word mnemonic (256-bit entropy)
+     */
     WORDS24;
     companion object
 }
@@ -14477,6 +19102,38 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
         } else {
             buf.put(1)
             FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteArray?> {
+    override fun read(buf: ByteBuffer): kotlin.ByteArray? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterByteArray.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.ByteArray?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterByteArray.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.ByteArray?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterByteArray.write(value, buf)
         }
     }
 }
@@ -14999,6 +19656,38 @@ public object FfiConverterOptionalTypeRouteParametersConfig: FfiConverterRustBuf
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeTorConfig: FfiConverterRustBuffer<TorConfig?> {
+    override fun read(buf: ByteBuffer): TorConfig? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeTorConfig.read(buf)
+    }
+
+    override fun allocationSize(value: TorConfig?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeTorConfig.allocationSize(value)
+        }
+    }
+
+    override fun write(value: TorConfig?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeTorConfig.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeAsyncPaymentsRole: FfiConverterRustBuffer<AsyncPaymentsRole?> {
     override fun read(buf: ByteBuffer): AsyncPaymentsRole? {
         if (buf.get().toInt() == 0) {
@@ -15191,6 +19880,38 @@ public object FfiConverterOptionalTypeOfferAmount: FfiConverterRustBuffer<OfferA
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypePaidBolt12Invoice: FfiConverterRustBuffer<PaidBolt12Invoice?> {
+    override fun read(buf: ByteBuffer): PaidBolt12Invoice? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypePaidBolt12Invoice.read(buf)
+    }
+
+    override fun allocationSize(value: PaidBolt12Invoice?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypePaidBolt12Invoice.allocationSize(value)
+        }
+    }
+
+    override fun write(value: PaidBolt12Invoice?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypePaidBolt12Invoice.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypePaymentFailureReason: FfiConverterRustBuffer<PaymentFailureReason?> {
     override fun read(buf: ByteBuffer): PaymentFailureReason? {
         if (buf.get().toInt() == 0) {
@@ -15255,60 +19976,28 @@ public object FfiConverterOptionalTypeWordCount: FfiConverterRustBuffer<WordCoun
 /**
  * @suppress
  */
-public object FfiConverterOptionalSequenceUByte: FfiConverterRustBuffer<List<kotlin.UByte>?> {
-    override fun read(buf: ByteBuffer): List<kotlin.UByte>? {
+public object FfiConverterOptionalSequenceByteArray: FfiConverterRustBuffer<List<kotlin.ByteArray>?> {
+    override fun read(buf: ByteBuffer): List<kotlin.ByteArray>? {
         if (buf.get().toInt() == 0) {
             return null
         }
-        return FfiConverterSequenceUByte.read(buf)
+        return FfiConverterSequenceByteArray.read(buf)
     }
 
-    override fun allocationSize(value: List<kotlin.UByte>?): ULong {
+    override fun allocationSize(value: List<kotlin.ByteArray>?): ULong {
         if (value == null) {
             return 1UL
         } else {
-            return 1UL + FfiConverterSequenceUByte.allocationSize(value)
+            return 1UL + FfiConverterSequenceByteArray.allocationSize(value)
         }
     }
 
-    override fun write(value: List<kotlin.UByte>?, buf: ByteBuffer) {
+    override fun write(value: List<kotlin.ByteArray>?, buf: ByteBuffer) {
         if (value == null) {
             buf.put(0)
         } else {
             buf.put(1)
-            FfiConverterSequenceUByte.write(value, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
-public object FfiConverterOptionalSequenceSequenceUByte: FfiConverterRustBuffer<List<List<kotlin.UByte>>?> {
-    override fun read(buf: ByteBuffer): List<List<kotlin.UByte>>? {
-        if (buf.get().toInt() == 0) {
-            return null
-        }
-        return FfiConverterSequenceSequenceUByte.read(buf)
-    }
-
-    override fun allocationSize(value: List<List<kotlin.UByte>>?): ULong {
-        if (value == null) {
-            return 1UL
-        } else {
-            return 1UL + FfiConverterSequenceSequenceUByte.allocationSize(value)
-        }
-    }
-
-    override fun write(value: List<List<kotlin.UByte>>?, buf: ByteBuffer) {
-        if (value == null) {
-            buf.put(0)
-        } else {
-            buf.put(1)
-            FfiConverterSequenceSequenceUByte.write(value, buf)
+            FfiConverterSequenceByteArray.write(value, buf)
         }
     }
 }
@@ -15639,38 +20328,6 @@ public object FfiConverterOptionalTypeScriptBuf: FfiConverterRustBuffer<ScriptBu
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeSocketAddress: FfiConverterRustBuffer<SocketAddress?> {
-    override fun read(buf: ByteBuffer): SocketAddress? {
-        if (buf.get().toInt() == 0) {
-            return null
-        }
-        return FfiConverterTypeSocketAddress.read(buf)
-    }
-
-    override fun allocationSize(value: SocketAddress?): ULong {
-        if (value == null) {
-            return 1UL
-        } else {
-            return 1UL + FfiConverterTypeSocketAddress.allocationSize(value)
-        }
-    }
-
-    override fun write(value: SocketAddress?, buf: ByteBuffer) {
-        if (value == null) {
-            buf.put(0)
-        } else {
-            buf.put(1)
-            FfiConverterTypeSocketAddress.write(value, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
 public object FfiConverterOptionalTypeUntrustedString: FfiConverterRustBuffer<UntrustedString?> {
     override fun read(buf: ByteBuffer): UntrustedString? {
         if (buf.get().toInt() == 0) {
@@ -15781,6 +20438,34 @@ public object FfiConverterSequenceULong: FfiConverterRustBuffer<List<kotlin.ULon
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterULong.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceByteArray: FfiConverterRustBuffer<List<kotlin.ByteArray>> {
+    override fun read(buf: ByteBuffer): List<kotlin.ByteArray> {
+        val len = buf.getInt()
+        return List<kotlin.ByteArray>(len) {
+            FfiConverterByteArray.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.ByteArray>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterByteArray.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.ByteArray>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterByteArray.write(it, buf)
         }
     }
 }
@@ -16145,34 +20830,6 @@ public object FfiConverterSequenceTypePendingSweepBalance: FfiConverterRustBuffe
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypePendingSweepBalance.write(it, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
-public object FfiConverterSequenceSequenceUByte: FfiConverterRustBuffer<List<List<kotlin.UByte>>> {
-    override fun read(buf: ByteBuffer): List<List<kotlin.UByte>> {
-        val len = buf.getInt()
-        return List<List<kotlin.UByte>>(len) {
-            FfiConverterSequenceUByte.read(buf)
-        }
-    }
-
-    override fun allocationSize(value: List<List<kotlin.UByte>>): ULong {
-        val sizeForLength = 4UL
-        val sizeForItems = value.map { FfiConverterSequenceUByte.allocationSize(it) }.sum()
-        return sizeForLength + sizeForItems
-    }
-
-    override fun write(value: List<List<kotlin.UByte>>, buf: ByteBuffer) {
-        buf.putInt(value.size)
-        value.iterator().forEach {
-            FfiConverterSequenceUByte.write(it, buf)
         }
     }
 }
