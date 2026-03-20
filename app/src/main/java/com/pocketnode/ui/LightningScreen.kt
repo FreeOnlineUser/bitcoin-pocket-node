@@ -539,6 +539,14 @@ fun LightningScreen(
                     }
                 }
 
+                // Wallet backup
+                OutlinedButton(
+                    onClick = onNavigateToSeedBackup,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("\uD83D\uDD11 Wallet Seed and Backup")
+                }
+
                 // Channels card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -919,14 +927,6 @@ fun LightningScreen(
                             Text(if (towerConfigured) "Watchtower Settings" else "Set Up Watchtower")
                         }
                     }
-                }
-
-                // Wallet backup
-                OutlinedButton(
-                    onClick = onNavigateToSeedBackup,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("\uD83D\uDD11 Wallet Seed and Backup")
                 }
 
             }
