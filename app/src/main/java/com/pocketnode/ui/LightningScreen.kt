@@ -433,6 +433,112 @@ fun LightningScreen(
                     }
                 }
 
+                // Fund wallet card
+                var depositAddress by remember { mutableStateOf<String?>(null) }
+                var addressVisible by remember { mutableStateOf(false) }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Fund Lightning Wallet", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Send bitcoin to this address to fund your Lightning wallet for opening channels.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        Spacer(Modifier.height(12.dp))
+
+                        if (depositAddress != null && addressVisible) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { addressVisible = false },
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Deposit Address", style = MaterialTheme.typography.labelMedium)
+                                Icon(
+                                    Icons.Default.KeyboardArrowUp,
+                                    contentDescription = "Hide",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                com.pocketnode.ui.lightning.QrCodeImage(
+                                    data = "bitcoin:${depositAddress!!}",
+                                    size = 200
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            SelectionContainer {
+                                Text(
+                                    depositAddress!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Visible
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = { clipboardManager.setText(AnnotatedString(depositAddress!!)) },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, "Copy", modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Copy Address", style = MaterialTheme.typography.labelSmall)
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        lightning.markDepositAddressUsed(depositAddress!!)
+                                        depositAddress = null
+                                        lightning.getOnchainAddress().onSuccess { depositAddress = it }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Refresh, "Skip", modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Skip Address", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = {
+                                    if (depositAddress == null) {
+                                        lightning.getOnchainAddress().onSuccess {
+                                            depositAddress = it
+                                            addressVisible = true
+                                        }
+                                    } else {
+                                        addressVisible = true
+                                    }
+                                }
+                            ) {
+                                Text(if (depositAddress != null) "Show Deposit Address" else "Generate Deposit Address")
+                            }
+                        }
+
+                        // Send on-chain button
+                        if (effectiveState.onchainBalanceSats > 0) {
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = onNavigateToSendOnchain,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Send On-chain")
+                            }
+                        }
+                    }
+                }
+
                 // Channels card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -744,113 +850,6 @@ fun LightningScreen(
                                         style = MaterialTheme.typography.bodySmall
                                     )
                                 }
-                            }
-                        }
-                    }
-                }
-
-                // Fund wallet card
-                var depositAddress by remember { mutableStateOf<String?>(null) }
-                var addressVisible by remember { mutableStateOf(false) }
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Fund Lightning Wallet", fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Send bitcoin to this address to fund your Lightning wallet for opening channels.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                        Spacer(Modifier.height(12.dp))
-
-                        if (depositAddress != null && addressVisible) {
-                            // Tap header to collapse the address
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { addressVisible = false },
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Deposit Address", style = MaterialTheme.typography.labelMedium)
-                                Icon(
-                                    Icons.Default.KeyboardArrowUp,
-                                    contentDescription = "Hide",
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                com.pocketnode.ui.lightning.QrCodeImage(
-                                    data = "bitcoin:${depositAddress!!}",
-                                    size = 200
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            SelectionContainer {
-                                Text(
-                                    depositAddress!!,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = FontFamily.Monospace,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Visible
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = { clipboardManager.setText(AnnotatedString(depositAddress!!)) },
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                                ) {
-                                    Icon(Icons.Default.ContentCopy, "Copy", modifier = Modifier.size(14.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Copy Address", style = MaterialTheme.typography.labelSmall)
-                                }
-                                OutlinedButton(
-                                    onClick = {
-                                        lightning.markDepositAddressUsed(depositAddress!!)
-                                        depositAddress = null
-                                        lightning.getOnchainAddress().onSuccess { depositAddress = it }
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                                ) {
-                                    Icon(Icons.Default.Refresh, "Skip", modifier = Modifier.size(14.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Skip Address", style = MaterialTheme.typography.labelSmall)
-                                }
-                            }
-                        } else {
-                            OutlinedButton(
-                                onClick = {
-                                    if (depositAddress == null) {
-                                        lightning.getOnchainAddress().onSuccess {
-                                            depositAddress = it
-                                            addressVisible = true
-                                        }
-                                    } else {
-                                        addressVisible = true
-                                    }
-                                }
-                            ) {
-                                Text(if (depositAddress != null) "Show Deposit Address" else "Generate Deposit Address")
-                            }
-                        }
-
-                        // Send on-chain button
-                        if (effectiveState.onchainBalanceSats > 0) {
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedButton(
-                                onClick = onNavigateToSendOnchain,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Send On-chain")
                             }
                         }
                     }
