@@ -230,6 +230,69 @@ fun LightningScreen(
                         )
                     }
                 }
+
+                // Watchtower status card
+                val wtPrefs = remember { context.getSharedPreferences("watchtower_prefs", android.content.Context.MODE_PRIVATE) }
+                val wtManager = remember { com.pocketnode.service.WatchtowerManager(context) }
+                val towerConfigured = remember { wtManager.isConfigured() }
+                val backupMonitorsDir = remember { java.io.File(context.filesDir, "lightning_backup/monitors") }
+                val backupCount = remember { backupMonitorsDir.listFiles()?.count { it.name.endsWith(".bin") } ?: 0 }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (towerConfigured) {
+                            val wtStatus = wtManager.getStatus()
+                            val nodeOs = if (wtStatus is com.pocketnode.service.WatchtowerManager.WatchtowerStatus.Configured) wtStatus.nodeOs else null
+                            val towerReachable = effectiveState.watchtowerReachable
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("\uD83D\uDEE1\uFE0F Watchtower", fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+                                when (towerReachable) {
+                                    true -> Text("● Connected", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
+                                    false -> Text("● Offline", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFF9800))
+                                    null -> Text("● Checking...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                                }
+                            }
+                            Text(
+                                "Your home node${if (nodeOs != null) " ($nodeOs)" else ""} watches your channels when this phone is offline.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            val towerOnion = wtPrefs.getString("tower_onion", "") ?: ""
+                            if (towerOnion.isNotEmpty()) {
+                                Text(
+                                    "\uD83E\uDDA7 ${towerOnion.take(16)}...onion",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                        } else {
+                            Text("\uD83D\uDEE1\uFE0F Watchtower", fontWeight = FontWeight.Bold)
+                            Text(
+                                "Not connected. Connect to your home node's watchtower to protect your channels when this phone is offline.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                        val channelCount = LightningService.stateFlow.value.channelCount
+                        if (channelCount > 0 || backupCount > 0) {
+                            Text(
+                                "\uD83D\uDCBE Local backup: $backupCount channel monitor${if (backupCount != 1) "s" else ""} saved",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (backupCount > 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                        OutlinedButton(onClick = onNavigateToWatchtower) {
+                            Text(if (towerConfigured) "Watchtower Settings" else "Set Up Watchtower")
+                        }
+                    }
+                }
             }
 
             // Start/Stop button
@@ -859,72 +922,6 @@ fun LightningScreen(
                                     )
                                 }
                             }
-                        }
-                    }
-                }
-
-                // Watchtower status card
-                val wtPrefs = remember { context.getSharedPreferences("watchtower_prefs", android.content.Context.MODE_PRIVATE) }
-                val wtManager = remember { com.pocketnode.service.WatchtowerManager(context) }
-                val towerConfigured = remember { wtManager.isConfigured() }
-
-                // Check monitor backup status
-                val backupMonitorsDir = remember { java.io.File(context.filesDir, "lightning_backup/monitors") }
-                val backupCount = remember { backupMonitorsDir.listFiles()?.count { it.name.endsWith(".bin") } ?: 0 }
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (towerConfigured) {
-                            val wtStatus = wtManager.getStatus()
-                            val nodeOs = if (wtStatus is com.pocketnode.service.WatchtowerManager.WatchtowerStatus.Configured) wtStatus.nodeOs else null
-                            val towerReachable = effectiveState.watchtowerReachable
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text("\uD83D\uDEE1\uFE0F Watchtower", fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
-                                when (towerReachable) {
-                                    true -> Text("● Connected", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
-                                    false -> Text("● Offline", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFF9800))
-                                    null -> Text("● Checking...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                                }
-                            }
-                            Text(
-                                "Your home node${if (nodeOs != null) " ($nodeOs)" else ""} watches your channels when this phone is offline.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                            val towerOnion = wtPrefs.getString("tower_onion", "") ?: ""
-                            if (towerOnion.isNotEmpty()) {
-                                Text(
-                                    "\uD83E\uDDA7 ${towerOnion.take(16)}...onion",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = FontFamily.Monospace,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                            }
-                        } else {
-                            Text("\uD83D\uDEE1\uFE0F Watchtower", fontWeight = FontWeight.Bold)
-                            Text(
-                                "Not connected. Connect to your home node's watchtower to protect your channels when this phone is offline.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                        }
-                        // Show local backup status
-                        val channelCount = LightningService.stateFlow.value.channelCount
-                        if (channelCount > 0 || backupCount > 0) {
-                            Text(
-                                "\uD83D\uDCBE Local backup: $backupCount channel monitor${if (backupCount != 1) "s" else ""} saved",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (backupCount > 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                            )
-                        }
-                        OutlinedButton(onClick = onNavigateToWatchtower) {
-                            Text(if (towerConfigured) "Watchtower Settings" else "Set Up Watchtower")
                         }
                     }
                 }
