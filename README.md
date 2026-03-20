@@ -449,10 +449,8 @@ app/src/main/java/com/pocketnode/
 
 ## Roadmap
 
-- **~~Tor for all traffic~~** ✅ One-tap toggle routes bitcoind, LDK peers, and HTTP calls through embedded Arti SOCKS proxy. Full network privacy shipped.
 - **LDK upstream contribution:** improving watchtower API in rust-lightning ChannelMonitor ([#813](https://github.com/lightningdevkit/ldk-node/issues/813)). Draft PR submitted.
 - **Upstream PRs:** rust-lightning [#4453](https://github.com/lightningdevkit/rust-lightning/pull/4453) (justice tx API), ldk-node [#822](https://github.com/lightningdevkit/ldk-node/pull/822) (wallet birthday), rust-lightning [#4485](https://github.com/lightningdevkit/rust-lightning/issues/4485) (anchor downgrade bug)
-- **Ark integration:** Community-scale trustless payments. Run an Ark Service Provider on your Umbrel, friends connect from their phones over Tor. No individual channel management, no routing failures, ASP can't steal funds. See [design doc](docs/ARK-INTEGRATION.md)
 - **Desktop port:** Same app on Linux, macOS, Windows via Compose Multiplatform. See [design doc](docs/DESKTOP-PORT.md)
 - **iOS port:** Burst sync + watchtower + in-process LDK make iOS viable. See [feasibility analysis](docs/IOS-PORT.md)
 
