@@ -298,8 +298,9 @@ fun LightningScreen(
                 }
             }
 
-            // Action buttons — shown when running
-            if (effectiveState.status == LightningService.LightningState.Status.RUNNING) {
+            // Action buttons — shown when running with active channels
+            if (effectiveState.status == LightningService.LightningState.Status.RUNNING &&
+                effectiveState.channelCount > 0) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -929,7 +930,11 @@ fun LightningScreen(
                     Text("\uD83D\uDD11 Wallet Seed and Backup")
                 }
 
-                // Stop node
+            }
+
+            // Lightning info & management — always visible at bottom
+            run {
+                // Stop node — always available
                 OutlinedButton(
                     onClick = { lightning.stop() },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -937,10 +942,7 @@ fun LightningScreen(
                 ) {
                     Text("Stop Lightning Node")
                 }
-            }
 
-            // Lightning info & management — always visible at bottom
-            run {
                 val filterDir = java.io.File(context.filesDir, "bitcoin/indexes/blockfilter/basic")
                 val hasFilters = filterDir.exists() && (filterDir.listFiles()?.size ?: 0) > 1
 
