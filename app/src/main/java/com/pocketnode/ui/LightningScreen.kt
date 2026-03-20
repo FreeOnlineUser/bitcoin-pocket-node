@@ -934,15 +934,6 @@ fun LightningScreen(
 
             // Lightning info & management — always visible at bottom
             run {
-                // Stop node — always available
-                OutlinedButton(
-                    onClick = { lightning.stop() },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Stop Lightning Node")
-                }
-
                 val filterDir = java.io.File(context.filesDir, "bitcoin/indexes/blockfilter/basic")
                 val hasFilters = filterDir.exists() && (filterDir.listFiles()?.size ?: 0) > 1
 
@@ -979,6 +970,20 @@ fun LightningScreen(
                         }
                     }
 
+                }
+
+                // Stop node
+                OutlinedButton(
+                    onClick = { lightning.stop() },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Stop Lightning Node")
+                }
+
+                if (hasFilters) {
+                    val manager2 = remember { BlockFilterManager(context) }
+                    val sizeGb2 = remember { manager2.localSizeBytes() / (1024.0 * 1024 * 1024) }
                     var showRemoveConfirm by remember { mutableStateOf(false) }
 
                     OutlinedButton(
@@ -996,14 +1001,14 @@ fun LightningScreen(
                             onDismissRequest = { showRemoveConfirm = false },
                             title = { Text("Remove Lightning Support?") },
                             text = {
-                                Text("This will delete ${"%.1f".format(sizeGb)} GB of block filter data. Lightning will stop working and your channels may need to be closed.")
+                                Text("This will delete ${"%.1f".format(sizeGb2)} GB of block filter data. Lightning will stop working and your channels may need to be closed.")
                             },
                             confirmButton = {
                                 TextButton(onClick = {
                                     showRemoveConfirm = false
                                     scope.launch {
                                         lightning.stop()
-                                        manager.removeLocal(context)
+                                        manager2.removeLocal(context)
                                         onNavigateBack()
                                     }
                                 }) {
