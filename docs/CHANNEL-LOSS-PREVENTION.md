@@ -50,6 +50,15 @@ Automatically snapshot state before any APK install via the in-app updater. If t
 ### Backup verification
 After restore, confirm channel_manager and monitors are consistent before starting LDK. Check that every monitor has a matching channel entry in the manager.
 
+## What we should have done
+
+The rebase onto upstream/main was unnecessary for the live wallet. We could have:
+1. Bumped versionCode on the old fork and kept shipping
+2. Developed the rebase on a separate branch, tested on an empty wallet
+3. Only switched to the new codebase after closing the channel or verifying the migration
+
+The phone doesn't care about git history. It only checks that versionCode goes up. The simplest path was right there: keep the old binary running, increment the version number, and take our time with the migration.
+
 ## Hard rules (from March 7 + March 20 failures)
 
 1. Never auto-delete wallet/channel state based on time. Compare against external source of truth.
