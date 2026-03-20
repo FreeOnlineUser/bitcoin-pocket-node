@@ -1278,14 +1278,6 @@ private fun ActionButtons(
             }
         }
 
-        // Check if legacy Lightning channels exist (would be lost on update)
-        val hasLegacyChannels = remember {
-            val storageDir = java.io.File(updateContext.filesDir, "lightning")
-            val monitorsDir = java.io.File(storageDir, "monitors")
-            val hasSqlite = java.io.File(storageDir, "ldk_node_data.sqlite").exists()
-            !hasSqlite && monitorsDir.exists() && (monitorsDir.listFiles()?.any { it.length() > 0 } == true)
-        }
-
         // Update available card with release notes
         if (updateInfo?.hasUpdate == true && !dismissed) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -1318,22 +1310,7 @@ private fun ActionButtons(
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    if (hasLegacyChannels) {
-                        // Block update when legacy channels would be lost
-                        Text(
-                            "⚠️ You have open Lightning channels that use the old storage format. " +
-                                "This update changes the storage format and your channels would be lost. " +
-                                "Close all Lightning channels first, then update.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFFF5722),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = { dismissed = true }) {
-                            Text("OK")
-                        }
-                    } else {
-                        Row(
+                    Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
                         ) {
@@ -1374,7 +1351,6 @@ private fun ActionButtons(
                     }
                 }
             }
-        }
         // Bitcoin version selector
         val versionContext = LocalContext.current
         var selectedVersion by remember { mutableStateOf(com.pocketnode.util.BinaryExtractor.getSelectedVersion(versionContext)) }

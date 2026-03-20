@@ -172,26 +172,6 @@ class LightningService(private val context: Context) {
     // initialised and it's safe to touch coroutine machinery again.
     private fun startInternal(rpcUser: String, rpcPassword: String, rpcPort: Int) {
         try {
-            // Safety net: block if legacy flat-file channels exist (update screen should catch this first)
-            val legacyStorageDir = File(context.filesDir, STORAGE_DIR)
-            val legacyMonitorsDir = File(legacyStorageDir, "monitors")
-            val hasSqlite = File(legacyStorageDir, "ldk_node_data.sqlite").exists()
-            if (!hasSqlite && legacyMonitorsDir.exists()) {
-                val monitorFiles = legacyMonitorsDir.listFiles()?.filter { it.length() > 0 } ?: emptyList()
-                if (monitorFiles.isNotEmpty()) {
-                    Log.e(TAG, "MIGRATION BLOCKED: ${monitorFiles.size} legacy channel monitor(s) in flat-file storage.")
-                    scope.launch {
-                        _state.value = _state.value.copy(
-                            status = LightningState.Status.ERROR,
-                            error = "Open channels from a previous version detected. " +
-                                "Close all Lightning channels before updating."
-                        )
-                    }
-                    starting = false
-                    return
-                }
-            }
-
             // Apply pending seed restore before LDK touches any files
             recovery.applyPendingSeedRestore(onchain)
 
