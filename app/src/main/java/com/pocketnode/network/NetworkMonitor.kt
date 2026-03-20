@@ -54,6 +54,10 @@ class NetworkMonitor(private val context: Context) {
 
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
+    init {
+        android.util.Log.i("DataUsage", "NetworkMonitor init: uid=$uid baseline=↓${lastRxBytes}/↑${lastTxBytes} (trafficStats since boot)")
+    }
+
     fun start() {
         // Determine initial state
         _networkState.value = currentNetworkState()
@@ -157,6 +161,23 @@ class NetworkMonitor(private val context: Context) {
             }
             apply()
         }
+
+        // Log every sample with context for debugging data usage
+        val todayUsage = getUsageForDate(today)
+        val totalToday = todayUsage.wifiRx + todayUsage.wifiTx + todayUsage.cellularRx + todayUsage.cellularTx
+        val powerMode = try { com.pocketnode.power.PowerModeManager.modeFlow.value } catch (_: Exception) { "unknown" }
+        android.util.Log.d("DataUsage",
+            "delta=↓${formatDelta(deltaRx)}/↑${formatDelta(deltaTx)} " +
+            "today=${formatDelta(totalToday)} " +
+            "net=$state power=$powerMode " +
+            "trafficStats=↓${formatDelta(currentRx)}/↑${formatDelta(currentTx)}")
+    }
+
+    private fun formatDelta(bytes: Long): String = when {
+        bytes >= 1_073_741_824 -> "%.1fGB".format(bytes / 1_073_741_824.0)
+        bytes >= 1_048_576 -> "%.1fMB".format(bytes / 1_048_576.0)
+        bytes >= 1024 -> "%.0fKB".format(bytes / 1024.0)
+        else -> "${bytes}B"
     }
 
     /** Get usage for a specific date (yyyy-MM-dd) */

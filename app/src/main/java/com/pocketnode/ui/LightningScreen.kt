@@ -345,6 +345,35 @@ fun LightningScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Balances", fontWeight = FontWeight.Bold)
+
+                        // LDK chain sync status
+                        val ldkH = effectiveState.ldkHeight
+                        val btcH = effectiveState.bitcoindHeight
+                        if (ldkH > 0) {
+                            Spacer(Modifier.height(4.dp))
+                            if (btcH > 0 && ldkH < btcH) {
+                                val behind = btcH - ldkH
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(12.dp),
+                                        strokeWidth = 1.5.dp,
+                                        color = Color(0xFFFF9800)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "⚡ Syncing: $behind blocks behind ($ldkH / $btcH)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFFFF9800)
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    "⚡ Block ${"%,d".format(ldkH)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(12.dp))
 
                         Row(

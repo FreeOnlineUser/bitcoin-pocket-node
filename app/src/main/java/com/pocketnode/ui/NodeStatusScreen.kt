@@ -479,7 +479,7 @@ fun NodeStatusScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Route all traffic through Tor",
+                            "🧅 Route all traffic through Tor",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1278,6 +1278,14 @@ private fun ActionButtons(
             }
         }
 
+        // Check if legacy Lightning channels exist (would be lost on update)
+        val hasLegacyChannels = remember {
+            val storageDir = java.io.File(updateContext.filesDir, "lightning")
+            val monitorsDir = java.io.File(storageDir, "monitors")
+            val hasSqlite = java.io.File(storageDir, "ldk_node_data.sqlite").exists()
+            !hasSqlite && monitorsDir.exists() && (monitorsDir.listFiles()?.any { it.length() > 0 } == true)
+        }
+
         // Update available card with release notes
         if (updateInfo?.hasUpdate == true && !dismissed) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -1310,41 +1318,57 @@ private fun ActionButtons(
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-                    ) {
+                    if (hasLegacyChannels) {
+                        // Block update when legacy channels would be lost
+                        Text(
+                            "⚠️ You have open Lightning channels that use the old storage format. " +
+                                "This update changes the storage format and your channels would be lost. " +
+                                "Close all Lightning channels first, then update.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFF5722),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(onClick = { dismissed = true }) {
-                            Text("Not yet")
+                            Text("OK")
                         }
-                        if (updateInfo?.apkUrl != null) {
-                            Button(
-                                onClick = {
-                                    dismissed = true
-                                    downloading = true
-                                    downloadProgress = 0
-                                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                                        val success = com.pocketnode.util.UpdateChecker.downloadAndInstall(
-                                            updateContext, updateInfo!!.apkUrl!!
-                                        ) { progress -> downloadProgress = progress }
-                                        downloading = false
-                                        if (success) installReady = true
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
-                            ) {
-                                Text("Update", color = Color.Black, fontWeight = FontWeight.Bold)
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                        ) {
+                            OutlinedButton(onClick = { dismissed = true }) {
+                                Text("Not yet")
                             }
-                        } else {
-                            Button(
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(updateInfo!!.htmlUrl))
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    updateContext.startActivity(intent)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
-                            ) {
-                                Text("View release", color = Color.Black, fontWeight = FontWeight.Bold)
+                            if (updateInfo?.apkUrl != null) {
+                                Button(
+                                    onClick = {
+                                        dismissed = true
+                                        downloading = true
+                                        downloadProgress = 0
+                                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                            val success = com.pocketnode.util.UpdateChecker.downloadAndInstall(
+                                                updateContext, updateInfo!!.apkUrl!!
+                                            ) { progress -> downloadProgress = progress }
+                                            downloading = false
+                                            if (success) installReady = true
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+                                ) {
+                                    Text("Update", color = Color.Black, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(updateInfo!!.htmlUrl))
+                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        updateContext.startActivity(intent)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+                                ) {
+                                    Text("View release", color = Color.Black, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }

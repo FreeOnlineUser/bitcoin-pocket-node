@@ -29,6 +29,7 @@ class LightningService(private val context: Context) {
         // One-time restart flag for orphan balance rebroadcast (persists across LDK restarts)
         @Volatile
         private var hasAttemptedRebroadcastRestart = false
+        private var hasCalledBroadcastThisSession = false
 
         // Singleton state for UI observation
         private val _state = MutableStateFlow(LightningState())
@@ -68,6 +69,7 @@ class LightningService(private val context: Context) {
         val pendingCloseDetails: List<PendingClose> = emptyList(),
         // Chain sync status for payment readiness
         val ldkHeight: Long = 0,
+        val bitcoindHeight: Long = 0,
         val chainSynced: Boolean = false,
         // Watchtower bridge connectivity
         val watchtowerReachable: Boolean? = null,  // null=unknown, true=connected, false=failed
@@ -99,6 +101,7 @@ class LightningService(private val context: Context) {
     }
 
     private var node: Node? = null
+    private lateinit var storageDir: File
     private var rpcClient: BitcoinRpcClient? = null
     private var watchtowerBridge: WatchtowerBridge? = null
     private var lndHubServer: LndHubServer? = null
@@ -169,6 +172,26 @@ class LightningService(private val context: Context) {
     // initialised and it's safe to touch coroutine machinery again.
     private fun startInternal(rpcUser: String, rpcPassword: String, rpcPort: Int) {
         try {
+            // Safety net: block if legacy flat-file channels exist (update screen should catch this first)
+            val legacyStorageDir = File(context.filesDir, STORAGE_DIR)
+            val legacyMonitorsDir = File(legacyStorageDir, "monitors")
+            val hasSqlite = File(legacyStorageDir, "ldk_node_data.sqlite").exists()
+            if (!hasSqlite && legacyMonitorsDir.exists()) {
+                val monitorFiles = legacyMonitorsDir.listFiles()?.filter { it.length() > 0 } ?: emptyList()
+                if (monitorFiles.isNotEmpty()) {
+                    Log.e(TAG, "MIGRATION BLOCKED: ${monitorFiles.size} legacy channel monitor(s) in flat-file storage.")
+                    scope.launch {
+                        _state.value = _state.value.copy(
+                            status = LightningState.Status.ERROR,
+                            error = "Open channels from a previous version detected. " +
+                                "Close all Lightning channels before updating."
+                        )
+                    }
+                    starting = false
+                    return
+                }
+            }
+
             // Apply pending seed restore before LDK touches any files
             recovery.applyPendingSeedRestore(onchain)
 
@@ -210,7 +233,7 @@ class LightningService(private val context: Context) {
             // If LDK's stored height is far behind bitcoind, synchronize_listeners
             // will hang trying to fetch pruned blocks. Proactively reset chain state
             // while preserving the seed and any channel data.
-            val storageDir = File(context.filesDir, STORAGE_DIR)
+            storageDir = File(context.filesDir, STORAGE_DIR)
             if (storageDir.exists()) {
                 val chainInfo = rpc.getBlockchainInfoSync()
                 val bitcoindHeight = chainInfo?.optLong("blocks", 0) ?: 0
@@ -345,6 +368,12 @@ class LightningService(private val context: Context) {
                 }
             }
 
+            // --- State backup: auto-restore if needed ---
+            val stateBackup = StateBackupManager(context, storageDir)
+            if (stateBackup.autoRestoreIfNeeded()) {
+                Log.w(TAG, "State auto-restored from backup before build")
+            }
+
             val ldkNode = builder.build(entropy)
 
             // --- Start LDK (sync, blocks until tokio runtime is running) ---
@@ -354,6 +383,14 @@ class LightningService(private val context: Context) {
             for (attempt in 1..10) {
                 try {
                     ldkNode.start()
+                    // IMMEDIATELY broadcast orphan monitor commitment txs before background sync archives them
+                    try {
+                        ldkNode.broadcastHolderCommitmentTxns()
+                        Log.i(TAG, "Immediate post-start: broadcast holder commitment txns")
+                        hasCalledBroadcastThisSession = true
+                    } catch (e2: Exception) {
+                        Log.w(TAG, "Immediate post-start broadcast failed: ${e2.message}")
+                    }
                     lastError = null
                     break
                 } catch (e: Exception) {
@@ -397,6 +434,14 @@ class LightningService(private val context: Context) {
             Log.i(TAG, "Lightning node started. Node ID: $nodeId")
             Log.i(TAG, "Initial balances: onchain=${initBalances.totalOnchainBalanceSats} spendable=${initBalances.spendableOnchainBalanceSats} lightning=${initBalances.totalLightningBalanceSats}")
 
+            // Initial state backup after successful start
+            try {
+                val initialBackup = stateBackup.backup()
+                Log.i(TAG, "Initial state backup: ${if (initialBackup) "written" else "skipped"} | ${stateBackup.getStatus()}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Initial state backup failed: ${e.message}")
+            }
+
             // Diagnostic: list backup directory contents
             val backupDir = File(context.filesDir, "${STORAGE_DIR}_backup")
             if (backupDir.exists()) {
@@ -404,6 +449,21 @@ class LightningService(private val context: Context) {
                     "${f.name}${if (f.isDirectory) "/ (${f.listFiles()?.size ?: 0} files)" else " (${f.length()}b)"}"
                 } ?: emptyList()
                 Log.i(TAG, "Backup dir contents: $files")
+                // Dump monitors_meta.json and copy monitor binary to Download
+                val metaFile = File(backupDir, "monitors_meta.json")
+                if (metaFile.exists()) {
+                    Log.i(TAG, "monitors_meta.json: ${metaFile.readText()}")
+                }
+                val backupMonitorDir = File(backupDir, "monitors")
+                if (backupMonitorDir.exists()) {
+                    val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS)
+                    backupMonitorDir.listFiles()?.forEach { f ->
+                        val dest = File(downloadDir, f.name)
+                        f.copyTo(dest, overwrite = true)
+                        Log.i(TAG, "Copied monitor ${f.name} (${f.length()}b) to Download")
+                    }
+                }
             } else {
                 Log.i(TAG, "No backup directory found")
             }
@@ -568,7 +628,7 @@ class LightningService(private val context: Context) {
                         val hasOrphanFunds = st.channelCount == 0 && st.lightningBalanceSats > 0
                         if ((hasOrphanFunds || st.pendingCloseSats > 0) && now - lastWalletSync > 300_000) {
                             lastWalletSync = now
-                            if (hasOrphanFunds && st.pendingCloseDetails.isEmpty() && !hasAttemptedRebroadcastRestart) {
+                            if (hasOrphanFunds && st.pendingCloseDetails.isEmpty() && !hasAttemptedRebroadcastRestart && !hasCalledBroadcastThisSession) {
                                 // Commitment tx likely never broadcast — restart LDK
                                 Log.w(TAG, "Orphan lightning balance detected with no pending sweeps. Restarting LDK to rebroadcast commitment tx (one-time).")
                                 hasAttemptedRebroadcastRestart = true
@@ -597,10 +657,21 @@ class LightningService(private val context: Context) {
                                 }
                             }
                         }
-                        // Periodic monitor backup + watchtower drain (every 5 min if channels exist)
-                        if (st.channelCount > 0 && now - lastWalletSync > 300_000) {
-                            node?.let { recovery.backupChannelMonitors(it) }
-                            drainWatchtowerBlobs()
+                        // Periodic state backup + monitor backup + watchtower drain (every 5 min)
+                        if (now - lastWalletSync > 300_000) {
+                            lastWalletSync = now
+                            // Rolling state backup (critical SQLite rows)
+                            try {
+                                val backed = StateBackupManager(context, storageDir).backup()
+                                if (backed) Log.i(TAG, "Periodic state backup complete")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "State backup failed: ${e.message}")
+                            }
+                            // Legacy monitor backup + watchtower
+                            if (st.channelCount > 0) {
+                                node?.let { recovery.backupChannelMonitors(it) }
+                                drainWatchtowerBlobs()
+                            }
                         }
                     } catch (_: Exception) {}
                 }
@@ -997,6 +1068,7 @@ class LightningService(private val context: Context) {
                 pendingCloseSats = pendingCloseTotalSats,
                 pendingCloseDetails = pendingCloses,
                 ldkHeight = ldkH,
+                bitcoindHeight = bitcoindH,
                 chainSynced = synced,
                 graphNodes = currentGraphNodes,
                 lnPeerCount = currentLnPeerCount,
@@ -1075,6 +1147,13 @@ class LightningService(private val context: Context) {
                 || event is Event.PaymentSuccessful || event is Event.PaymentReceived) {
                 drainWatchtowerBlobs()
                 node?.let { recovery.backupChannelMonitors(it) }
+                // Immediate state backup on channel events
+                try {
+                    StateBackupManager(context, storageDir).backup()
+                    Log.i(TAG, "State backup triggered by channel event")
+                } catch (e2: Exception) {
+                    Log.e(TAG, "Channel event state backup failed: ${e2.message}")
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling events", e)
