@@ -107,6 +107,7 @@ class LightningService(private val context: Context) {
     private var lndHubServer: LndHubServer? = null
     private var stateRefreshJob: kotlinx.coroutines.Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // Extracted managers (delegate pattern — public API stays the same)
     val payments = PaymentManager(context)
@@ -590,7 +591,7 @@ class LightningService(private val context: Context) {
 
             // Periodic state refresh — safe to use coroutines here, LDK is running
             var lastWalletSync = 0L
-            stateRefreshJob = scope.launch {
+            stateRefreshJob = ioScope.launch {
                 while (isActive) {
                     delay(10_000)
                     try {
@@ -1012,18 +1013,23 @@ class LightningService(private val context: Context) {
             }
             val pendingCloseTotalSats = pendingCloses.sumOf { it.amountSats }
 
-            // Mark deposit address as used if on-chain balance increased
-            val prevBalance = _state.value.onchainBalanceSats
+            // Mark deposit address as used if raw on-chain balance increased
+            val prevRawBalance = _state.value.onchainBalanceSats + _state.value.pendingCloseSats
             val newBalance = balances.totalOnchainBalanceSats.toLong()
-            if (newBalance > prevBalance && prevBalance >= 0) {
+            if (newBalance > prevRawBalance && prevRawBalance >= 0) {
                 onchain.getOnchainAddress() // trigger rotation check
                 onchain.clearDepositAddress()
             }
 
+            // Subtract pending close from on-chain to avoid double-counting.
+            // LDK's totalOnchainBalanceSats includes sweeper-tracked outputs
+            // which are already shown separately as pending close.
+            val adjustedOnchain = maxOf(0L, newBalance - pendingCloseTotalSats)
+
             _state.value = LightningState(
                 status = LightningState.Status.RUNNING,
                 nodeId = n.nodeId(),
-                onchainBalanceSats = newBalance,
+                onchainBalanceSats = adjustedOnchain,
                 lightningBalanceSats = balances.totalLightningBalanceSats.toLong(),
                 channelCount = channels.size,
                 totalCapacitySats = channels.sumOf { it.channelValueSats.toLong() }.also {

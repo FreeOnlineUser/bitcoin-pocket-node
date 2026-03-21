@@ -167,7 +167,7 @@ fun BurstSyncBanner(
             horizontalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "⚡ Max mode locked: syncing to chain tip",
+                text = if (peerCount > 0) "⚡ Syncing to chain tip ($peerCount peers)" else "⚡ Syncing to chain tip: connecting...",
                 color = Color.White,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold
@@ -224,7 +224,7 @@ fun BurstSyncBanner(
     if (burstState == PowerModeManager.BurstState.IDLE && nextBurstMs == 0L) return
 
     val text = when (burstState) {
-        PowerModeManager.BurstState.SYNCING -> "⏳ Burst sync in progress..."
+        PowerModeManager.BurstState.SYNCING -> if (peerCount > 0) "⏳ Burst sync: connected ($peerCount peers)" else "⏳ Burst sync: connecting..."
         PowerModeManager.BurstState.WAITING -> if (peerCount > 0) return else {
             val remaining = nextBurstMs - System.currentTimeMillis()
             if (remaining > 0) {
