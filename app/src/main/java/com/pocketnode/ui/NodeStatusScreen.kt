@@ -969,7 +969,8 @@ private fun SyncProgressSection(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-            } else if (nodeStatus == "Synced" || nodeStatus.startsWith("Synced")) {
+            } else if ((nodeStatus == "Synced" || nodeStatus.startsWith("Synced")) &&
+                       (headerHeight <= 0 || blockHeight >= headerHeight - 1)) {
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "✅ Fully synced to chain tip",
