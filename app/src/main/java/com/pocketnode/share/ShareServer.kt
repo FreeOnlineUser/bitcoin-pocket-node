@@ -31,6 +31,9 @@ class ShareServer(private val context: Context) {
         private val _activeTransfers = MutableStateFlow<Map<Int, TransferInfo>>(emptyMap())
         val activeTransfersFlow: StateFlow<Map<Int, TransferInfo>> = _activeTransfers
 
+        private val _completedTransfers = MutableStateFlow(0)
+        val completedTransfersFlow: StateFlow<Int> = _completedTransfers
+
         private val _isRunning = MutableStateFlow(false)
         val isRunningFlow: StateFlow<Boolean> = _isRunning
     }
@@ -90,6 +93,7 @@ class ShareServer(private val context: Context) {
         serverThread = null
         transfers.clear()
         _activeTransfers.value = emptyMap()
+        _completedTransfers.value = 0
         _isRunning.value = false
     }
 
@@ -371,6 +375,7 @@ class ShareServer(private val context: Context) {
                 }
             }
             out.flush()
+            _completedTransfers.value++
         } finally {
             activeConnections.decrementAndGet()
             transfers.remove(transferId)

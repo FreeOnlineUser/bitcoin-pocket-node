@@ -35,6 +35,7 @@ fun ShareScreen(
     val shareServer = remember { ShareServer(context) }
     val isRunning by ShareServer.isRunningFlow.collectAsState()
     val activeTransfers by ShareServer.activeTransfersFlow.collectAsState()
+    val completedFiles by ShareServer.completedTransfersFlow.collectAsState()
     var serverIp by remember { mutableStateOf<String?>(null) }
     var nodeStopped by remember { mutableStateOf(false) }
     var stopping by remember { mutableStateOf(false) }
@@ -241,6 +242,26 @@ fun ShareScreen(
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
+                        }
+                    }
+                } else if (completedFiles > 0) {
+                    // No active transfers but some files were served
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B5E20))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "✅ $completedFiles file${if (completedFiles != 1) "s" else ""} transferred",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Waiting for more connections, or stop sharing if done.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
                         }
                     }
                 } else {

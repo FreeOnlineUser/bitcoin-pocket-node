@@ -146,6 +146,14 @@ fun NearbyNodeScreen(
                 }
 
                 if (downloadState.phase == "Download complete") {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "✅ All ${downloadState.totalFiles} files received. You can disconnect from the other phone now.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF4CAF50),
+                        textAlign = TextAlign.Center
+                    )
+
                     var postStatus by remember { mutableStateOf("Creating block file stubs...") }
                     var postDone by remember { mutableStateOf(false) }
 
