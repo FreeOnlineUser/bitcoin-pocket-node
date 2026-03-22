@@ -386,17 +386,23 @@ class BitcoindService : Service() {
                             }
                             // Auto-start Lightning when synced (if it was previously running)
                             if (prefs.getBoolean("lightning_was_running", false)) {
-                                val rpcUser = prefs.getString("rpc_user", "pocketnode") ?: "pocketnode"
-                                val rpcPass = prefs.getString("rpc_password", "") ?: ""
-                                if (rpcPass.isNotEmpty()) {
-                                    Thread {
-                                        try {
-                                            com.pocketnode.lightning.LightningService.getInstance(this@BitcoindService).start(rpcUser, rpcPass)
-                                            Log.i(TAG, "Auto-started Lightning from service (node synced)")
-                                        } catch (e: Exception) {
-                                            Log.e(TAG, "Failed to auto-start Lightning: ${e.message}")
-                                        }
-                                    }.start()
+                                val crashCount = prefs.getInt("lightning_crash_count", 0)
+                                if (crashCount >= 3) {
+                                    Log.e(TAG, "Lightning crash circuit breaker: $crashCount consecutive crashes. Not auto-restarting. User must start manually.")
+                                    prefs.edit().putBoolean("lightning_was_running", false).apply()
+                                } else {
+                                    val rpcUser = prefs.getString("rpc_user", "pocketnode") ?: "pocketnode"
+                                    val rpcPass = prefs.getString("rpc_password", "") ?: ""
+                                    if (rpcPass.isNotEmpty()) {
+                                        Thread {
+                                            try {
+                                                com.pocketnode.lightning.LightningService.getInstance(this@BitcoindService).start(rpcUser, rpcPass)
+                                                Log.i(TAG, "Auto-started Lightning from service (node synced, crash count: $crashCount)")
+                                            } catch (e: Exception) {
+                                                Log.e(TAG, "Failed to auto-start Lightning: ${e.message}")
+                                            }
+                                        }.start()
+                                    }
                                 }
                             }
                         }

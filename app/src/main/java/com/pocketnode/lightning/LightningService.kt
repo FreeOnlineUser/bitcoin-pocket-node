@@ -586,8 +586,12 @@ class LightningService(private val context: Context) {
                 }, "recovery-scan").start()
             }
 
-            context.getSharedPreferences("pocketnode_prefs", Context.MODE_PRIVATE)
-                .edit().putBoolean("lightning_was_running", true).apply()
+            val startPrefs = context.getSharedPreferences("pocketnode_prefs", Context.MODE_PRIVATE)
+            startPrefs.edit().putBoolean("lightning_was_running", true).apply()
+            // Track consecutive starts without clean stop (crash detection)
+            val crashCount = startPrefs.getInt("lightning_crash_count", 0) + 1
+            startPrefs.edit().putInt("lightning_crash_count", crashCount).apply()
+            Log.i(TAG, "Lightning started (crash counter: $crashCount)")
 
             starting = false
             updateState()
@@ -750,8 +754,11 @@ class LightningService(private val context: Context) {
             lndHubServer = null
             node?.stop()
             context.getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
-                .edit().putBoolean("lightning_was_running", false).apply()
-            Log.i(TAG, "Lightning node stopped")
+                .edit()
+                .putBoolean("lightning_was_running", false)
+                .putInt("lightning_crash_count", 0)  // clean stop resets crash counter
+                .apply()
+            Log.i(TAG, "Lightning node stopped (crash counter reset)")
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping Lightning node", e)
         } finally {
