@@ -32,6 +32,8 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
     var confirmed by remember { mutableStateOf(false) }
     var strategy by remember { mutableStateOf(ChannelProbe.Strategy.SMALL_FRIENDLY) }
     var probeAmountText by remember { mutableStateOf("100000") }
+    val lightningState by LightningService.stateFlow.collectAsState()
+    val isLightningRunning = lightningState.status == LightningService.LightningState.Status.RUNNING
 
     Scaffold(
         topBar = {
@@ -88,7 +90,13 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
                     }
                 }
 
-                if (!confirmed) {
+                if (!isLightningRunning) {
+                    Text(
+                        "⚠️ Lightning must be running to probe nodes.",
+                        color = Color(0xFFF44336),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else if (!confirmed) {
                     OutlinedButton(
                         onClick = { confirmed = true },
                         modifier = Modifier.fillMaxWidth()
