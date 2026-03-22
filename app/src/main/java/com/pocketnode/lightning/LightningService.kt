@@ -1040,8 +1040,9 @@ class LightningService(private val context: Context) {
                     if (channels.isNotEmpty()) {
                         // Auto-unlock Lightning Pay when channels exist
                         try { prefs.edit().putBoolean("lightning_unlocked", true).apply() } catch (_: Exception) {}
-                    } else if (balances.totalLightningBalanceSats == 0UL && pendingCloseTotalSats == 0L) {
-                        // Re-lock when no channels, no lightning balance, no pending close
+                    } else if (balances.totalLightningBalanceSats == 0UL) {
+                        // Re-lock when no channels and no lightning balance.
+                        // Pending close (force-close sweep) doesn't keep Pay unlocked.
                         try { prefs.edit().putBoolean("lightning_unlocked", false).apply() } catch (_: Exception) {}
                     }
                 },
