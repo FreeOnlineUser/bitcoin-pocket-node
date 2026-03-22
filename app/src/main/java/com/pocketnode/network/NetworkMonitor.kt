@@ -203,10 +203,13 @@ class NetworkMonitor(private val context: Context) {
     }
 
     /** Get total cellular usage for current month */
-    /** Clear all stored data usage history */
+    /** Clear all stored data usage history and reset baseline */
     fun clearAllUsage() {
         prefs.edit().clear().apply()
-        android.util.Log.i("NetworkMonitor", "All data usage history cleared")
+        // Reset baseline so the next sample starts fresh (no delta from boot)
+        lastRxBytes = TrafficStats.getUidRxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
+        lastTxBytes = TrafficStats.getUidTxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
+        android.util.Log.i("NetworkMonitor", "All data usage history cleared, baseline reset")
     }
 
     fun getMonthCellularUsage(): Long = getMonthUsage("cell")
