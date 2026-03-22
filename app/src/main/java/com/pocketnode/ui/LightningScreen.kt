@@ -609,12 +609,11 @@ fun LightningScreen(
                                     ) {
                                         Column {
                                             Text("Channel closed", style = MaterialTheme.typography.bodySmall)
-                                            val blocksInfo = if (pc.confirmationHeight > 0 && ldkHeight > 0) {
-                                                // CSV timelock is typically 144 blocks for to_local
-                                                val blocksElapsed = ldkHeight - pc.confirmationHeight
-                                                val blocksRemaining = (144 - blocksElapsed).coerceAtLeast(0)
-                                                if (blocksRemaining > 0) " (~$blocksRemaining blocks)" else " (ready)"
-                                            } else ""
+                                            val blocksInfo = when {
+                                                pc.blocksRemaining > 0 -> " (${pc.blocksRemaining} block${if (pc.blocksRemaining != 1) "s" else ""} remaining)"
+                                                pc.confirmations > 0 -> " (confirmed)"
+                                                else -> ""
+                                            }
                                             Text(
                                                 "${pc.status}$blocksInfo",
                                                 style = MaterialTheme.typography.labelSmall,
@@ -824,8 +823,9 @@ fun LightningScreen(
                                                 fontFamily = FontFamily.Monospace
                                             )
                                             val statusText = if (close.blocksRemaining > 0) {
-                                                val hours = (close.blocksRemaining * 10) / 60
-                                                "${close.confirmations}/144 confirmations (~${hours}h remaining)"
+                                                val mins = close.blocksRemaining * 10
+                                                val timeStr = if (mins >= 60) "~${mins / 60}h ${mins % 60}min" else "~${mins}min"
+                                                "${close.confirmations}/6 confirmations ($timeStr remaining)"
                                             } else close.status
                                             Text(statusText, style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))

@@ -995,15 +995,19 @@ class LightningService(private val context: Context) {
                             "Awaiting confirmation", psb.latestBroadcastHeight.toInt(),
                             txid = psb.latestSpendingTxid)
                     is org.lightningdevkit.ldknode.PendingSweepBalance.AwaitingThresholdConfirmations -> {
-                        val blocksLeft = maxOf(0, psb.confirmationHeight.toInt() - currentH)
-                        val confs = if (blocksLeft > 0) 144 - blocksLeft else 144  // estimate based on typical 144-block delay
-                        LightningState.PendingClose(psb.channelId ?: "", psb.amountSatoshis.toLong(),
-                            "Awaiting threshold", psb.confirmationHeight.toInt(),
+                        // Funds spendable after ANTI_REORG_DELAY (6 blocks) from confirmation
+                        val spendableAt = psb.confirmationHeight.toInt() + 6
+                        val blocksLeft = maxOf(0, spendableAt - currentH)
+                        val confs = currentH - psb.confirmationHeight.toInt()
+                        // Hide once past threshold (sweeper keeps tracking for 4038 blocks, but funds are spendable)
+                        if (blocksLeft <= 0) null
+                        else LightningState.PendingClose(psb.channelId ?: "", psb.amountSatoshis.toLong(),
+                            "Confirming", psb.confirmationHeight.toInt(),
                             txid = psb.latestSpendingTxid, blocksRemaining = blocksLeft, confirmations = confs)
                     }
                     else -> LightningState.PendingClose("", 0, "Unknown")
                 }
-            }.filter { it.amountSats > 0 }
+            }.filterNotNull().filter { it.amountSats > 0 }
             if (pendingCloses.isNotEmpty() || balances.pendingBalancesFromChannelClosures.isNotEmpty()) {
                 Log.d(TAG, "pendingCloses: raw=${balances.pendingBalancesFromChannelClosures.size} parsed=${pendingCloses.size}")
                 pendingCloses.forEach { pc ->
