@@ -68,11 +68,11 @@ fun PocketNodeApp(
         val syncPaused by (activeController?.syncPaused
             ?: remember { kotlinx.coroutines.flow.MutableStateFlow(false) })
             .collectAsState()
-        // Re-read every 30s so cleared data doesn't show stale values
-        val usageTick = produceState(0L) {
-            while (true) { kotlinx.coroutines.delay(30_000); value = System.currentTimeMillis() }
-        }
-        val todayUsage = remember(networkState, activeMonitor, usageTick.value) { activeMonitor?.getTodayUsage() }
+        // Reactive usage state from singleton NetworkMonitor
+        val usageState by (activeMonitor?.usageState
+            ?: remember { kotlinx.coroutines.flow.MutableStateFlow(com.pocketnode.network.UsageState()) })
+            .collectAsState()
+        val todayUsage = usageState.today.takeIf { it.date.isNotEmpty() }
 
         // Detect wide screen (foldable unfolded) — 550dp+ triggers dual-pane
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {

@@ -28,37 +28,62 @@ data class DataUsageEntry(
 )
 
 /**
- * Monitors network connectivity and tracks data usage per network type.
+ * Usage data exposed as reactive state. UI collects this flow directly.
  */
-class NetworkMonitor(private val context: Context) {
+data class UsageState(
+    val today: DataUsageEntry = DataUsageEntry(date = ""),
+    val recentDays: List<DataUsageEntry> = emptyList(),
+    val monthCellular: Long = 0
+)
+
+/**
+ * Monitors network connectivity and tracks data usage per network type.
+ * Singleton: use NetworkMonitor.getInstance(context) to get the shared instance.
+ */
+class NetworkMonitor private constructor(private val context: Context) {
+
+    companion object {
+        @Volatile private var instance: NetworkMonitor? = null
+
+        fun getInstance(context: Context): NetworkMonitor {
+            return instance ?: synchronized(this) {
+                instance ?: NetworkMonitor(context.applicationContext).also { instance = it }
+            }
+        }
+    }
 
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-    // Default OFFLINE so the first real connectivity callback always triggers a state transition.
-    // Starting as WIFI would silently skip the initial evaluateNetworkState on WiFi networks.
     private val _networkState = MutableStateFlow(NetworkState.OFFLINE)
     val networkState: StateFlow<NetworkState> = _networkState.asStateFlow()
+
+    // Reactive usage state: UI collects this flow, no remember caching needed
+    private val _usageState = MutableStateFlow(UsageState())
+    val usageState: StateFlow<UsageState> = _usageState.asStateFlow()
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("network_data_usage", Context.MODE_PRIVATE)
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // TrafficStats per-UID gives cumulative bytes since boot for THIS app only.
-    // We track deltas between samples and attribute them to the current network type.
     private val uid: Int = android.os.Process.myUid()
     private var lastRxBytes: Long = TrafficStats.getUidRxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
     private var lastTxBytes: Long = TrafficStats.getUidTxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
     private var lastNetworkState: NetworkState = NetworkState.OFFLINE
 
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var started = false
 
     init {
         android.util.Log.i("DataUsage", "NetworkMonitor init: uid=$uid baseline=↓${lastRxBytes}/↑${lastTxBytes} (trafficStats since boot)")
+        refreshUsageState()
     }
 
     fun start() {
+        if (started) return
+        started = true
+
         // Determine initial state
         _networkState.value = currentNetworkState()
         lastNetworkState = _networkState.value
@@ -162,6 +187,9 @@ class NetworkMonitor(private val context: Context) {
             apply()
         }
 
+        // Update reactive state
+        refreshUsageState()
+
         // Log every sample with context for debugging data usage
         val todayUsage = getUsageForDate(today)
         val totalToday = todayUsage.wifiRx + todayUsage.wifiTx + todayUsage.cellularRx + todayUsage.cellularTx
@@ -178,6 +206,15 @@ class NetworkMonitor(private val context: Context) {
         bytes >= 1_048_576 -> "%.1fMB".format(bytes / 1_048_576.0)
         bytes >= 1024 -> "%.0fKB".format(bytes / 1024.0)
         else -> "${bytes}B"
+    }
+
+    /** Refresh the reactive usage state from SharedPreferences */
+    private fun refreshUsageState() {
+        _usageState.value = UsageState(
+            today = getUsageForDate(todayKey()),
+            recentDays = getRecentUsage(7),
+            monthCellular = getMonthUsage("cell")
+        )
     }
 
     /** Get usage for a specific date (yyyy-MM-dd) */
@@ -206,9 +243,9 @@ class NetworkMonitor(private val context: Context) {
     /** Clear all stored data usage history and reset baseline */
     fun clearAllUsage() {
         prefs.edit().clear().apply()
-        // Reset baseline so the next sample starts fresh (no delta from boot)
         lastRxBytes = TrafficStats.getUidRxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
         lastTxBytes = TrafficStats.getUidTxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
+        refreshUsageState()
         android.util.Log.i("NetworkMonitor", "All data usage history cleared, baseline reset")
     }
 

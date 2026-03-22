@@ -170,8 +170,8 @@ class BitcoindService : Service() {
                                 .edit().putBoolean("node_was_running", true).apply()
                             updateNotification("Running (attached)")
 
-                            // Start network monitoring and sync control
-                            val monitor = NetworkMonitor(this@BitcoindService)
+                            // Start network monitoring and sync control (singleton)
+                            val monitor = NetworkMonitor.getInstance(this@BitcoindService)
                             monitor.start()
                             networkMonitor = monitor
                             activeNetworkMonitor = monitor
@@ -259,7 +259,7 @@ class BitcoindService : Service() {
             val creds = ConfigGenerator.readCredentials(this@BitcoindService)
             if (creds != null) {
                 val rpc = BitcoinRpcClient(creds.first, creds.second)
-                val monitor = NetworkMonitor(this@BitcoindService)
+                val monitor = NetworkMonitor.getInstance(this@BitcoindService)
                 monitor.start()
                 networkMonitor = monitor
                 activeNetworkMonitor = monitor

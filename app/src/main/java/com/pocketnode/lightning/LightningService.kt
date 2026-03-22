@@ -748,7 +748,7 @@ class LightningService(private val context: Context) {
         val blocksNeeded = (currentHeight - pruneHeight).toInt().coerceAtLeast(1)
         Log.i(TAG, "Prune recovery: need to re-download ~$blocksNeeded blocks (prune height: $pruneHeight, tip: $currentHeight)")
 
-        val networkMonitor = NetworkMonitor(context)
+        val networkMonitor = NetworkMonitor.getInstance(context)
         if (networkMonitor.networkState.value != NetworkState.WIFI) {
             Log.i(TAG, "Prune recovery: waiting for WiFi...")
             _state.value = _state.value.copy(

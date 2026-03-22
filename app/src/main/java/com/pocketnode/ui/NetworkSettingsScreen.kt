@@ -3,6 +3,8 @@ package com.pocketnode.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -124,40 +126,11 @@ fun NetworkSettingsScreen(
                     "Set to 0 or leave empty for unlimited."
             )
 
-            // Data Usage section — reads from SharedPreferences directly so it works
-            // even when NetworkMonitor isn't running (e.g. node failed to start)
-            val usagePrefs = remember { context.getSharedPreferences("network_data_usage", android.content.Context.MODE_PRIVATE) }
-            var usageVersion by remember { mutableStateOf(0) }
-            val recentUsage = remember(usageVersion) {
-                val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                val cal = java.util.Calendar.getInstance()
-                (0 until 7).map { _ ->
-                    val date = fmt.format(cal.time)
-                    cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
-                    DataUsageEntry(
-                        date = date,
-                        wifiRx = usagePrefs.getLong("${date}_wifi_rx", 0),
-                        wifiTx = usagePrefs.getLong("${date}_wifi_tx", 0),
-                        cellularRx = usagePrefs.getLong("${date}_cell_rx", 0),
-                        cellularTx = usagePrefs.getLong("${date}_cell_tx", 0)
-                    )
-                }
-            }
-            val monthCellular = remember(usageVersion) {
-                val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                val monthPrefix = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
-                val cal = java.util.Calendar.getInstance()
-                var total = 0L
-                val dayOfMonth = cal.get(java.util.Calendar.DAY_OF_MONTH)
-                for (i in 0 until dayOfMonth) {
-                    val date = fmt.format(cal.time)
-                    if (date.startsWith(monthPrefix)) {
-                        total += usagePrefs.getLong("${date}_cell_rx", 0) + usagePrefs.getLong("${date}_cell_tx", 0)
-                    }
-                    cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
-                }
-                total
-            }
+            // Data Usage section — reactive via NetworkMonitor singleton
+            val monitor = remember { com.pocketnode.network.NetworkMonitor.getInstance(context) }
+            val usageState by monitor.usageState.collectAsState()
+            val recentUsage = usageState.recentDays
+            val monthCellular = usageState.monthCellular
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
@@ -211,10 +184,7 @@ fun NetworkSettingsScreen(
             if (showConfirm) {
                 OutlinedButton(
                     onClick = {
-                        // Clear prefs directly (networkMonitor may be null if node not running)
-                        usagePrefs.edit().clear().apply()
-                        networkMonitor?.clearAllUsage() // also reset baseline if monitor exists
-                        usageVersion++
+                        monitor.clearAllUsage()
                         showConfirm = false
                     },
                     modifier = Modifier.fillMaxWidth(),
