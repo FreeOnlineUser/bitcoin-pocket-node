@@ -30,6 +30,7 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
     val probe = remember { ChannelProbe(context) }
     val probeState by probe.state.collectAsState()
     var confirmed by remember { mutableStateOf(false) }
+    var strategy by remember { mutableStateOf(ChannelProbe.Strategy.SMALL_FRIENDLY) }
 
     Scaffold(
         topBar = {
@@ -94,10 +95,36 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
                         Text("I understand, prepare scan")
                     }
                 } else {
+                    // Strategy selector
+                    Text("Strategy", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = strategy == ChannelProbe.Strategy.SMALL_FRIENDLY,
+                            onClick = { strategy = ChannelProbe.Strategy.SMALL_FRIENDLY },
+                            label = { Text("Small-friendly first", style = MaterialTheme.typography.labelSmall) }
+                        )
+                        FilterChip(
+                            selected = strategy == ChannelProbe.Strategy.TOP_NODES,
+                            onClick = { strategy = ChannelProbe.Strategy.TOP_NODES },
+                            label = { Text("Top nodes first", style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                    Text(
+                        when (strategy) {
+                            ChannelProbe.Strategy.SMALL_FRIENDLY -> "Sorted by smallest average channel size. Most likely to accept."
+                            ChannelProbe.Strategy.TOP_NODES -> "Biggest, most connected nodes. Best for routing if they accept."
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+
                     Button(
                         onClick = {
                             val ls = LightningService.getInstance(context)
-                            probe.start(ls.channels, com.pocketnode.lightning.NodeDirectory)
+                            probe.start(ls.channels, com.pocketnode.lightning.NodeDirectory, strategy)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))

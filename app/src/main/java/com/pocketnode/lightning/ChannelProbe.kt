@@ -49,11 +49,18 @@ class ChannelProbe(private val context: Context) {
 
     private var probeJob: Job? = null
 
+    enum class Strategy {
+        /** Probe the biggest, most connected nodes first. Best routing partners if they accept. */
+        TOP_NODES,
+        /** Probe nodes with smallest average channel size first. Most likely to accept small channels. */
+        SMALL_FRIENDLY
+    }
+
     /**
-     * Start probing. Fetches top .onion nodes from mempool.space and
+     * Start probing. Fetches .onion nodes from mempool.space and
      * attempts channel opens to discover minimums.
      */
-    fun start(channelManager: ChannelManager, nodeDirectory: NodeDirectory) {
+    fun start(channelManager: ChannelManager, nodeDirectory: NodeDirectory, strategy: Strategy = Strategy.TOP_NODES) {
         if (probeJob?.isActive == true) return
 
         probeJob = CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
@@ -61,8 +68,19 @@ class ChannelProbe(private val context: Context) {
                 _state.value = ProbeState(running = true)
                 Log.i(TAG, "Starting channel probe scan")
 
-                // Fetch top nodes by connectivity (most channels = most likely to be online)
-                val topNodes = nodeDirectory.getTopNodes(100) + nodeDirectory.getTopByCapacity(100)
+                val topNodes = when (strategy) {
+                    Strategy.TOP_NODES -> {
+                        // Biggest, most connected nodes
+                        nodeDirectory.getTopNodes(100) + nodeDirectory.getTopByCapacity(100)
+                    }
+                    Strategy.SMALL_FRIENDLY -> {
+                        // All top nodes, sorted by average channel size (smallest first)
+                        val all = nodeDirectory.getTopNodes(100) + nodeDirectory.getTopByCapacity(100) + nodeDirectory.getTopByLowestFee(100)
+                        all.distinctBy { it.publicKey }
+                            .filter { it.channels > 0 }
+                            .sortedBy { it.capacity / it.channels }
+                    }
+                }
                 val onionNodes = topNodes
                     .filter { it.hasOnion }
                     .distinctBy { it.publicKey }
