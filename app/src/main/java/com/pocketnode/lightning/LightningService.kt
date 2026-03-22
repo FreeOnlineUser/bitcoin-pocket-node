@@ -114,6 +114,7 @@ class LightningService(private val context: Context) {
     val channels = ChannelManager(context)
     val onchain = OnchainWallet(context)
     val recovery = RecoveryManager(context).also { it.stateFlow = _state }
+    val channelEvents = ChannelEventHandler(context)
 
     // Signaled by handleEvents() when a channel event (Pending/Ready/Closed) occurs
     @Volatile private var channelEventLatch: java.util.concurrent.CountDownLatch? = null
@@ -1071,38 +1072,14 @@ class LightningService(private val context: Context) {
                 }
                 is Event.ChannelClosed     -> {
                     val reason = event.reason?.toString() ?: "unknown"
-                    // Detect pre-funding rejection: CounterpartyForceClosed before any funding tx
-                    val isRejection = reason.contains("CounterpartyForceClosed") || reason.contains("min chan size")
-                    val displayReason = if (isRejection) {
-                        // Extract peer message for cleaner display
-                        val peerMsg = Regex("""peerMsg=(.+?)\)""").find(reason)?.groupValues?.get(1) ?: reason
-                        "Channel rejected by peer: $peerMsg"
-                    } else reason
-                    Log.w(TAG, "Channel closed: ${event.channelId} reason: $displayReason")
-                    _state.value = _state.value.copy(lastChannelError = displayReason)
-                    // Save channel close/rejection info for tracking
-                    try {
-                        val closePrefs = context.getSharedPreferences("channel_closes", android.content.Context.MODE_PRIVATE)
-                        closePrefs.edit()
-                            .putString("close_${event.channelId}_reason", displayReason)
-                            .putString("close_${event.channelId}_type", if (isRejection) "rejection" else "close")
-                            .putLong("close_${event.channelId}_time", System.currentTimeMillis())
-                            .putString("close_${event.channelId}_peer", event.counterpartyNodeId ?: "")
-                            .apply()
-                        Log.i(TAG, "Saved close info for channel ${event.channelId}")
-                    } catch (_: Exception) {}
-                    // Cache peer's min channel size from rejection message
+                    val result = channelEvents.processCloseReason(reason)
+                    Log.w(TAG, "Channel closed: ${event.channelId} reason: ${result.displayReason}")
+                    _state.value = _state.value.copy(lastChannelError = result.displayReason)
+                    channelEvents.saveCloseInfo(event.channelId, result, event.counterpartyNodeId)
+                    // Cache peer's min channel size if parsed from rejection
                     val peerId = event.counterpartyNodeId
-                    if (peerId != null) {
-                        // Parse min channel size from various rejection formats
-                        val minBtc = Regex("""min chan size of (\d+\.?\d*) BTC""").find(reason)?.groupValues?.get(1)
-                        val minSatDirect = Regex("""min=(\d+)\s*sat""").find(reason)?.groupValues?.get(1)
-                        if (minBtc != null) {
-                            val minSats = (minBtc.toDouble() * 100_000_000).toLong()
-                            savePeerMinChannel(peerId, minSats)
-                        } else if (minSatDirect != null) {
-                            savePeerMinChannel(peerId, minSatDirect.toLong())
-                        }
+                    if (peerId != null && result.minChannelSats != null) {
+                        savePeerMinChannel(peerId, result.minChannelSats)
                     }
                     channelEventLatch?.countDown()
                 }

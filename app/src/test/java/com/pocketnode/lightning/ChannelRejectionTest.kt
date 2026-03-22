@@ -4,28 +4,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Tests for channel rejection detection and peer minimum parsing.
- * Mirrors logic in LightningService.handleEvents() ChannelClosed handler.
+ * Tests for ChannelEventHandler: rejection detection and peer minimum parsing.
  */
 class ChannelRejectionTest {
 
-    // Mirrors rejection detection logic
+    // Can't instantiate with Context in unit tests, so test the pure functions directly
+    // by mirroring them here. The real code in ChannelEventHandler uses identical logic.
     private fun isRejection(reason: String): Boolean {
         return reason.contains("CounterpartyForceClosed") || reason.contains("min chan size")
     }
 
-    // Mirrors peer message extraction
     private fun extractPeerMessage(reason: String): String {
         return Regex("""peerMsg=(.+?)\)""").find(reason)?.groupValues?.get(1) ?: reason
     }
 
-    // Mirrors min channel size parsing (BTC format)
     private fun parseMinBtc(reason: String): Long? {
         val match = Regex("""min chan size of (\d+\.?\d*) BTC""").find(reason) ?: return null
         return (match.groupValues[1].toDouble() * 100_000_000).toLong()
     }
 
-    // Mirrors min channel size parsing (sat format)
     private fun parseMinSats(reason: String): Long? {
         val match = Regex("""min=(\d+)\s*sat""").find(reason) ?: return null
         return match.groupValues[1].toLong()
