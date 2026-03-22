@@ -203,6 +203,12 @@ class NetworkMonitor(private val context: Context) {
     }
 
     /** Get total cellular usage for current month */
+    /** Clear all stored data usage history */
+    fun clearAllUsage() {
+        prefs.edit().clear().apply()
+        android.util.Log.i("NetworkMonitor", "All data usage history cleared")
+    }
+
     fun getMonthCellularUsage(): Long = getMonthUsage("cell")
 
     /** Get total WiFi usage for current month */

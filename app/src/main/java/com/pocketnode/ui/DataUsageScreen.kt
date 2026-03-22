@@ -99,6 +99,29 @@ fun DataUsageScreen(
             recentUsage.forEach { entry ->
                 DayUsageRow(entry)
             }
+
+            // Clear all data button
+            Spacer(Modifier.height(8.dp))
+            var showConfirm by remember { mutableStateOf(false) }
+            if (showConfirm) {
+                OutlinedButton(
+                    onClick = {
+                        networkMonitor?.clearAllUsage()
+                        showConfirm = false
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336))
+                ) {
+                    Text("Confirm Reset")
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { showConfirm = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Reset Data Usage")
+                }
+            }
         }
     }
 }
@@ -140,7 +163,7 @@ private fun DayUsageRow(entry: DataUsageEntry) {
                         fontFamily = FontFamily.Monospace
                     )
                 }
-            }
-        }
+                    }
     }
+}
 }
