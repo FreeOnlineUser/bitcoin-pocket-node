@@ -555,7 +555,10 @@ fun NodeStatusScreen(
                     )
                 }
                 // Tor info panel — always available
-                val lightningRunning = com.pocketnode.lightning.LightningService.stateFlow.collectAsState().value.status == com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING
+                val hasLightning = remember {
+                    val filterDir = context.filesDir.resolve("bitcoin/indexes/blockfilter/basic")
+                    filterDir.exists() && (filterDir.listFiles()?.size ?: 0) > 1
+                }
                 val torRunning = torEnabled && torStatus == com.pocketnode.tor.TorManager.TorStatus.RUNNING
                 var showTorInfo by remember { mutableStateOf(false) }
                 Row(
@@ -607,7 +610,7 @@ fun NodeStatusScreen(
                             Text("• GitHub can see your IP (updates)", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9800))
                         }
 
-                        if (lightningRunning) {
+                        if (hasLightning) {
                             Spacer(Modifier.height(4.dp))
                             Text("Lightning", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             if (torRunning) {
