@@ -733,6 +733,19 @@ class LightningService(private val context: Context) {
                 Log.d(TAG, "  ch=${ch.channelId.take(12)} usable=${ch.isUsable} ready=${ch.isChannelReady} value=${ch.channelValueSats} outbound=${ch.outboundCapacityMsat.toLong()/1000} inbound=${ch.inboundCapacityMsat.toLong()/1000} confs=${ch.confirmations} required=${ch.confirmationsRequired} peer=${ch.counterpartyNodeId.take(16)}")
             }
 
+            // Hold network open while any channel is pending (not yet ready)
+            val hasPendingChannels = channels.any { !it.isChannelReady }
+            val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
+            if (hasPendingChannels && !com.pocketnode.power.PowerModeManager.channelHoldingNetwork) {
+                Log.i(TAG, "Pending channel detected, holding network open")
+                val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
+                if (creds != null) pmm.setRpc(com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second))
+                pmm.holdNetwork()
+            } else if (!hasPendingChannels && com.pocketnode.power.PowerModeManager.channelHoldingNetwork) {
+                Log.i(TAG, "All channels ready, releasing network hold")
+                pmm.releaseNetworkHold()
+            }
+
             // Auto-reconnect to channel peers that have enough confs but aren't ready.
             // This handles the case where the peer address wasn't persisted (e.g. from probe).
             // Rate-limited: only attempt every 60s per peer.
