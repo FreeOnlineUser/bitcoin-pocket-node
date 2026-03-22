@@ -19,7 +19,7 @@ class ChannelProbe(private val context: Context) {
 
     companion object {
         private const val TAG = "ChannelProbe"
-        private const val PROBE_AMOUNT_SATS = 100_000L
+        const val DEFAULT_PROBE_AMOUNT_SATS = 100_000L
         private const val DELAY_BETWEEN_PROBES_MS = 45_000L // 45 seconds between attempts
     }
 
@@ -60,6 +60,8 @@ class ChannelProbe(private val context: Context) {
      * Start probing. Fetches .onion nodes from mempool.space and
      * attempts channel opens to discover minimums.
      */
+    var probeAmountSats: Long = DEFAULT_PROBE_AMOUNT_SATS
+
     fun start(channelManager: ChannelManager, nodeDirectory: NodeDirectory, strategy: Strategy = Strategy.TOP_NODES) {
         if (probeJob?.isActive == true) return
 
@@ -68,18 +70,23 @@ class ChannelProbe(private val context: Context) {
                 _state.value = ProbeState(running = true)
                 Log.i(TAG, "Starting channel probe scan")
 
-                val topNodes = when (strategy) {
-                    Strategy.TOP_NODES -> {
-                        // Biggest, most connected nodes
-                        nodeDirectory.getTopNodes(100) + nodeDirectory.getTopByCapacity(100)
+                Log.i(TAG, "Fetching node list (strategy: $strategy, probe amount: $probeAmountSats sats)")
+                val topNodes = try {
+                    when (strategy) {
+                        Strategy.TOP_NODES -> {
+                            nodeDirectory.getTopNodes(100) + nodeDirectory.getTopByCapacity(100)
+                        }
+                        Strategy.SMALL_FRIENDLY -> {
+                            val all = nodeDirectory.getTopNodes(100) + nodeDirectory.getTopByCapacity(100)
+                            all.distinctBy { it.publicKey }
+                                .filter { it.channels > 0 }
+                                .sortedBy { it.capacity / it.channels }
+                        }
                     }
-                    Strategy.SMALL_FRIENDLY -> {
-                        // All top nodes, sorted by average channel size (smallest first)
-                        val all = nodeDirectory.getTopNodes(100) + nodeDirectory.getTopByCapacity(100) + nodeDirectory.getTopByLowestFee(100)
-                        all.distinctBy { it.publicKey }
-                            .filter { it.channels > 0 }
-                            .sortedBy { it.capacity / it.channels }
-                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to fetch node list: ${e.message}", e)
+                    _state.value = _state.value.copy(running = false, currentNode = "Failed to fetch nodes: ${e.message}")
+                    return@launch
                 }
                 val onionNodes = topNodes
                     .filter { it.hasOnion }
@@ -94,7 +101,8 @@ class ChannelProbe(private val context: Context) {
                 for ((index, node) in onionNodes.withIndex()) {
                     if (!isActive) break
 
-                    val address = node.address ?: continue
+                    val address = node.address
+                    if (address.isEmpty() || !address.contains(".onion")) continue
                     _state.value = _state.value.copy(
                         currentNode = node.alias.ifEmpty { node.publicKey.take(16) },
                         probed = index
@@ -157,7 +165,7 @@ class ChannelProbe(private val context: Context) {
         }
 
         // Step 2: Attempt channel open (will be rejected or accepted)
-        val openResult = channelManager.openChannel(node.publicKey, address, PROBE_AMOUNT_SATS)
+        val openResult = channelManager.openChannel(node.publicKey, address, probeAmountSats)
 
         // Step 3: Check what happened
         val lastError = LightningService.stateFlow.value.lastChannelError ?: ""
@@ -185,7 +193,7 @@ class ChannelProbe(private val context: Context) {
                 } catch (e: Exception) {
                     Log.w(TAG, "  Failed to close probe channel: ${e.message}")
                 }
-                ProbeResult(node.publicKey, node.alias, Outcome.ACCEPTED, message = "Accepts ${PROBE_AMOUNT_SATS / 1000}k sats")
+                ProbeResult(node.publicKey, node.alias, Outcome.ACCEPTED, message = "Accepts ${probeAmountSats / 1000}k sats")
             }
             closeResult.minChannelSats != null -> {
                 Log.i(TAG, "  REJECTED: min ${closeResult.minChannelSats} sats")

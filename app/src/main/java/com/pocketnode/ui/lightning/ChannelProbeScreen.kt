@@ -31,6 +31,7 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
     val probeState by probe.state.collectAsState()
     var confirmed by remember { mutableStateOf(false) }
     var strategy by remember { mutableStateOf(ChannelProbe.Strategy.SMALL_FRIENDLY) }
+    var probeAmountText by remember { mutableStateOf("100000") }
 
     Scaffold(
         topBar = {
@@ -121,9 +122,19 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
 
+                    // Probe amount
+                    OutlinedTextField(
+                        value = probeAmountText,
+                        onValueChange = { probeAmountText = it.filter { c -> c.isDigit() } },
+                        label = { Text("Channel size to test (sats)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
                     Button(
                         onClick = {
                             val ls = LightningService.getInstance(context)
+                            probe.probeAmountSats = probeAmountText.toLongOrNull() ?: ChannelProbe.DEFAULT_PROBE_AMOUNT_SATS
                             probe.start(ls.channels, com.pocketnode.lightning.NodeDirectory, strategy)
                         },
                         modifier = Modifier.fillMaxWidth(),
