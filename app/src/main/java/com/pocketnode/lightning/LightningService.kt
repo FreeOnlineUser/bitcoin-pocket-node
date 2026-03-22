@@ -115,6 +115,7 @@ class LightningService(private val context: Context) {
     val onchain = OnchainWallet(context)
     val recovery = RecoveryManager(context).also { it.stateFlow = _state }
     val channelEvents = ChannelEventHandler(context)
+    private lateinit var refreshLoop: StateRefreshLoop
 
     // Signaled by handleEvents() when a channel event (Pending/Ready/Closed) occurs
     @Volatile private var channelEventLatch: java.util.concurrent.CountDownLatch? = null
@@ -596,105 +597,38 @@ class LightningService(private val context: Context) {
             starting = false
             updateState()
 
-            // Periodic state refresh — safe to use coroutines here, LDK is running
-            var lastWalletSync = 0L
-            stateRefreshJob = ioScope.launch {
-                while (isActive) {
-                    delay(10_000)
-                    try {
-                        // Update bitcoind height on background thread (avoids NetworkOnMainThreadException)
-                        try {
-                            lastBitcoindHeight = rpcClient?.callSync("getblockcount", org.json.JSONArray())?.optLong("value", 0) ?: 0
-                        } catch (_: Exception) {}
-                        updateState()
-                        // Handle pending close: LDK's broadcast queue is fire-and-forget.
-                        // If the commitment tx broadcast failed (e.g. network off during burst),
-                        // the tx is lost from the queue. Only fix: restart LDK so it
-                        // reconstructs from channel monitor and rebroadcasts on startup.
-                        val st = _state.value
-                        val now = System.currentTimeMillis()
-                        val hasOrphanFunds = st.channelCount == 0 && st.lightningBalanceSats > 0
-                        if ((hasOrphanFunds || st.pendingCloseSats > 0) && now - lastWalletSync > 300_000) {
-                            lastWalletSync = now
-                            if (hasOrphanFunds && st.pendingCloseDetails.isEmpty() && !hasAttemptedRebroadcastRestart && !hasCalledBroadcastThisSession) {
-                                // Commitment tx likely never broadcast — restart LDK
-                                Log.w(TAG, "Orphan lightning balance detected with no pending sweeps. Restarting LDK to rebroadcast commitment tx (one-time).")
-                                hasAttemptedRebroadcastRestart = true
-                                val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context)
-                                if (creds != null) {
-                                    // Run on separate thread since stop() cancels the coroutine scope
-                                    Thread({
-                                        try {
-                                            stop()
-                                            Thread.sleep(2000)
-                                            start(creds.first, creds.second)
-                                        } catch (e: Exception) {
-                                            Log.e(TAG, "Failed to restart LDK for rebroadcast: ${e.message}")
-                                        }
-                                    }, "ldk-rebroadcast-restart").start()
-                                    return@launch // Exit this coroutine, new one starts after restart
-                                }
-                            } else {
-                                // Pending sweeps exist: broadcast stuck commitment txs + sync wallets
-                                try {
-                                    node?.broadcastHolderCommitmentTxns()
-                                    node?.syncWallets()
-                                    Log.d(TAG, "syncWallets+broadcast: triggered for pending close funds")
-                                } catch (e: Exception) {
-                                    Log.d(TAG, "syncWallets+broadcast: ${e.message}")
-                                }
-                            }
-                        }
-                        // Periodic state backup + monitor backup + watchtower drain (every 5 min)
-                        if (now - lastWalletSync > 300_000) {
-                            lastWalletSync = now
-                            // Rolling state backup (critical SQLite rows)
-                            try {
-                                val backed = StateBackupManager(context, storageDir).backup()
-                                if (backed) Log.i(TAG, "Periodic state backup complete")
-                            } catch (e: Exception) {
-                                Log.e(TAG, "State backup failed: ${e.message}")
-                            }
-                            // Legacy monitor backup + watchtower
-                            if (st.channelCount > 0) {
-                                node?.let { recovery.backupChannelMonitors(it) }
-                                drainWatchtowerBlobs()
-                            }
-                        }
-                    } catch (_: Exception) {}
+            // Periodic state refresh, orphan detection, backup orchestration
+            refreshLoop = StateRefreshLoop(context, storageDir).apply {
+                getNode = { node }
+                getRpcClient = { rpcClient }
+                this.updateState = { this@LightningService.updateState() }
+                updateBitcoindHeight = { lastBitcoindHeight = it }
+                getState = { _state.value }
+                stopAndRestart = { user, pass ->
+                    Thread({
+                        try { stop(); Thread.sleep(2000); start(user, pass) }
+                        catch (e: Exception) { Log.e(TAG, "Failed to restart LDK: ${e.message}") }
+                    }, "ldk-rebroadcast-restart").start()
                 }
+                this.drainWatchtowerBlobs = { this@LightningService.drainWatchtowerBlobs() }
+                backupMonitors = { node?.let { recovery.backupChannelMonitors(it) } }
+                hasCalledBroadcastThisSession = LightningService.hasCalledBroadcastThisSession
             }
+            stateRefreshJob = refreshLoop.start(ioScope)
 
-            // Sync watchdog: if LDK is behind bitcoind after 120s, chain state
-            // may be corrupted. Only resets if LDK height < bitcoind height.
-            // If LDK is at tip (no new blocks mined), that's normal — don't reset.
+            // Sync watchdog
             val startHeight = try { ldkNode.status().currentBestBlock.height.toLong() } catch (_: Exception) { 0L }
-            val watchdogRpc = BitcoinRpcClient(rpcUser, rpcPassword, port = rpcPort)
-            Thread({
-                Thread.sleep(120_000) // Wait 2 minutes
-                try {
-                    val ldkHeight = ldkNode.status().currentBestBlock.height.toLong()
-                    val chainInfo = watchdogRpc.getBlockchainInfoSync()
-                    val bitcoindHeight = chainInfo?.optLong("blocks", 0) ?: 0
-                    if (ldkHeight < bitcoindHeight && ldkHeight <= startHeight && !_state.value.scanningForFunds) {
-                        Log.e(TAG, "Sync watchdog: LDK stuck at $ldkHeight, bitcoind at $bitcoindHeight. Resetting chain state.")
-                        stop()
-                        recovery.resetChainState(storageDir)
-                        // Clear the stale sync height so prune check doesn't block restart
-                        context.getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
-                            .edit().putLong("last_ldk_sync_height", 0).apply()
-                        // Restart on a new thread
-                        Thread({
-                            Thread.sleep(2_000)
-                            start(rpcUser, rpcPassword, rpcPort)
-                        }, "ldk-restart").start()
-                    } else {
-                        Log.i(TAG, "Sync watchdog: LDK at $ldkHeight, bitcoind at $bitcoindHeight. Sync healthy.")
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Sync watchdog check failed: ${e.message}")
+            refreshLoop.startSyncWatchdog(
+                startHeight, rpcUser, rpcPassword, rpcPort,
+                isScanningForFunds = { _state.value.scanningForFunds },
+                onReset = {
+                    stop()
+                    recovery.resetChainState(storageDir)
+                    context.getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
+                        .edit().putLong("last_ldk_sync_height", 0).apply()
+                    Thread({ Thread.sleep(2_000); start(rpcUser, rpcPassword, rpcPort) }, "ldk-restart").start()
                 }
-            }, "ldk-sync-watchdog").start()
+            )
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start Lightning node", e)
