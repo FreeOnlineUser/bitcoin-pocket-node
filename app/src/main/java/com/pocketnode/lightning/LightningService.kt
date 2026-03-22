@@ -248,7 +248,7 @@ class LightningService(private val context: Context) {
                         LogLevel.INFO  -> Log.i(tag, record.args)
                         LogLevel.DEBUG -> Log.d(tag, record.args)
                         LogLevel.TRACE -> Log.v(tag, record.args)
-                        LogLevel.GOSSIP -> Log.v(tag, "[gossip] ${record.args}")
+                        LogLevel.GOSSIP -> {} // Drop gossip logs (floods logcat ring buffer)
                     }
                 }
             })
