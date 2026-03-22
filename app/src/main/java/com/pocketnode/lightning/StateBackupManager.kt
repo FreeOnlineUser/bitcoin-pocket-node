@@ -226,6 +226,81 @@ class StateBackupManager(
      * Call this BEFORE builder.build().
      * Returns true if a restore was performed.
      */
+    /**
+     * Restore ONLY monitor rows from backup. Safe across LDK session changes.
+     * Full state restore (manager + monitors) fails if the build context changed.
+     * Monitor-only restore lets LDK build fresh, see the orphan monitor, and force-close.
+     */
+    fun autoRestoreMonitorsOnly(): Boolean {
+        val sqliteFile = File(storageDir, "ldk_node_data.sqlite")
+        if (!sqliteFile.exists()) return false
+
+        cleanupBadMonitorKeys(sqliteFile)
+
+        val currentState = readCurrentState() ?: return false
+        val needsRestore = currentState.monitorCount == 0 && hasBackupWithMonitors()
+
+        if (!needsRestore) {
+            Log.d(TAG, "Monitors OK: ${currentState.monitorCount} monitors")
+            return false
+        }
+
+        Log.w(TAG, "0 monitors but backup has channels. Restoring monitors only.")
+
+        // Find best backup with monitors
+        val candidates = mutableListOf<Triple<Int, Long, Int>>() // slot, timestamp, monitorCount
+        for (slot in 0 until MAX_SLOTS) {
+            val metaFile = File(backupDir, "state_backup_$slot.meta")
+            val dbFile = File(backupDir, "state_backup_$slot.sqlite")
+            if (!metaFile.exists() || !dbFile.exists()) continue
+            val meta = metaFile.readText()
+            val timestamp = meta.lines().find { it.startsWith("timestamp=") }
+                ?.substringAfter("=")?.toLongOrNull() ?: 0L
+            val monitorCount = meta.lines().find { it.startsWith("monitor_count=") }
+                ?.substringAfter("=")?.toIntOrNull() ?: 0
+            if (monitorCount > 0) candidates.add(Triple(slot, timestamp, monitorCount))
+        }
+
+        if (candidates.isEmpty()) {
+            Log.w(TAG, "No backups with monitors found")
+            return restoreFromLegacyMonitors(sqliteFile)
+        }
+
+        val best = candidates.maxByOrNull { it.second }!!
+        val backupDb = File(backupDir, "state_backup_${best.first}.sqlite")
+
+        return try {
+            val source = SQLiteDatabase.openDatabase(backupDb.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val target = SQLiteDatabase.openDatabase(sqliteFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+
+            // Only restore monitor rows
+            val cursor = source.rawQuery(
+                "SELECT primary_namespace, secondary_namespace, key, value FROM ldk_node_data WHERE primary_namespace='monitors'", null)
+            var restored = 0
+            while (cursor.moveToNext()) {
+                val stmt = target.compileStatement(
+                    "INSERT OR REPLACE INTO ldk_node_data (primary_namespace, secondary_namespace, key, value) VALUES (?, ?, ?, ?)")
+                stmt.bindString(1, cursor.getString(0))
+                stmt.bindString(2, cursor.getString(1))
+                stmt.bindString(3, cursor.getString(2))
+                stmt.bindBlob(4, cursor.getBlob(3))
+                stmt.executeInsert()
+                stmt.close()
+                restored++
+            }
+            cursor.close()
+            target.close()
+            source.close()
+
+            Log.w(TAG, "MONITOR-ONLY RESTORE: $restored monitor(s) from backup slot ${best.first}")
+            restored > 0
+        } catch (e: Exception) {
+            Log.e(TAG, "Monitor restore failed: ${e.message}")
+            false
+        }
+    }
+
+    @Deprecated("Use autoRestoreMonitorsOnly instead")
     fun autoRestoreIfNeeded(): Boolean {
         val sqliteFile = File(storageDir, "ldk_node_data.sqlite")
         if (!sqliteFile.exists()) return false

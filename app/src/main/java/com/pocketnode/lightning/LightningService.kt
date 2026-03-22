@@ -354,10 +354,22 @@ class LightningService(private val context: Context) {
                 }
             }
 
-            // --- State backup: auto-restore if needed ---
-            val stateBackup = StateBackupManager(context, storageDir)
-            if (stateBackup.autoRestoreIfNeeded()) {
-                Log.w(TAG, "State auto-restored from backup before build")
+            // --- One-time recovery: delete corrupt SQLite from failed auto-restore ---
+            val corruptRecoveryPrefs = context.getSharedPreferences("pocketnode_prefs", Context.MODE_PRIVATE)
+            val resetVersion = corruptRecoveryPrefs.getInt("sqlite_reset_version", 0)
+            if (resetVersion < 1) {
+                corruptRecoveryPrefs.edit()
+                    .putBoolean("needs_sqlite_reset", true)
+                    .putInt("sqlite_reset_version", 1)
+                    .apply()
+            }
+            if (corruptRecoveryPrefs.getBoolean("needs_sqlite_reset", false)) {
+                val dbFile = File(storageDir, "ldk_node_data.sqlite")
+                val walFile = File(storageDir, "ldk_node_data.sqlite-wal")
+                val shmFile = File(storageDir, "ldk_node_data.sqlite-shm")
+                dbFile.delete(); walFile.delete(); shmFile.delete()
+                corruptRecoveryPrefs.edit().putBoolean("needs_sqlite_reset", false).apply()
+                Log.w(TAG, "Deleted corrupt SQLite for fresh LDK start")
             }
 
             val ldkNode = builder.build(entropy)
@@ -369,7 +381,16 @@ class LightningService(private val context: Context) {
             for (attempt in 1..10) {
                 try {
                     ldkNode.start()
-                    // IMMEDIATELY broadcast orphan monitor commitment txs before background sync archives them
+                    // Inject monitors from backup AFTER start (before sync archives them)
+                    try {
+                        val stateBackup = StateBackupManager(context, storageDir)
+                        if (stateBackup.autoRestoreMonitorsOnly()) {
+                            Log.w(TAG, "Monitors injected post-start from backup")
+                        }
+                    } catch (e2: Exception) {
+                        Log.w(TAG, "Post-start monitor restore failed: ${e2.message}")
+                    }
+                    // IMMEDIATELY broadcast orphan monitor commitment txs
                     try {
                         ldkNode.broadcastHolderCommitmentTxns()
                         Log.i(TAG, "Immediate post-start: broadcast holder commitment txns")
@@ -422,6 +443,7 @@ class LightningService(private val context: Context) {
 
             // Initial state backup after successful start
             try {
+                val stateBackup = StateBackupManager(context, storageDir)
                 val initialBackup = stateBackup.backup()
                 Log.i(TAG, "Initial state backup: ${if (initialBackup) "written" else "skipped"} | ${stateBackup.getStatus()}")
             } catch (e: Exception) {
