@@ -561,14 +561,21 @@ fun NodeStatusScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .clickable { showTorInfo = !showTorInfo }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         "ⓘ Network privacy info",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (torRunning) Color(0xFF9C27B0) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        modifier = Modifier.clickable { showTorInfo = !showTorInfo }
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = if (torRunning) Color(0xFF9C27B0) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        if (showTorInfo) "▲" else "▼",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                 }
                 if (showTorInfo) {
