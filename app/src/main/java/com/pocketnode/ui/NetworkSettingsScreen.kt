@@ -211,7 +211,9 @@ fun NetworkSettingsScreen(
             if (showConfirm) {
                 OutlinedButton(
                     onClick = {
-                        networkMonitor?.clearAllUsage()
+                        // Clear prefs directly (networkMonitor may be null if node not running)
+                        usagePrefs.edit().clear().apply()
+                        networkMonitor?.clearAllUsage() // also reset baseline if monitor exists
                         usageVersion++
                         showConfirm = false
                     },
