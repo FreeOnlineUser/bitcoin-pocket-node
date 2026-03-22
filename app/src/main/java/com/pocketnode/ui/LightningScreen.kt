@@ -658,7 +658,18 @@ fun LightningScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        val peerAlias = peerAliases.getString(ch.counterpartyNodeId, null)
+                                        var peerAlias = peerAliases.getString(ch.counterpartyNodeId, null)
+                                        // Look up alias from gossip graph if not cached
+                                        if (peerAlias == null) {
+                                            try {
+                                                val nodeInfo = lightning.networkGraph()?.node(ch.counterpartyNodeId)
+                                                val alias = nodeInfo?.announcementInfo?.alias
+                                                if (!alias.isNullOrEmpty()) {
+                                                    peerAlias = alias
+                                                    peerAliases.edit().putString(ch.counterpartyNodeId, alias).apply()
+                                                }
+                                            } catch (_: Exception) {}
+                                        }
                                         if (peerAlias != null) {
                                             Text(
                                                 peerAlias,
