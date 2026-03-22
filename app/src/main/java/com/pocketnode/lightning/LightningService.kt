@@ -1101,14 +1101,23 @@ class LightningService(private val context: Context) {
                 }
                 is Event.ChannelClosed     -> {
                     val reason = event.reason?.toString() ?: "unknown"
-                    Log.w(TAG, "Channel closed: ${event.channelId} reason: $reason")
-                    _state.value = _state.value.copy(lastChannelError = reason)
-                    // Save channel close info for tracking
+                    // Detect pre-funding rejection: CounterpartyForceClosed before any funding tx
+                    val isRejection = reason.contains("CounterpartyForceClosed") || reason.contains("min chan size")
+                    val displayReason = if (isRejection) {
+                        // Extract peer message for cleaner display
+                        val peerMsg = Regex("""peerMsg=(.+?)\)""").find(reason)?.groupValues?.get(1) ?: reason
+                        "Channel rejected by peer: $peerMsg"
+                    } else reason
+                    Log.w(TAG, "Channel closed: ${event.channelId} reason: $displayReason")
+                    _state.value = _state.value.copy(lastChannelError = displayReason)
+                    // Save channel close/rejection info for tracking
                     try {
                         val closePrefs = context.getSharedPreferences("channel_closes", android.content.Context.MODE_PRIVATE)
                         closePrefs.edit()
-                            .putString("close_${event.channelId}_reason", reason)
+                            .putString("close_${event.channelId}_reason", displayReason)
+                            .putString("close_${event.channelId}_type", if (isRejection) "rejection" else "close")
                             .putLong("close_${event.channelId}_time", System.currentTimeMillis())
+                            .putString("close_${event.channelId}_peer", event.counterpartyNodeId ?: "")
                             .apply()
                         Log.i(TAG, "Saved close info for channel ${event.channelId}")
                     } catch (_: Exception) {}
