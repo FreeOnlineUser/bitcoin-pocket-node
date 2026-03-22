@@ -127,7 +127,8 @@ fun NetworkSettingsScreen(
             // Data Usage section — reads from SharedPreferences directly so it works
             // even when NetworkMonitor isn't running (e.g. node failed to start)
             val usagePrefs = remember { context.getSharedPreferences("network_data_usage", android.content.Context.MODE_PRIVATE) }
-            val recentUsage = remember {
+            var usageVersion by remember { mutableStateOf(0) }
+            val recentUsage = remember(usageVersion) {
                 val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
                 val cal = java.util.Calendar.getInstance()
                 (0 until 7).map { _ ->
@@ -142,7 +143,7 @@ fun NetworkSettingsScreen(
                     )
                 }
             }
-            val monthCellular = remember {
+            val monthCellular = remember(usageVersion) {
                 val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
                 val monthPrefix = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US).format(java.util.Date())
                 val cal = java.util.Calendar.getInstance()
@@ -211,6 +212,7 @@ fun NetworkSettingsScreen(
                 OutlinedButton(
                     onClick = {
                         networkMonitor?.clearAllUsage()
+                        usageVersion++
                         showConfirm = false
                     },
                     modifier = Modifier.fillMaxWidth(),
