@@ -116,6 +116,7 @@ class LightningService(private val context: Context) {
     val recovery = RecoveryManager(context).also { it.stateFlow = _state }
     val channelEvents = ChannelEventHandler(context)
     private lateinit var refreshLoop: StateRefreshLoop
+    private val reconnectAttempts = mutableMapOf<String, Long>() // peer pubkey -> last attempt timestamp
 
     // Signaled by handleEvents() when a channel event (Pending/Ready/Closed) occurs
     @Volatile private var channelEventLatch: java.util.concurrent.CountDownLatch? = null
@@ -729,8 +730,50 @@ class LightningService(private val context: Context) {
             val usableChannels = channels.count { it.isUsable }
             Log.d(TAG, "updateState: onchain=${balances.totalOnchainBalanceSats} lightning=${balances.totalLightningBalanceSats} spendable=${balances.spendableOnchainBalanceSats} channels=${channels.size} usable=$usableChannels ldkHeight=${bestBlock.height} outbound=${outboundMsat/1000}sats inbound=${inboundMsat/1000}sats")
             channels.forEach { ch ->
-                Log.d(TAG, "  ch=${ch.channelId.take(12)} usable=${ch.isUsable} ready=${ch.isChannelReady} value=${ch.channelValueSats} outbound=${ch.outboundCapacityMsat.toLong()/1000} inbound=${ch.inboundCapacityMsat.toLong()/1000} confs=${ch.confirmations}")
+                Log.d(TAG, "  ch=${ch.channelId.take(12)} usable=${ch.isUsable} ready=${ch.isChannelReady} value=${ch.channelValueSats} outbound=${ch.outboundCapacityMsat.toLong()/1000} inbound=${ch.inboundCapacityMsat.toLong()/1000} confs=${ch.confirmations} required=${ch.confirmationsRequired} peer=${ch.counterpartyNodeId.take(16)}")
             }
+
+            // Auto-reconnect to channel peers that have enough confs but aren't ready.
+            // This handles the case where the peer address wasn't persisted (e.g. from probe).
+            // Rate-limited: only attempt every 60s per peer.
+            val connectedPeers = try { n.listPeers().map { it.nodeId }.toSet() } catch (_: Exception) { emptySet() }
+            val now = System.currentTimeMillis()
+            channels.filter { ch ->
+                !ch.isChannelReady
+                && (ch.confirmations?.toInt() ?: 0) >= (ch.confirmationsRequired?.toInt() ?: 3)
+                && ch.counterpartyNodeId !in connectedPeers
+                && now - reconnectAttempts.getOrDefault(ch.counterpartyNodeId, 0L) > 60_000
+            }.forEach { ch ->
+                reconnectAttempts[ch.counterpartyNodeId] = now
+                val peerId = ch.counterpartyNodeId
+                Log.i(TAG, "Channel ${ch.channelId.take(12)} has ${ch.confirmations} confs but not ready. Attempting reconnect to $peerId")
+                ioScope.launch {
+                    try {
+                        // 1. Check LDK's gossip graph first (already have the data locally)
+                        var addr: String? = null
+                        try {
+                            val nodeInfo = n.networkGraph().node(peerId)
+                            val addrs = nodeInfo?.announcementInfo?.addresses ?: emptyList()
+                            addr = addrs.firstOrNull { it.contains(".onion") }
+                                ?: addrs.firstOrNull()
+                            if (addr != null) Log.i(TAG, "Found peer address from gossip graph: $addr")
+                        } catch (_: Exception) {}
+                        // 2. Fallback to mempool.space API
+                        if (addr.isNullOrEmpty()) {
+                            addr = NodeDirectory.getNodeDetails(peerId)?.address
+                        }
+                        if (addr != null && addr.isNotEmpty()) {
+                            n.connect(peerId, addr, true)
+                            Log.i(TAG, "Reconnected to channel peer $peerId at $addr")
+                        } else {
+                            Log.w(TAG, "No address found for channel peer $peerId")
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Reconnect to $peerId failed: ${e.message}")
+                    }
+                }
+            }
+
             // Routing readiness: graph size, peers, sync timestamps
             var currentGraphNodes = 0
             var currentLnPeerCount = 0
