@@ -135,6 +135,9 @@ fun NetworkSettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             Text("Data Usage", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Approximate. Check your phone's Settings for exact usage.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
 
             // Monthly cellular summary
             Card(
