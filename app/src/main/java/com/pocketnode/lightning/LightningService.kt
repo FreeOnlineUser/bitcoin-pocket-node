@@ -172,6 +172,7 @@ class LightningService(private val context: Context) {
     // coroutine-free. After node.start() returns, tokio's runtime is fully
     // initialised and it's safe to touch coroutine machinery again.
     private fun startInternal(rpcUser: String, rpcPassword: String, rpcPort: Int) {
+        Log.i(TAG, "startInternal: entering")
         try {
             // Apply pending seed restore before LDK touches any files
             recovery.applyPendingSeedRestore(onchain)
@@ -275,9 +276,10 @@ class LightningService(private val context: Context) {
             // --- Wallet birthday for seed recovery ---
             val seedFile = File(storageDir, "keys_seed")
             val birthdayFile = File(storageDir, "wallet_birthday")
-            val hasPersistedState = File(storageDir, "bdk_wallet").exists()
             val hasMnemonic = File(storageDir, "mnemonic").exists()
+
             // Recovery: if wallet has a birthday but no persisted BDK state,
+            val hasPersistedState = File(storageDir, "ldk_node_data.sqlite").exists()
             // set the wallet birthday height so BDK creates its first checkpoint
             // at that block instead of the current tip. This lets the chain
             // listener sync from the birthday forward, finding historical UTXOs
@@ -1013,23 +1015,24 @@ class LightningService(private val context: Context) {
             }
             val pendingCloseTotalSats = pendingCloses.sumOf { it.amountSats }
 
-            // Mark deposit address as used if raw on-chain balance increased
-            val prevRawBalance = _state.value.onchainBalanceSats + _state.value.pendingCloseSats
+            // Mark deposit address as used if total on-chain balance increased
             val newBalance = balances.totalOnchainBalanceSats.toLong()
-            if (newBalance > prevRawBalance && prevRawBalance >= 0) {
+            val prevTotal = _state.value.onchainBalanceSats + _state.value.pendingCloseSats
+            if (newBalance > prevTotal && prevTotal >= 0) {
                 onchain.getOnchainAddress() // trigger rotation check
                 onchain.clearDepositAddress()
             }
 
-            // Subtract pending close from on-chain to avoid double-counting.
+            // Subtract pending close from total to avoid double-counting.
             // LDK's totalOnchainBalanceSats includes sweeper-tracked outputs
             // which are already shown separately as pending close.
-            val adjustedOnchain = maxOf(0L, newBalance - pendingCloseTotalSats)
+            // During sync this may show 0 until all UTXOs are discovered.
+            val displayOnchain = maxOf(0L, newBalance - pendingCloseTotalSats)
 
             _state.value = LightningState(
                 status = LightningState.Status.RUNNING,
                 nodeId = n.nodeId(),
-                onchainBalanceSats = adjustedOnchain,
+                onchainBalanceSats = displayOnchain,
                 lightningBalanceSats = balances.totalLightningBalanceSats.toLong(),
                 channelCount = channels.size,
                 totalCapacitySats = channels.sumOf { it.channelValueSats.toLong() }.also {

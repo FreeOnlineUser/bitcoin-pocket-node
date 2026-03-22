@@ -225,11 +225,12 @@ fun BurstSyncBanner(
 
     val text = when (burstState) {
         PowerModeManager.BurstState.SYNCING -> if (peerCount > 0) "⏳ Burst sync: connected ($peerCount peers)" else "⏳ Burst sync: connecting..."
-        PowerModeManager.BurstState.WAITING -> if (peerCount > 0) return else {
+        PowerModeManager.BurstState.WAITING -> {
             val remaining = nextBurstMs - System.currentTimeMillis()
             if (remaining > 0) {
                 val minutes = (remaining / 60_000).toInt()
-                "💤 Network paused, next sync in ${minutes}min"
+                if (peerCount > 0) "💤 Connected ($peerCount peers), next sync in ${minutes}min"
+                else "💤 Network paused, next sync in ${minutes}min"
             } else {
                 "💤 Network paused, syncing soon..."
             }

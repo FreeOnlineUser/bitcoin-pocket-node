@@ -339,9 +339,11 @@ fun NodeStatusScreen(
                         (blockHeight.toDouble() / headerHeight * 100)
                     } else 0.0
 
+                    val blocksBehind = if (headerHeight > 0 && blockHeight > 0) headerHeight - blockHeight else 0L
                     val newStatus = when {
                         assumeUtxoActive -> "Synced (validating)"
-                        syncProgress >= 0.9999 && !ibd -> "Synced"
+                        syncProgress >= 0.9999 && !ibd && blocksBehind <= 1 -> "Synced"
+                        syncProgress >= 0.9999 && !ibd && blocksBehind > 1 -> "Catching up"
                         syncProgress >= 0.9999 -> "Almost synced"
                         blockHeight > 0 && ibd && headersComplete -> {
                             "Syncing ${"%.2f".format(blockPct)}%"

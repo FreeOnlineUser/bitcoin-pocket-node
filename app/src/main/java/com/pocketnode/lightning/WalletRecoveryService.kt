@@ -26,7 +26,7 @@ class WalletRecoveryService(private val context: Context) {
         private const val TAG = "WalletRecovery"
         private const val STORAGE_DIR = "lightning"
         // Number of addresses to scan per keychain (receiving + change)
-        private const val SCAN_RANGE = 20
+        private const val SCAN_RANGE = 100
     }
 
     data class FoundUtxo(
