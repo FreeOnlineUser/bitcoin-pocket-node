@@ -554,14 +554,73 @@ fun NodeStatusScreen(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
-                if (!torEnabled) {
-                    val hasClearnetLeaks = true // mempool.space, GitHub, etc.
-                    if (hasClearnetLeaks) {
+                // Tor info panel — always available
+                val lightningRunning = com.pocketnode.lightning.LightningService.stateFlow.collectAsState().value.status == com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING
+                val torRunning = torEnabled && torStatus == com.pocketnode.tor.TorManager.TorStatus.RUNNING
+                var showTorInfo by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "ⓘ Network privacy info",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (torRunning) Color(0xFF9C27B0) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        modifier = Modifier.clickable { showTorInfo = !showTorInfo }
+                    )
+                }
+                if (showTorInfo) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                                shape = MaterialTheme.shapes.small
+                            )
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("Bitcoin P2P", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        if (torRunning) {
+                            Text("• Only connects to .onion peers", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                            Text("• Your IP hidden from all peers", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                        } else {
+                            Text("• Clearnet peers can see your IP", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9800))
+                        }
+
+                        Spacer(Modifier.height(4.dp))
+                        Text("HTTP calls", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        if (torRunning) {
+                            Text("• mempool.space via .onion address", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                            Text("• GitHub updates via Tor exit node", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                        } else {
+                            Text("• mempool.space can see your IP", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9800))
+                            Text("• GitHub can see your IP (updates)", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9800))
+                        }
+
+                        if (lightningRunning) {
+                            Spacer(Modifier.height(4.dp))
+                            Text("Lightning", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            if (torRunning) {
+                                Text("• All peer connections via Tor", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                                Text("• Gossip sync (RGS) via Tor exit node", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9800))
+                                Text("  No .onion endpoint available", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                Text("• Watchtower via .onion address", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                            } else {
+                                Text("• Lightning peers can see your IP", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9800))
+                                Text("• Gossip sync server can see your IP", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF9800))
+                                Text("• Watchtower uses Tor independently", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                            }
+                        }
+
+                        Spacer(Modifier.height(4.dp))
                         Text(
-                            "Clearnet active. mempool.space and GitHub can see your IP.",
+                            if (torRunning) "Tor hides your IP. Your node pubkey is still permanent and linkable across sessions."
+                            else "Enable Tor to hide your IP from peers and external services.",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                            modifier = Modifier.padding(bottom = 4.dp)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
                 }
