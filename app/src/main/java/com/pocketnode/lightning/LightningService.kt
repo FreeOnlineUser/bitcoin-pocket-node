@@ -984,39 +984,11 @@ class LightningService(private val context: Context) {
             }
 
             // Parse pending balances from channel closures
-            val currentHeight = bestBlock.height.toInt()
             val currentH = bestBlock.height.toInt()
-            val pendingCloses = balances.pendingBalancesFromChannelClosures.map { psb ->
-                when (psb) {
-                    is org.lightningdevkit.ldknode.PendingSweepBalance.PendingBroadcast ->
-                        LightningState.PendingClose(psb.channelId ?: "", psb.amountSatoshis.toLong(), "Pending broadcast")
-                    is org.lightningdevkit.ldknode.PendingSweepBalance.BroadcastAwaitingConfirmation ->
-                        LightningState.PendingClose(psb.channelId ?: "", psb.amountSatoshis.toLong(),
-                            "Awaiting confirmation", psb.latestBroadcastHeight.toInt(),
-                            txid = psb.latestSpendingTxid)
-                    is org.lightningdevkit.ldknode.PendingSweepBalance.AwaitingThresholdConfirmations -> {
-                        // Funds spendable after ANTI_REORG_DELAY (6 blocks) from confirmation
-                        val spendableAt = psb.confirmationHeight.toInt() + 6
-                        val blocksLeft = maxOf(0, spendableAt - currentH)
-                        val confs = currentH - psb.confirmationHeight.toInt()
-                        // Hide once past threshold (sweeper keeps tracking for 4038 blocks, but funds are spendable)
-                        if (blocksLeft <= 0) null
-                        else LightningState.PendingClose(psb.channelId ?: "", psb.amountSatoshis.toLong(),
-                            "Confirming", psb.confirmationHeight.toInt(),
-                            txid = psb.latestSpendingTxid, blocksRemaining = blocksLeft, confirmations = confs)
-                    }
-                    else -> LightningState.PendingClose("", 0, "Unknown")
-                }
-            }.filterNotNull().filter { it.amountSats > 0 }
-            if (pendingCloses.isNotEmpty() || balances.pendingBalancesFromChannelClosures.isNotEmpty()) {
-                Log.d(TAG, "pendingCloses: raw=${balances.pendingBalancesFromChannelClosures.size} parsed=${pendingCloses.size}")
-                pendingCloses.forEach { pc ->
-                    Log.d(TAG, "  close: ${pc.amountSats}sats status=${pc.status} blocks=${pc.blocksRemaining} txid=${pc.txid?.take(16)}")
-                }
-                balances.pendingBalancesFromChannelClosures.forEach { psb ->
-                    Log.d(TAG, "  raw: ${psb::class.simpleName}")
-                }
-            }
+            val pendingCloses = BalanceTracker.parsePendingCloses(
+                balances.pendingBalancesFromChannelClosures, currentH
+            )
+            BalanceTracker.logPendingCloses(pendingCloses, balances.pendingBalancesFromChannelClosures.size)
             val pendingCloseTotalSats = pendingCloses.sumOf { it.amountSats }
 
             // Mark deposit address as used if total on-chain balance increased
@@ -1027,11 +999,7 @@ class LightningService(private val context: Context) {
                 onchain.clearDepositAddress()
             }
 
-            // Subtract pending close from total to avoid double-counting.
-            // LDK's totalOnchainBalanceSats includes sweeper-tracked outputs
-            // which are already shown separately as pending close.
-            // During sync this may show 0 until all UTXOs are discovered.
-            val displayOnchain = maxOf(0L, newBalance - pendingCloseTotalSats)
+            val displayOnchain = BalanceTracker.displayOnchain(newBalance, pendingCloseTotalSats)
 
             _state.value = LightningState(
                 status = LightningState.Status.RUNNING,
@@ -1041,12 +1009,9 @@ class LightningService(private val context: Context) {
                 channelCount = channels.size,
                 totalCapacitySats = channels.sumOf { it.channelValueSats.toLong() }.also {
                     val prefs = context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
-                    if (channels.isNotEmpty()) {
-                        // Auto-unlock Lightning Pay when channels exist
+                    if (BalanceTracker.shouldUnlockLightningPay(channels.size)) {
                         try { prefs.edit().putBoolean("lightning_unlocked", true).apply() } catch (_: Exception) {}
-                    } else if (balances.totalLightningBalanceSats == 0UL) {
-                        // Re-lock when no channels and no lightning balance.
-                        // Pending close (force-close sweep) doesn't keep Pay unlocked.
+                    } else if (BalanceTracker.shouldRelockLightningPay(channels.size, balances.totalLightningBalanceSats.toLong())) {
                         try { prefs.edit().putBoolean("lightning_unlocked", false).apply() } catch (_: Exception) {}
                     }
                 },

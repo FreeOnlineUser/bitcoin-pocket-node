@@ -4,18 +4,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Tests for balance display logic.
+ * Tests for BalanceTracker.
  * Verifies on-chain balance subtracts pending close to avoid double-counting,
  * and pending close visibility thresholds.
  */
 class BalanceLogicTest {
 
-    // Mirrors the logic in LightningService.updateState()
+    // Uses BalanceTracker directly
     private fun displayOnchain(totalOnchain: Long, pendingClose: Long): Long {
-        return maxOf(0L, totalOnchain - pendingClose)
+        return BalanceTracker.displayOnchain(totalOnchain, pendingClose)
     }
 
-    // Mirrors the logic in LightningService for AwaitingThresholdConfirmations
+    // Mirrors threshold logic (can't call parsePendingCloses without LDK types in unit tests)
     private fun pendingCloseVisible(confirmationHeight: Int, currentHeight: Int): Boolean {
         val spendableAt = confirmationHeight + 6  // ANTI_REORG_DELAY
         val blocksLeft = maxOf(0, spendableAt - currentHeight)

@@ -10,15 +10,13 @@ import org.junit.Test
  */
 class LightningPayLockTest {
 
-    // Mirrors logic in LightningService.updateState()
+    // Uses BalanceTracker directly
     private fun shouldUnlock(channelCount: Int): Boolean {
-        return channelCount > 0
+        return BalanceTracker.shouldUnlockLightningPay(channelCount)
     }
 
     private fun shouldRelock(channelCount: Int, lightningBalance: Long): Boolean {
-        // Re-lock when no channels and no lightning balance.
-        // Pending close doesn't keep Pay unlocked.
-        return channelCount == 0 && lightningBalance == 0L
+        return BalanceTracker.shouldRelockLightningPay(channelCount, lightningBalance)
     }
 
     @Test
