@@ -67,3 +67,35 @@ The phone doesn't care about git history. It only checks that versionCode goes u
 4. Test destructive operations mentally first: "What data does this delete? Can it be recovered?"
 5. Channel state backups go stale fast. SCB is the only safe external backup for Lightning channels.
 6. If LDK starts with 0 channels but monitors exist, something went wrong. Do not proceed normally.
+
+## Disaster Recovery: Full Seed + Channel Restore
+
+If you lose app data completely (uninstall, device loss, data corruption):
+
+### Prerequisites
+- Your 24-word seed (mnemonic)
+- Channel monitor backups (from `lightning_backup/monitors/` or StateBackupManager)
+- The app installed on any phone with bitcoind synced
+
+### Steps
+
+1. **Restore seed:** Use the app's seed restore flow. This creates a fresh BDK wallet with standard BIP39 derivation and sets the wallet birthday from your backup.
+
+2. **Wait for block replay:** The bitcoind chain source replays all blocks from the wallet birthday to the current tip. BDK discovers on-chain UTXOs at initially revealed addresses (receive and change paths). This takes a few minutes.
+
+3. **Verify on-chain balance:** Confirm your on-chain funds appear. If UTXOs at higher address indices are missing, use BlueWallet (import same seed) to sweep them to the app's deposit address.
+
+4. **Inject channel monitors:** If you have monitor backups, inject them into the SQLite database before starting Lightning:
+   - Table: `ldk_node_data`
+   - Namespace: `monitors` (primary), `""` (secondary)
+   - Key: `{funding_txid_rpc_order}_{vout}`
+   - Value: raw monitor binary
+
+5. **Start Lightning:** LDK detects monitors with no matching channel_manager, force-closes the channels. The commitment transaction broadcasts.
+
+6. **Wait for timelock:** Anchor channels have a ~144 block CSV delay (~24 hours). After confirmation + timelock, funds become spendable on-chain.
+
+### Limitations
+- **bitcoind chain source only scans addresses BDK has revealed.** If you used many addresses, some on-chain UTXOs may not appear. Import your seed into BlueWallet (or any BIP84 wallet) to find and sweep them.
+- **Channel monitor restore triggers force-close, not reconnect.** There is no way to resume a channel from monitor-only backup. SCB (Static Channel Backup) can request the counterparty to force-close instead, which is slightly cleaner.
+- **Lightning balance is lost if you have no monitor backup.** The seed alone only recovers on-chain funds. Lightning channel funds require the channel monitor data.
