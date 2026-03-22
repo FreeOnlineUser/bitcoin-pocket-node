@@ -896,6 +896,7 @@ class LightningService(private val context: Context) {
                 scanningForFunds = _state.value.scanningForFunds,
                 scanProgress = _state.value.scanProgress,
                 lastChannelError = _state.value.lastChannelError,
+                watchtowerReachable = _state.value.watchtowerReachable,
                 pendingChannels = pending,
                 channelFeeRates = feeRates,
                 pendingCloseSats = pendingCloseTotalSats,
