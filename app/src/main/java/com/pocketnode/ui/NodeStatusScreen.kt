@@ -1423,6 +1423,16 @@ private fun ActionButtons(
                             OutlinedButton(onClick = { dismissed = true }) {
                                 Text("Not yet")
                             }
+                            val torActive = com.pocketnode.tor.TorManager.enabledFlow.collectAsState().value &&
+                                com.pocketnode.tor.TorManager.statusFlow.collectAsState().value == com.pocketnode.tor.TorManager.TorStatus.RUNNING
+                            if (torActive) {
+                                Text(
+                                    "⚠️ Downloading over Tor. Secure but slow (~88 MB).",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFFFF9800),
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                            }
                             if (updateInfo?.apkUrl != null) {
                                 Button(
                                     onClick = {
