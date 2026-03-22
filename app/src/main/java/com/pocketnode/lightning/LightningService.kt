@@ -1130,7 +1130,7 @@ class LightningService(private val context: Context) {
                     val peerId = event.counterpartyNodeId
                     if (peerId != null) {
                         // Parse min channel size from various rejection formats
-                        val minBtc = Regex("""min chan size of (\d+\.\d+) BTC""").find(reason)?.groupValues?.get(1)
+                        val minBtc = Regex("""min chan size of (\d+\.?\d*) BTC""").find(reason)?.groupValues?.get(1)
                         val minSatDirect = Regex("""min=(\d+)\s*sat""").find(reason)?.groupValues?.get(1)
                         if (minBtc != null) {
                             val minSats = (minBtc.toDouble() * 100_000_000).toLong()
