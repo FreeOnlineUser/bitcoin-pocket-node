@@ -88,8 +88,16 @@ class ChannelProbe(private val context: Context) {
                     _state.value = _state.value.copy(running = false, currentNode = "Failed to fetch nodes: ${e.message}")
                     return@launch
                 }
-                val onionNodes = topNodes
-                    .filter { it.hasOnion }
+                // Rankings don't include addresses. Fetch details to find .onion nodes.
+                _state.value = _state.value.copy(currentNode = "Fetching node addresses...")
+                val enriched = topNodes.distinctBy { it.publicKey }.mapNotNull { node ->
+                    if (node.hasOnion) return@mapNotNull node // already has address info
+                    try {
+                        val details = nodeDirectory.getNodeDetails(node.publicKey)
+                        details?.takeIf { it.hasOnion }
+                    } catch (_: Exception) { null }
+                }
+                val onionNodes = enriched
                     .distinctBy { it.publicKey }
                     .filter { !hasExistingMinimum(it.publicKey) }
 
