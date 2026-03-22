@@ -407,9 +407,15 @@ fun PocketNodeApp(
                     prefillAlias = selectedAlias
                 )
             }
+            composable("channel_probe") {
+                com.pocketnode.ui.lightning.ChannelProbeScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable("peer_browser") {
                 com.pocketnode.ui.lightning.PeerBrowserScreen(
                     onNavigateBack = { navController.popBackStack() },
+                    onNavigateToProbe = { navController.navigate("channel_probe") },
                     onSelectNode = { nodeId, address, alias, _ ->
                         navController.previousBackStackEntry?.savedStateHandle?.apply {
                             set("selected_node_id", nodeId)

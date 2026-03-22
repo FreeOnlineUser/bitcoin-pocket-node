@@ -35,6 +35,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun PeerBrowserScreen(
     onNavigateBack: () -> Unit = {},
+    onNavigateToProbe: (() -> Unit)? = null,
     onSelectNode: (nodeId: String, address: String, alias: String, minChannelSats: Long) -> Unit = { _, _, _, _ -> }
 ) {
     val scope = rememberCoroutineScope()
@@ -133,6 +134,11 @@ fun PeerBrowserScreen(
                 },
                 actions = {
                     com.pocketnode.ui.components.PeerCountBadge()
+                    if (onNavigateToProbe != null) {
+                        IconButton(onClick = onNavigateToProbe) {
+                            Icon(Icons.Default.Search, "Probe .onion nodes")
+                        }
+                    }
                     if (selectedTab < 2) {
                         IconButton(onClick = { refreshNodes() }) {
                             Icon(Icons.Default.Refresh, "Refresh from mempool.space")
