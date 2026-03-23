@@ -97,5 +97,10 @@ If you lose app data completely (uninstall, device loss, data corruption):
 
 ### Limitations
 - **bitcoind chain source only scans addresses BDK has revealed.** If you used many addresses, some on-chain UTXOs may not appear. Import your seed into BlueWallet (or any BIP84 wallet) to find and sweep them.
-- **Channel monitor restore triggers force-close, not reconnect.** There is no way to resume a channel from monitor-only backup. SCB (Static Channel Backup) can request the counterparty to force-close instead, which is slightly cleaner.
 - **Lightning balance is lost if you have no monitor backup.** The seed alone only recovers on-chain funds. Lightning channel funds require the channel monitor data.
+
+## Update: March 23, 2026
+
+**Monitor injection is deprecated.** Injecting stale monitors from a different LDK session causes native crashes ("Failed to process events" SIGABRT in libldk_node.so). The correct recovery path is now SCB (Static Channel Backup): connect to the peer, they detect the state mismatch, force-close from their side. Proven to work.
+
+See `MOBILE_LIGHTNING_PLAYBOOK.md` for the current consolidated playbook.
