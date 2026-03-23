@@ -376,10 +376,10 @@ class LightningService(private val context: Context) {
             // --- One-time recovery: delete corrupt SQLite from failed auto-restore ---
             val corruptRecoveryPrefs = context.getSharedPreferences("pocketnode_prefs", Context.MODE_PRIVATE)
             val resetVersion = corruptRecoveryPrefs.getInt("sqlite_reset_version", 0)
-            if (resetVersion < 1) {
+            if (resetVersion < 2) {
                 corruptRecoveryPrefs.edit()
                     .putBoolean("needs_sqlite_reset", true)
-                    .putInt("sqlite_reset_version", 1)
+                    .putInt("sqlite_reset_version", 2)
                     .apply()
             }
             if (corruptRecoveryPrefs.getBoolean("needs_sqlite_reset", false)) {
@@ -432,23 +432,10 @@ class LightningService(private val context: Context) {
             for (attempt in 1..10) {
                 try {
                     ldkNode.start()
-                    // Inject monitors from backup AFTER start (before sync archives them)
-                    try {
-                        val stateBackup = StateBackupManager(context, storageDir)
-                        if (stateBackup.autoRestoreMonitorsOnly()) {
-                            Log.w(TAG, "Monitors injected post-start from backup")
-                        }
-                    } catch (e2: Exception) {
-                        Log.w(TAG, "Post-start monitor restore failed: ${e2.message}")
-                    }
-                    // IMMEDIATELY broadcast orphan monitor commitment txs
-                    try {
-                        ldkNode.broadcastHolderCommitmentTxns()
-                        Log.i(TAG, "Immediate post-start: broadcast holder commitment txns")
-                        hasCalledBroadcastThisSession = true
-                    } catch (e2: Exception) {
-                        Log.w(TAG, "Immediate post-start broadcast failed: ${e2.message}")
-                    }
+                    // DISABLED: Auto monitor injection causes native crashes in LDK event processing.
+                    // "Failed to process events" SIGABRT when stale monitors are injected.
+                    // SCB is the correct recovery path, not monitor injection.
+                    Log.i(TAG, "Post-start: SCB available for recovery, monitor injection disabled")
                     lastError = null
                     break
                 } catch (e: Exception) {
