@@ -372,6 +372,21 @@ class LightningService(private val context: Context) {
                 Log.w(TAG, "Deleted corrupt SQLite for fresh LDK start")
             }
 
+            // Force WAL checkpoint before build to ensure all pending writes are flushed.
+            // Prevents stale channel_manager reads after unexpected process termination.
+            try {
+                val walDbFile = File(storageDir, "ldk_node_data.sqlite")
+                if (walDbFile.exists()) {
+                    val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                        walDbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
+                    db.rawQuery("PRAGMA wal_checkpoint(FULL)", null).use { it.moveToFirst() }
+                    db.close()
+                    Log.i(TAG, "WAL checkpoint completed before build")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "WAL checkpoint failed: ${e.message}")
+            }
+
             val ldkNode = builder.build(entropy)
 
             // --- Start LDK (sync, blocks until tokio runtime is running) ---
@@ -627,11 +642,12 @@ class LightningService(private val context: Context) {
                 this.updateState = { this@LightningService.updateState() }
                 updateBitcoindHeight = { lastBitcoindHeight = it }
                 getState = { _state.value }
-                stopAndRestart = { user, pass ->
-                    Thread({
-                        try { stop(); Thread.sleep(2000); start(user, pass) }
-                        catch (e: Exception) { Log.e(TAG, "Failed to restart LDK: ${e.message}") }
-                    }, "ldk-rebroadcast-restart").start()
+                stopAndRestart = { _, _ ->
+                    // DISABLED: auto-restart risks channel loss. Log and set error state instead.
+                    Log.e(TAG, "Auto-restart requested (orphan rebroadcast) but DISABLED for safety")
+                    _state.value = _state.value.copy(
+                        lastChannelError = "Orphan balance detected. Please restart Lightning manually."
+                    )
                 }
                 this.drainWatchtowerBlobs = { this@LightningService.drainWatchtowerBlobs() }
                 backupMonitors = { node?.let { recovery.backupChannelMonitors(it) } }
@@ -645,11 +661,11 @@ class LightningService(private val context: Context) {
                 startHeight, rpcUser, rpcPassword, rpcPort,
                 isScanningForFunds = { _state.value.scanningForFunds },
                 onReset = {
-                    stop()
-                    recovery.resetChainState(storageDir)
-                    context.getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
-                        .edit().putLong("last_ldk_sync_height", 0).apply()
-                    Thread({ Thread.sleep(2_000); start(rpcUser, rpcPassword, rpcPort) }, "ldk-restart").start()
+                    // DISABLED: auto-restart risks channel loss. Log and set error state instead.
+                    Log.e(TAG, "Sync watchdog triggered but auto-restart DISABLED for safety")
+                    _state.value = _state.value.copy(
+                        lastChannelError = "Lightning sync stalled. Please restart Lightning manually."
+                    )
                 }
             )
 
