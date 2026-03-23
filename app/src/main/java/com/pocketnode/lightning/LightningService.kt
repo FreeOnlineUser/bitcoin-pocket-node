@@ -102,6 +102,24 @@ class LightningService(private val context: Context) {
 
     private var node: Node? = null
     private lateinit var storageDir: File
+
+    /**
+     * Force WAL checkpoint on LDK's SQLite. Called after every critical state change
+     * (channel events, payments) to ensure the main DB file is up to date.
+     * If the process is killed after this returns, no channel state is lost.
+     */
+    private fun walCheckpoint() {
+        try {
+            val dbFile = File(storageDir, "ldk_node_data.sqlite")
+            if (!dbFile.exists()) return
+            val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
+            db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
+            db.close()
+        } catch (e: Exception) {
+            Log.w(TAG, "Runtime WAL checkpoint failed: ${e.message}")
+        }
+    }
     private var rpcClient: BitcoinRpcClient? = null
     private var watchtowerBridge: WatchtowerBridge? = null
     private var lndHubServer: LndHubServer? = null
@@ -1041,6 +1059,8 @@ class LightningService(private val context: Context) {
                 || event is Event.PaymentSuccessful || event is Event.PaymentReceived) {
                 drainWatchtowerBlobs()
                 node?.let { recovery.backupChannelMonitors(it) }
+                // Flush WAL to disk immediately — prevents channel loss on process kill
+                walCheckpoint()
                 // Immediate state backup on channel events
                 try {
                     StateBackupManager(context, storageDir).backup()
