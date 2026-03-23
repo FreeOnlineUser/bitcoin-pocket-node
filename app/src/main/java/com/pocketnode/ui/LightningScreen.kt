@@ -570,7 +570,7 @@ fun LightningScreen(
                                 )
                             }
                             Text(
-                                "To recover: go to the peer browser, connect to the peer above. They will detect the state mismatch and force-close the channel. Funds return after ~144 blocks (~24 hours).",
+                                "To recover: go to the peer browser, connect to the peer above. They will detect the state mismatch and force-close the channel. Funds return after ~144 blocks (~24 hours after confirmation).",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.7f)
                             )
