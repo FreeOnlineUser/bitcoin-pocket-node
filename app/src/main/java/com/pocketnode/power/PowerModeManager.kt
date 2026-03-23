@@ -142,8 +142,18 @@ class PowerModeManager private constructor(private val context: Context) {
         val mode = _modeFlow.value
         if (mode != Mode.MAX && burstJob?.isActive != true && !_initialSyncHold.value) {
             val scope = activeScope ?: return
-            Log.i(TAG, "setRpc: starting burst cycle for $mode (was not running)")
+            // Check if we're in IBD before starting burst cycling.
+            // startInitialSyncHold() may not have been called yet at this point.
             scope.launch(Dispatchers.IO) {
+                try {
+                    val info = client.getBlockchainInfoSync()
+                    val ibd = info?.optBoolean("initialblockdownload", false) ?: false
+                    if (ibd) {
+                        Log.i(TAG, "setRpc: IBD in progress, skipping burst cycle start")
+                        return@launch
+                    }
+                } catch (_: Exception) {}
+                Log.i(TAG, "setRpc: starting burst cycle for $mode (was not running)")
                 applyMode(mode)
             }
         }
@@ -609,6 +619,11 @@ class PowerModeManager private constructor(private val context: Context) {
     }
 
     private suspend fun setNetworkActive(client: BitcoinRpcClient, active: Boolean) {
+        // Never disable network during initial block download
+        if (!active && _initialSyncHold.value) {
+            Log.i(TAG, "setNetworkActive(false) blocked: IBD in progress")
+            return
+        }
         try {
             val params = JSONArray().apply { put(active) }
             client.call("setnetworkactive", params)
