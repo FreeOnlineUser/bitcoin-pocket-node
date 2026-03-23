@@ -137,6 +137,42 @@ Wipes app data including wallet. Use `install -r` to update in place.
 ### GrapheneOS Blocks Downgrades
 `INSTALL_FAILED_VERSION_DOWNGRADE` even with `-d` flag. Always increment versionCode.
 
+## Channel Open UX
+
+### Async Channel Negotiation
+`openChannel()` returns success when negotiation starts, not when the peer accepts. The channel appears in `listChannels()` within 6ms. Rejection arrives 350-700ms later. Checking too early falsely reports success.
+
+**Fix:** Wait 3 seconds, polling `handleEvents()` every 500ms. Then check `listChannels()`. If channel survived, peer accepted. If gone, peer rejected. Drain events during wait to capture the close reason.
+
+### updateState() Wipes Transient Fields
+`updateState()` creates a new `LightningState()` every 10 seconds. Constructor defaults reset `lastChannelError` to null. Any field not explicitly carried forward gets silently wiped.
+
+**Rule:** When adding fields to state objects, always carry them through `updateState()`.
+
+### Anchor Downgrade on Rejection
+LDK retries rejected channel opens with downgraded channel type (removing anchors), even when the rejection was about amount/policy, not channel type. Causes double-rejection in logs and wasted bandwidth. Upstream bug in `maybe_downgrade_channel_features`.
+
+### Never Delete Channel State on Timeout
+A sync watchdog that deleted SQLite after 120s with no new block destroyed a live 100k sat channel. Bitcoin blocks can take 30+ minutes. Always compare against bitcoind height, never use elapsed time alone.
+
+## Force-Close Broadcast
+
+### Fire-and-Forget Problem
+LDK's `BroadcasterInterface` drops failed broadcasts with no retry. If `sendrawtransaction` fails (network off during burst mode), the commitment tx is gone. `rebroadcast_pending_claims()` only handles sweeps, not the commitment tx itself.
+
+### Commitment Tx Rebroadcast
+Call `broadcastHolderCommitmentTxns()` on startup and periodically when pending close funds exist. This iterates closed channel monitors and re-broadcasts the latest holder commitment. Safety net for fire-and-forget failures.
+
+## Android-Specific
+
+### UniFFI Tokio Runtime Context Leak
+When `node.start()` is called from a Kotlin coroutine context, UniFFI's JNI bridge leaks a tokio runtime handle to the calling thread. LDK borrows that runtime instead of creating its own. The reactor is not driven from the sync thread, causing all `.await` calls to hang forever.
+
+**Fix:** Start LDK from a plain `Thread`, never from `withContext(Dispatchers.IO)` or `runBlocking`.
+
+### Electrum History Bug
+Client-side transaction cache showed stale history after wallet operations. Resolved by clearing the persisted tx history file on significant state changes.
+
 ---
 
 *Every entry here cost us something to learn. Don't repeat the mistakes.*
