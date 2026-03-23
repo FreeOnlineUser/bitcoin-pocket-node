@@ -148,7 +148,7 @@ fun PeerBrowserScreen(
                     com.pocketnode.ui.components.PeerCountBadge()
                     if (onNavigateToProbe != null) {
                         IconButton(onClick = onNavigateToProbe) {
-                            Icon(Icons.Default.Search, "Probe .onion nodes")
+                            Text("📡", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                     if (selectedTab < 3) {
