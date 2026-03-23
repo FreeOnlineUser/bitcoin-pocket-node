@@ -45,7 +45,7 @@ fun PeerBrowserScreen(
     var nodes by remember { mutableStateOf<List<LightningNode>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Most Connected", "Largest", "Search")
+    val tabs = listOf("Connected", "Largest", "Smallest", "Search")
     val torEnabled by com.pocketnode.tor.TorManager.enabledFlow.collectAsState()
     val torStatus by com.pocketnode.tor.TorManager.statusFlow.collectAsState()
     val isTor = torEnabled && torStatus == com.pocketnode.tor.TorManager.TorStatus.RUNNING
@@ -74,6 +74,13 @@ fun PeerBrowserScreen(
                 loading = false
                 lastUpdate = getCacheAge(context, isTor)
             }
+        } else if (selectedTab == 2) {
+            // "Smallest" tab: show all peers with known minimums, sorted ascending
+            loading = true
+            nodes = withContext(Dispatchers.IO) {
+                loadSmallestChannelNodes(context)
+            }
+            loading = false
         }
     }
 
@@ -105,6 +112,12 @@ fun PeerBrowserScreen(
     fun refreshNodes() {
         loading = true
         scope.launch {
+            if (selectedTab == 2) {
+                // Smallest tab: re-read from SharedPreferences
+                nodes = withContext(Dispatchers.IO) { loadSmallestChannelNodes(context) }
+                loading = false
+                return@launch
+            }
             val fetched = withContext(Dispatchers.IO) {
                 when (selectedTab) {
                     0 -> NodeDirectory.getTopNodes(30)
@@ -117,7 +130,6 @@ fun PeerBrowserScreen(
                 withContext(Dispatchers.IO) { saveCachedNodes(context, selectedTab, fetched, isTor) }
                 enrichKey++
             }
-            // If fetch failed, keep showing existing nodes (from cache)
             loading = false
             lastUpdate = getCacheAge(context, isTor)
         }
@@ -139,9 +151,9 @@ fun PeerBrowserScreen(
                             Icon(Icons.Default.Search, "Probe .onion nodes")
                         }
                     }
-                    if (selectedTab < 2) {
+                    if (selectedTab < 3) {
                         IconButton(onClick = { refreshNodes() }) {
-                            Icon(Icons.Default.Refresh, "Refresh from mempool.space")
+                            Icon(Icons.Default.Refresh, if (selectedTab == 2) "Refresh" else "Refresh from mempool.space")
                         }
                     }
                 }
@@ -200,7 +212,7 @@ fun PeerBrowserScreen(
             val displayNodes = if (anchorOnly) torFiltered.filter { it.supportsAnchors != false } else torFiltered
 
             // Search bar (visible on Search tab)
-            if (selectedTab == 2) {
+            if (selectedTab == 3) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -241,7 +253,8 @@ fun PeerBrowserScreen(
             } else if (displayNodes.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        if (selectedTab == 2) "Search for a node by name or pubkey"
+                        if (selectedTab == 3) "Search for a node by name or pubkey"
+                        else if (selectedTab == 2) "No probed peers yet. Use the probe scanner to discover minimum channel sizes."
                         else if (isTor && nodes.isNotEmpty()) "No Tor-reachable peers found yet — enriching..."
                         else if (anchorOnly && nodes.isNotEmpty()) "No anchor-capable peers found"
                         else "No nodes found",
@@ -434,6 +447,46 @@ private fun loadCachedNodes(context: Context, tab: Int, tor: Boolean = false): L
             )
         }
     } catch (_: Exception) { emptyList() }
+}
+
+/**
+ * Load all peers with known minimum channel sizes from probe/rejection data.
+ * Sorted ascending by minimum, so smallest-accepting peers appear first.
+ */
+private fun loadSmallestChannelNodes(context: Context): List<LightningNode> {
+    val prefs = context.getSharedPreferences("peer_channel_limits", Context.MODE_PRIVATE)
+    val peerCache = context.getSharedPreferences("peer_cache", Context.MODE_PRIVATE)
+    val aliasPrefs = context.getSharedPreferences("peer_aliases", Context.MODE_PRIVATE)
+
+    // Collect all peers with known minimums
+    val peers = mutableListOf<LightningNode>()
+    for ((key, value) in prefs.all) {
+        // Keys are pubkeys (64 hex chars), values are Long (minimum sats)
+        if (key.length == 66 && value is Long && value > 0) {
+            val pubkey = key
+            val minSats = value
+            val isFloor = prefs.getBoolean("${pubkey}_floor", false)
+            val isCeiling = prefs.getBoolean("${pubkey}_ceiling", false)
+            val anchors = if (prefs.contains("${pubkey}_anchors")) prefs.getBoolean("${pubkey}_anchors", false) else null
+            val alias = aliasPrefs.getString(pubkey, "") ?: ""
+
+            peers.add(LightningNode(
+                publicKey = pubkey,
+                alias = alias,
+                channels = 0,
+                capacity = 0,
+                country = if (isCeiling) "✓ accepted" else if (isFloor) "≥ rejected" else "exact",
+                feeRate = -1,
+                sockets = "",
+                minChannelSize = minSats,
+                supportsAnchors = anchors
+            ))
+        }
+    }
+
+    // Sort by minimum ascending (smallest first), ceilings (accepted) before floors
+    return peers.sortedWith(compareBy<LightningNode> { it.minChannelSize }
+        .thenByDescending { it.country == "✓ accepted" })
 }
 
 private fun getCacheAge(context: Context, tor: Boolean = false): String {
