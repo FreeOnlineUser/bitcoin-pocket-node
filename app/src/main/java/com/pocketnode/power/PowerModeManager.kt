@@ -127,8 +127,14 @@ class PowerModeManager private constructor(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     init {
+        reloadFromPrefs()
+    }
+
+    /** Re-read mode and auto-detect state from SharedPreferences. Call on service (re)start. */
+    fun reloadFromPrefs() {
         _modeFlow.value = Mode.fromString(prefs.getString(PREF_KEY_POWER_MODE, "LOW") ?: "LOW")
         _autoEnabled.value = prefs.getBoolean(PREF_KEY_AUTO_POWER, false)
+        Log.i(TAG, "Loaded from prefs: mode=${_modeFlow.value} auto=${_autoEnabled.value}")
     }
 
     private var initialSyncJob: Job? = null

@@ -185,6 +185,7 @@ class BitcoindService : Service() {
                             activeBatteryMonitor = bm
                             startNotificationUpdater(testRpc)
                             val pmm = PowerModeManager.getInstance(this@BitcoindService)
+                            pmm.reloadFromPrefs() // Re-read saved mode in case statics are stale
                             pmm.setMode(PowerModeManager.modeFlow.value, serviceScope)
                             pmm.setRpc(testRpc)
                             pmm.startAutoIfEnabled(monitor.networkState, bm.state, serviceScope)
@@ -274,6 +275,7 @@ class BitcoindService : Service() {
                 activeBatteryMonitor = bm
                 startNotificationUpdater(rpc)
                 val pmm = PowerModeManager.getInstance(this@BitcoindService)
+                pmm.reloadFromPrefs() // Re-read saved mode in case statics are stale
                 pmm.setMode(PowerModeManager.modeFlow.value, serviceScope)
                 pmm.setRpc(rpc)
                 pmm.startAutoIfEnabled(monitor.networkState, bm.state, serviceScope)
