@@ -656,6 +656,9 @@ class LightningService(private val context: Context) {
             startPrefs.edit().putInt("lightning_crash_count", crashCount).apply()
             Log.i(TAG, "Lightning started (crash counter: $crashCount)")
 
+            // Clear stale error messages on successful start
+            _state.value = _state.value.copy(lastChannelError = null)
+
             starting = false
             updateState()
 
@@ -667,11 +670,8 @@ class LightningService(private val context: Context) {
                 updateBitcoindHeight = { lastBitcoindHeight = it }
                 getState = { _state.value }
                 stopAndRestart = { _, _ ->
-                    // DISABLED: auto-restart risks channel loss. Log and set error state instead.
+                    // DISABLED: auto-restart risks channel loss. Log only.
                     Log.e(TAG, "Auto-restart requested (orphan rebroadcast) but DISABLED for safety")
-                    _state.value = _state.value.copy(
-                        lastChannelError = "Orphan balance detected. Please restart Lightning manually."
-                    )
                 }
                 this.drainWatchtowerBlobs = { this@LightningService.drainWatchtowerBlobs() }
                 backupMonitors = { node?.let { recovery.backupChannelMonitors(it) } }
@@ -685,11 +685,8 @@ class LightningService(private val context: Context) {
                 startHeight, rpcUser, rpcPassword, rpcPort,
                 isScanningForFunds = { _state.value.scanningForFunds },
                 onReset = {
-                    // DISABLED: auto-restart risks channel loss. Log and set error state instead.
+                    // DISABLED: auto-restart risks channel loss. Log only.
                     Log.e(TAG, "Sync watchdog triggered but auto-restart DISABLED for safety")
-                    _state.value = _state.value.copy(
-                        lastChannelError = "Lightning sync stalled. Please restart Lightning manually."
-                    )
                 }
             )
 
