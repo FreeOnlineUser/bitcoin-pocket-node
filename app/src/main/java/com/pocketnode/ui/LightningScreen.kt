@@ -548,6 +548,61 @@ fun LightningScreen(
                     Text("\uD83D\uDD11 Wallet Seed and Backup")
                 }
 
+                // Recovery info: missing on-chain funds
+                val scb = remember { lightning.scb }
+                val lostChannels = remember(effectiveState) {
+                    val activeIds = try { lightning.listChannels().map { it.channelId }.toSet() } catch (_: Exception) { emptySet() }
+                    scb.getLostChannels(activeIds)
+                }
+
+                if (lostChannels.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF4A1010))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("⚠️ Lost Channel${if (lostChannels.size > 1) "s" else ""} Detected", fontWeight = FontWeight.Bold, color = Color(0xFFF44336))
+                            lostChannels.forEach { ch ->
+                                Text(
+                                    "${ch.peerAlias.ifEmpty { ch.peerPubkey.take(16) + "..." }} (${"%,d".format(ch.capacitySats)} sats)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+                            Text(
+                                "To recover: go to the peer browser, connect to the peer above. They will detect the state mismatch and force-close the channel. Funds return after ~144 blocks (~24 hours).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                if (effectiveState.onchainBalanceSats == 0L && effectiveState.channelCount == 0 && effectiveState.pendingCloseSats == 0L) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D2D))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Missing on-chain funds?", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(
+                                "If your on-chain balance should be higher, the wallet may not see funds at older addresses after a restart.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            Text("To recover:", fontWeight = FontWeight.Bold, color = Color.White, style = MaterialTheme.typography.bodySmall)
+                            Text("1. Export your seed words (button above)", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+                            Text("2. Import into BlueWallet or any BIP84 wallet", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+                            Text("3. Send all funds to a new deposit address from this app", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+                            Text(
+                                "This happens because the Bitcoin node can only see addresses the wallet has generated, not historical ones from before a restart.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+
                 // Channels card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
