@@ -136,6 +136,7 @@ class LightningService(private val context: Context) {
     val scb = StaticChannelBackup(context)
     private lateinit var refreshLoop: StateRefreshLoop
     private val reconnectAttempts = mutableMapOf<String, Long>()
+    private val pendingChannelHolds = mutableSetOf<String>() // channel IDs with active network holds
 
     // Signaled by handleEvents() when a channel event (Pending/Ready/Closed) occurs
     @Volatile private var channelEventLatch: java.util.concurrent.CountDownLatch? = null
@@ -1011,10 +1012,27 @@ class LightningService(private val context: Context) {
                     } catch (e: Exception) {
                         Log.w(TAG, "SCB save failed: ${e.message}")
                     }
+                    // Hold network while channel is pending confirmation
+                    try {
+                        com.pocketnode.power.PowerModeManager.getInstance(context).holdNetwork()
+                        pendingChannelHolds.add(event.channelId)
+                        Log.i(TAG, "Network held for pending channel ${event.channelId.take(12)}")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to hold network for pending channel: ${e.message}")
+                    }
                     channelEventLatch?.countDown()
                 }
                 is Event.ChannelReady      -> {
                     Log.i(TAG, "Channel ready: ${event.channelId}")
+                    // Release network hold for this channel
+                    if (pendingChannelHolds.remove(event.channelId)) {
+                        try {
+                            com.pocketnode.power.PowerModeManager.getInstance(context).releaseNetworkHold()
+                            Log.i(TAG, "Network hold released for ready channel ${event.channelId.take(12)}")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to release network hold: ${e.message}")
+                        }
+                    }
                     // Unlock Lightning Pay as default home screen
                     try {
                         context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
@@ -1030,6 +1048,13 @@ class LightningService(private val context: Context) {
                     channelEvents.saveCloseInfo(event.channelId, result, event.counterpartyNodeId)
                     // Remove from SCB (channel is closing, funds returning)
                     if (!result.isRejection) scb.removeChannel(event.channelId)
+                    // Release network hold if we were holding for this channel
+                    if (pendingChannelHolds.remove(event.channelId)) {
+                        try {
+                            com.pocketnode.power.PowerModeManager.getInstance(context).releaseNetworkHold()
+                            Log.i(TAG, "Network hold released for closed channel ${event.channelId.take(12)}")
+                        } catch (_: Exception) {}
+                    }
                     // Cache peer's min channel size if parsed from rejection
                     val peerId = event.counterpartyNodeId
                     if (peerId != null && result.minChannelSats != null) {
