@@ -115,8 +115,9 @@ class LightningService(private val context: Context) {
     val onchain = OnchainWallet(context)
     val recovery = RecoveryManager(context).also { it.stateFlow = _state }
     val channelEvents = ChannelEventHandler(context)
+    val scb = StaticChannelBackup(context)
     private lateinit var refreshLoop: StateRefreshLoop
-    private val reconnectAttempts = mutableMapOf<String, Long>() // peer pubkey -> last attempt timestamp
+    private val reconnectAttempts = mutableMapOf<String, Long>()
 
     // Signaled by handleEvents() when a channel event (Pending/Ready/Closed) occurs
     @Volatile private var channelEventLatch: java.util.concurrent.CountDownLatch? = null
@@ -958,6 +959,36 @@ class LightningService(private val context: Context) {
                 }
                 is Event.ChannelPending    -> {
                     Log.i(TAG, "Channel pending: ${event.channelId} (funding txo: ${event.fundingTxo})")
+                    // Save to Static Channel Backup
+                    try {
+                        val fundingTxo = event.fundingTxo
+                        val peerId = event.counterpartyNodeId
+                        if (fundingTxo != null && peerId != null) {
+                            val peerAddrs = try {
+                                val nodeInfo = node?.networkGraph()?.node(peerId)
+                                nodeInfo?.announcementInfo?.addresses ?: emptyList()
+                            } catch (_: Exception) { emptyList() }
+                            val alias = try {
+                                node?.networkGraph()?.node(peerId)?.announcementInfo?.alias ?: ""
+                            } catch (_: Exception) { "" }
+                            // Get capacity from channel list (not available on ChannelPending event)
+                            val capacity = try {
+                                node?.listChannels()?.find { it.channelId == event.channelId }
+                                    ?.channelValueSats?.toLong() ?: 0
+                            } catch (_: Exception) { 0L }
+                            scb.saveChannel(
+                                channelId = event.channelId,
+                                peerPubkey = peerId,
+                                peerAlias = alias,
+                                fundingTxid = fundingTxo.txid,
+                                fundingVout = fundingTxo.vout.toInt(),
+                                capacitySats = capacity,
+                                peerAddresses = peerAddrs
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "SCB save failed: ${e.message}")
+                    }
                     channelEventLatch?.countDown()
                 }
                 is Event.ChannelReady      -> {
@@ -975,6 +1006,8 @@ class LightningService(private val context: Context) {
                     Log.w(TAG, "Channel closed: ${event.channelId} reason: ${result.displayReason}")
                     _state.value = _state.value.copy(lastChannelError = result.displayReason)
                     channelEvents.saveCloseInfo(event.channelId, result, event.counterpartyNodeId)
+                    // Remove from SCB (channel is closing, funds returning)
+                    if (!result.isRejection) scb.removeChannel(event.channelId)
                     // Cache peer's min channel size if parsed from rejection
                     val peerId = event.counterpartyNodeId
                     if (peerId != null && result.minChannelSats != null) {
