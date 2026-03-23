@@ -380,9 +380,26 @@ class LightningService(private val context: Context) {
                 if (walDbFile.exists()) {
                     val db = android.database.sqlite.SQLiteDatabase.openDatabase(
                         walDbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
-                    db.rawQuery("PRAGMA wal_checkpoint(FULL)", null).use { it.moveToFirst() }
+                    // Integrity check first — detects corrupt WAL frames
+                    val integ = db.rawQuery("PRAGMA integrity_check", null)
+                    integ.use {
+                        it.moveToFirst()
+                        val result = it.getString(0)
+                        if (result != "ok") Log.e(TAG, "SQLite integrity issue: $result")
+                        else Log.i(TAG, "SQLite integrity: ok")
+                    }
+                    // TRUNCATE mode: checkpoint + delete the WAL file entirely
+                    // Guarantees main DB file is the single source of truth on next open
+                    val ckpt = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)
+                    ckpt.use {
+                        it.moveToFirst()
+                        val busy = it.getInt(0)    // 0 = success, 1 = blocked
+                        val total = it.getInt(1)   // total WAL frames
+                        val merged = it.getInt(2)  // frames checkpointed
+                        Log.i(TAG, "WAL checkpoint: busy=$busy total=$total merged=$merged")
+                        if (busy == 1) Log.w(TAG, "WAL checkpoint blocked — another connection holds a read lock")
+                    }
                     db.close()
-                    Log.i(TAG, "WAL checkpoint completed before build")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "WAL checkpoint failed: ${e.message}")
