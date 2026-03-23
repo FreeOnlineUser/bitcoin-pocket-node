@@ -70,5 +70,14 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <receiver
+            android:name=".service.AdminReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.pocketnode.STOP_LIGHTNING" />
+                <action android:name="com.pocketnode.RESTART_LIGHTNING" />
+            </intent-filter>
+        </receiver>
+
     </application>
 </manifest>

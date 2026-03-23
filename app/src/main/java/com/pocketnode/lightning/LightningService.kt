@@ -743,6 +743,14 @@ class LightningService(private val context: Context) {
         }
     }
 
+    /** Get stored RPC credentials for restart. Returns (user, password) or null. */
+    fun getStoredCredentials(): Pair<String, String>? {
+        val prefs = context.getSharedPreferences("pocketnode_prefs", Context.MODE_PRIVATE)
+        val user = prefs.getString("rpc_user", null) ?: return null
+        val pass = prefs.getString("rpc_password", null) ?: return null
+        return Pair(user, pass)
+    }
+
     fun stop() {
         try {
             stateRefreshJob?.cancel()
