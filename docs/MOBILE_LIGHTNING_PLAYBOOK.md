@@ -165,10 +165,10 @@ Call `broadcastHolderCommitmentTxns()` on startup and periodically when pending 
 
 ## Android-Specific
 
-### UniFFI Tokio Runtime Context Leak
-When `node.start()` is called from a Kotlin coroutine context, UniFFI's JNI bridge leaks a tokio runtime handle to the calling thread. LDK borrows that runtime instead of creating its own. The reactor is not driven from the sync thread, causing all `.await` calls to hang forever.
+### Tokio Nested Runtime Deadlock
+When `node.start()` is called from a Kotlin coroutine context (e.g. `withContext(Dispatchers.IO)` or `runBlocking`), ldk-node's internal `block_on` call deadlocks. The inner `block_on` tries to park the thread, but the outer runtime/dispatcher already owns it. This is a well-documented tokio constraint: "Cannot start a runtime from within a runtime."
 
-**Fix:** Start LDK from a plain `Thread`, never from `withContext(Dispatchers.IO)` or `runBlocking`.
+**Fix:** Start LDK from a plain `Thread`, never from a coroutine context. The thread has no existing runtime, so ldk-node's `block_on` works cleanly.
 
 ### Electrum History Bug
 Client-side transaction cache showed stale history after wallet operations. Resolved by clearing the persisted tx history file on significant state changes.
