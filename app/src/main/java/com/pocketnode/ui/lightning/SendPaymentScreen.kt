@@ -317,13 +317,13 @@ fun SendPaymentScreen(
                                 // Hint if Tor is off and peer is .onion
                                 val torOn = com.pocketnode.tor.TorManager.enabledFlow.value
                                 if (!torOn && msg.contains("route", ignoreCase = true)) {
-                                    val hasOnionPeer = try {
-                                        lightning.listChannels().any { ch ->
-                                            lightning.scb.loadAll().any { it.channelId == ch.channelId && it.peerAddresses.any { a -> a.contains(".onion") } }
-                                        }
-                                    } catch (_: Exception) { false }
-                                    if (hasOnionPeer) {
-                                        msg += "\n\nYour channel peer uses a .onion address. Turn on Tor to connect."
+                                    val channels = try { lightning.listChannels() } catch (_: Exception) { emptyList() }
+                                    val scbEntries = lightning.scb.loadAll()
+                                    val allOnion = channels.isNotEmpty() && channels.all { ch ->
+                                        scbEntries.any { it.channelId == ch.channelId && it.peerAddresses.all { a -> a.contains(".onion") } }
+                                    }
+                                    if (allOnion) {
+                                        msg += "\n\nAll your channel peers use .onion addresses. Turn on Tor to connect."
                                     }
                                 }
                                 error = msg
