@@ -313,7 +313,20 @@ fun SendPaymentScreen(
                                 showRetryDialog = true
                                 sending = false
                             } else {
-                                error = e.message ?: "Payment failed"
+                                var msg = e.message ?: "Payment failed"
+                                // Hint if Tor is off and peer is .onion
+                                val torOn = com.pocketnode.tor.TorManager.enabledFlow.value
+                                if (!torOn && msg.contains("route", ignoreCase = true)) {
+                                    val hasOnionPeer = try {
+                                        lightning.listChannels().any { ch ->
+                                            lightning.scb.loadAll().any { it.channelId == ch.channelId && it.peerAddresses.any { a -> a.contains(".onion") } }
+                                        }
+                                    } catch (_: Exception) { false }
+                                    if (hasOnionPeer) {
+                                        msg += "\n\nYour channel peer uses a .onion address. Turn on Tor to connect."
+                                    }
+                                }
+                                error = msg
                                 sending = false
                             }
                         }
