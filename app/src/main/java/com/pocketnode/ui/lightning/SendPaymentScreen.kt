@@ -372,7 +372,16 @@ fun SendPaymentScreen(
             val failedAttempts = allAttempts.filter { it.status == com.pocketnode.lightning.PaymentTracker.AttemptStatus.FAILED }
             val hasRouteData = paymentAttempt != null && paymentAttempt!!.status != com.pocketnode.lightning.PaymentTracker.AttemptStatus.ROUTING
 
-            if (failedAttempts.isNotEmpty() || hasRouteData) {
+            if (paymentComplete) {
+                // Payment succeeded — only show the successful route, hide failed attempts
+                if (hasRouteData) {
+                    RouteTreeCard(
+                        failedAttempts = emptyList(),
+                        currentAttempt = paymentAttempt
+                    )
+                }
+            } else if (failedAttempts.isNotEmpty() || hasRouteData) {
+                // Payment in progress or failed — show everything
                 RouteTreeCard(
                     failedAttempts = failedAttempts,
                     currentAttempt = if (hasRouteData) paymentAttempt else null
@@ -394,7 +403,7 @@ fun SendPaymentScreen(
                 }
             }
 
-            if (error != null) {
+            if (error != null && !paymentComplete) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
