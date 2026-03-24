@@ -1677,31 +1677,30 @@ private fun ActionButtons(
                         com.pocketnode.util.BinaryExtractor.setSelectedVersion(versionContext, newVersion)
                         selectedVersion = newVersion
                         pendingVersion = null
-                        // If node is running, stop and restart with new binary
+                        // If node is running, stop Lightning first, then restart bitcoind
                         if (isRunning) {
-                            val intent = android.content.Intent(versionContext, com.pocketnode.service.BitcoindService::class.java)
-                            versionContext.stopService(intent)
-                            // Poll until service stops, then restart
-                            val handler = android.os.Handler(android.os.Looper.getMainLooper())
-                            val ctx = versionContext
-                            val pollRestart = object : Runnable {
-                                var attempts = 0
-                                override fun run() {
-                                    attempts++
-                                    if (!BitcoindService.isRunningFlow.value || attempts > 30) {
-                                        // Service stopped (or timeout after 30s) — restart
-                                        val startIntent = android.content.Intent(ctx, com.pocketnode.service.BitcoindService::class.java)
-                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                            ctx.startForegroundService(startIntent)
-                                        } else {
-                                            ctx.startService(startIntent)
-                                        }
-                                    } else {
-                                        handler.postDelayed(this, 1000)
+                            Thread({
+                                // Stop Lightning cleanly before stopping bitcoind
+                                try {
+                                    val ls = com.pocketnode.lightning.LightningService.getInstance(versionContext)
+                                    val wasRunning = com.pocketnode.lightning.LightningService.stateFlow.value.status == com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING
+                                    if (wasRunning) {
+                                        ls.stop()
+                                        versionContext.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                                            .edit().putBoolean("lightning_was_running", true).apply()
                                     }
+                                } catch (_: Exception) {}
+
+                                // Stop bitcoind
+                                versionContext.stopService(android.content.Intent(versionContext, BitcoindService::class.java))
+                                var attempts = 0
+                                while (BitcoindService.isRunningFlow.value && attempts < 30) {
+                                    Thread.sleep(1000)
+                                    attempts++
                                 }
-                            }
-                            handler.postDelayed(pollRestart, 2000)
+                                // Restart with new binary
+                                versionContext.startForegroundService(android.content.Intent(versionContext, BitcoindService::class.java))
+                            }, "version-switch-restart").start()
                         }
                     }) {
                         Text("Switch", color = Color(0xFFFF9800))
@@ -1750,22 +1749,27 @@ private fun ActionButtons(
                         signalBip110 = enabled
                         pendingBip110Toggle = null
                         showVersionPicker = false
-                        // Restart if running
+                        // Restart if running — stop Lightning first
                         if (isRunning) {
-                            val intent = android.content.Intent(versionContext, com.pocketnode.service.BitcoindService::class.java)
-                            versionContext.stopService(intent)
-                            val handler = android.os.Handler(android.os.Looper.getMainLooper())
-                            val ctx = versionContext
-                            fun pollAndRestart() {
-                                handler.postDelayed({
-                                    if (!isRunning) {
-                                        ctx.startForegroundService(intent)
-                                    } else {
-                                        pollAndRestart()
+                            Thread({
+                                try {
+                                    val ls = com.pocketnode.lightning.LightningService.getInstance(versionContext)
+                                    val wasRunning = com.pocketnode.lightning.LightningService.stateFlow.value.status == com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING
+                                    if (wasRunning) {
+                                        ls.stop()
+                                        versionContext.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                                            .edit().putBoolean("lightning_was_running", true).apply()
                                     }
-                                }, 1000)
-                            }
-                            pollAndRestart()
+                                } catch (_: Exception) {}
+
+                                versionContext.stopService(android.content.Intent(versionContext, BitcoindService::class.java))
+                                var attempts = 0
+                                while (BitcoindService.isRunningFlow.value && attempts < 30) {
+                                    Thread.sleep(1000)
+                                    attempts++
+                                }
+                                versionContext.startForegroundService(android.content.Intent(versionContext, BitcoindService::class.java))
+                            }, "bip110-restart").start()
                         }
                     }) {
                         Text(if (enabled) "Enable" else "Disable", color = Color(0xFFF7931A))
