@@ -165,6 +165,12 @@ class ChannelProbe(private val context: Context) {
         address: String
     ): ProbeResult {
         // Step 1: Try to connect
+        // Minimum amount check: LDK requires enough to pay commitment fee
+        if (probeAmountSats < 5000) {
+            return ProbeResult(node.publicKey, node.alias, Outcome.REJECTED_OTHER,
+                message = "Probe amount too low (min ~5,000 sats for commitment fee)")
+        }
+
         val connectResult = channelManager.connectPeer(node.publicKey, address)
         if (connectResult.isFailure) {
             Log.d(TAG, "  Unreachable: ${connectResult.exceptionOrNull()?.message}")
@@ -172,35 +178,42 @@ class ChannelProbe(private val context: Context) {
                 message = connectResult.exceptionOrNull()?.message ?: "Connection failed")
         }
 
-        // Step 2: Attempt channel open (will be rejected or accepted)
+        // Step 2: Snapshot channels before probe
+        val channelsBefore = try {
+            channelManager.node?.listChannels()?.map { it.channelId }?.toSet() ?: emptySet()
+        } catch (_: Exception) { emptySet() }
+
+        // Step 3: Attempt channel open (will be rejected or accepted)
         val openResult = channelManager.openChannel(node.publicKey, address, probeAmountSats)
 
-        // Step 3: Check what happened
+        // Step 4: Immediately close any new channel that was created (before it confirms)
+        // This must happen ASAP to minimize on-chain impact
+        try {
+            val channelsAfter = channelManager.node?.listChannels() ?: emptyList()
+            val newChannels = channelsAfter.filter { it.channelId !in channelsBefore && it.counterpartyNodeId == node.publicKey }
+            for (ch in newChannels) {
+                try {
+                    channelManager.forceCloseChannel(ch.userChannelId, ch.counterpartyNodeId, "Probe: channel not intended to be kept")
+                    Log.i(TAG, "  Force-closed probe channel ${ch.channelId.take(12)}")
+                } catch (e: Exception) {
+                    Log.w(TAG, "  Failed to close probe channel: ${e.message}")
+                }
+            }
+        } catch (_: Exception) {}
+
+        // Step 5: Check what happened
         val lastError = LightningService.stateFlow.value.lastChannelError ?: ""
         val handler = ChannelEventHandler(context)
         val closeResult = handler.processCloseReason(lastError)
 
-        // Step 4: Try to disconnect cleanly
+        // Step 6: Try to disconnect cleanly
         try {
             channelManager.node?.disconnect(node.publicKey)
         } catch (_: Exception) {}
 
         return when {
             openResult.isSuccess && lastError.isEmpty() -> {
-                // Channel was accepted! Close it immediately (we don't actually want it)
                 Log.i(TAG, "  ACCEPTED by ${node.alias}")
-                try {
-                    val channels = channelManager.node?.listChannels() ?: emptyList()
-                    val newChannel = channels.find {
-                        it.counterpartyNodeId == node.publicKey
-                    }
-                    if (newChannel != null) {
-                        channelManager.node?.closeChannel(newChannel.userChannelId, node.publicKey)
-                        Log.i(TAG, "  Closed probe channel")
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "  Failed to close probe channel: ${e.message}")
-                }
                 ProbeResult(node.publicKey, node.alias, Outcome.ACCEPTED, message = "Accepts ${probeAmountSats / 1000}k sats")
             }
             closeResult.minChannelSats != null -> {
