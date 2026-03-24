@@ -121,6 +121,12 @@ class ChannelProbe(private val context: Context) {
 
                     Log.i(TAG, "Probing ${index + 1}/${onionNodes.size}: ${node.alias} (${node.publicKey.take(16)})")
 
+                    // Cache alias for channel list display
+                    if (node.alias.isNotEmpty()) {
+                        context.getSharedPreferences("peer_aliases", Context.MODE_PRIVATE)
+                            .edit().putString(node.publicKey, node.alias).apply()
+                    }
+
                     val result = probeNode(channelManager, node, address)
                     results.add(result)
 

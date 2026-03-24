@@ -1023,6 +1023,11 @@ class LightningService(private val context: Context) {
                                 node?.listChannels()?.find { it.channelId == event.channelId }
                                     ?.channelValueSats?.toLong() ?: 0
                             } catch (_: Exception) { 0L }
+                            // Cache alias for channel list display
+                            if (alias.isNotEmpty()) {
+                                context.getSharedPreferences("peer_aliases", Context.MODE_PRIVATE)
+                                    .edit().putString(peerId, alias).apply()
+                            }
                             scb.saveChannel(
                                 channelId = event.channelId,
                                 peerPubkey = peerId,
