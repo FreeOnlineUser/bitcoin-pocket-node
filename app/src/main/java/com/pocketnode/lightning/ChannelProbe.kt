@@ -90,12 +90,15 @@ class ChannelProbe(private val context: Context) {
                 }
                 // Rankings don't include addresses. Fetch details to find .onion nodes.
                 _state.value = _state.value.copy(currentNode = "Fetching node addresses...")
-                val enriched = topNodes.distinctBy { it.publicKey }.mapNotNull { node ->
-                    if (node.hasOnion) return@mapNotNull node // already has address info
+                val unique = topNodes.distinctBy { it.publicKey }
+                val enriched = mutableListOf<NodeDirectory.LightningNode>()
+                for (node in unique) {
+                    if (node.hasOnion) { enriched.add(node); continue }
                     try {
                         val details = nodeDirectory.getNodeDetails(node.publicKey)
-                        details?.takeIf { it.hasOnion }
-                    } catch (_: Exception) { null }
+                        if (details?.hasOnion == true) enriched.add(details)
+                    } catch (_: Exception) {}
+                    delay(200) // Rate limit: mempool.space allows ~10 req/s
                 }
                 val onionNodes = enriched
                     .distinctBy { it.publicKey }

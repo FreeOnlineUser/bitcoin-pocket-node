@@ -102,6 +102,7 @@ fun PeerBrowserScreen(
                                 withContext(Dispatchers.Main) { nodes = enriched.toList() }
                             }
                         } catch (_: Exception) {}
+                        kotlinx.coroutines.delay(200) // Rate limit: mempool.space ~10 req/s
                     }
                 }
                 if (selectedTab < 2) saveCachedNodes(context, selectedTab, enriched, isTor)
