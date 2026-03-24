@@ -335,9 +335,31 @@ See [Tor Integration](docs/tor-integration.md) for the full design document.
 - [ ] Multisig support (comes with descriptor wallets)
 - [ ] Remove `deprecatedrpc=create_bdb` dependency
 
+### Channel Safety ✅
+- [x] WAL checkpoint (TRUNCATE) after every channel/payment event: prevents channel state loss on process kill
+- [x] WAL integrity check + TRUNCATE on startup: detects corrupt frames, clean state for LDK build
+- [x] Static Channel Backup (SCB): saves peer+funding on open, recovery via peer reconnection
+- [x] All auto-restarts disabled (orphan, sync watchdog): manual restart only
+- [x] Gossip logs dropped: preserves logcat for crash debugging
+- [x] Circuit breaker: 3 consecutive crashes disables auto-start
+- [x] Recovery UI: lost channels card (SCB), missing on-chain funds guide (seed export)
+- [x] Channel probe scanner: discover minimum channel sizes from .onion nodes
+- [x] AdminReceiver: clean Lightning stop/restart via ADB broadcast
+- [x] Event-driven network hold: hold on ChannelPending, release on ChannelReady/Closed
+
 ### Chainstate Copy
 - [ ] XOR re-encoding: decode source obfuscation keys, re-encode with locally generated keys so every node is unique on disk
-- [ ] Phone-to-phone chainstate copy (WiFi Direct / hotspot)
+- [x] Phone-to-phone chainstate copy (WiFi Direct / hotspot)
+
+### Remote Node Sharing (Tor)
+Share the Freedom page: two bootstrap options from the same screen.
+
+- [ ] **Nearby (WiFi Direct)**: existing phone-to-phone, same room
+- [ ] **Remote (Tor)**: sender generates .onion URL with Arti, shows QR code. Receiver scans QR on first launch, downloads chainstate directly from sender's phone over Tor. No server, no account, no middleman.
+- [ ] Arti hidden service for file serving (lightweight, built on existing Arti integration)
+- [ ] QR code contains .onion URL + auth token + expected block hash for verification
+- [ ] Works at meetups, across countries, anywhere with internet
+- [ ] Same verification as phone-to-phone (block hash check at known height)
 
 ---
 

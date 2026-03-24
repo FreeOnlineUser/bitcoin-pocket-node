@@ -19,6 +19,9 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 - **P2P port** exposed on localhost:8333 for Neutrino-compatible wallets
 - **Proactive prune recovery** re-downloads missed blocks on startup when node was offline
 - **Full Tor integration** with one-tap toggle: routes bitcoind P2P, Lightning peers, and all HTTP calls through embedded Arti SOCKS proxy. Your ISP sees only Tor traffic. No Orbot needed.
+- **Channel safety**: WAL checkpoint after every state change, Static Channel Backup (SCB) for recovery, circuit breaker for crash loops
+- **Power modes**: Max (continuous), Low (15 min bursts), Away (60 min bursts) with auto-detect based on WiFi/cellular/battery
+- **Channel probe scanner**: discover which Lightning nodes accept small channels before committing funds
 
 ## Screenshots
 
