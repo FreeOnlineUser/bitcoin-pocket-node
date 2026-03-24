@@ -31,6 +31,9 @@ class AdminReceiver : BroadcastReceiver() {
                     try {
                         val lightning = com.pocketnode.lightning.LightningService.getInstance(context)
                         lightning.stop()
+                        // Prevent auto-restart by BitcoindService
+                        context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                            .edit().putBoolean("lightning_was_running", false).apply()
                         Log.i(TAG, "Lightning stopped cleanly. Safe to install update.")
                     } catch (e: Exception) {
                         Log.e(TAG, "Clean stop failed: ${e.message}")
