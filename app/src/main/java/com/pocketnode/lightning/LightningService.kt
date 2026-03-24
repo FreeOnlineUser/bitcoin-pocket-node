@@ -442,6 +442,19 @@ class LightningService(private val context: Context) {
                     // "Failed to process events" SIGABRT when stale monitors are injected.
                     // SCB is the correct recovery path, not monitor injection.
                     Log.i(TAG, "Post-start: SCB available for recovery, monitor injection disabled")
+                    // Cleanup: remove SCB entries for channels that no longer exist
+                    try {
+                        val activeIds = ldkNode.listChannels().map { it.channelId }.toSet()
+                        val scbEntries = scb.loadAll()
+                        for (entry in scbEntries) {
+                            if (entry.channelId !in activeIds) {
+                                scb.removeChannel(entry.channelId)
+                                Log.i(TAG, "SCB cleanup: removed stale entry ${entry.channelId.take(12)}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "SCB cleanup failed: ${e.message}")
+                    }
                     lastError = null
                     break
                 } catch (e: Exception) {
@@ -1058,6 +1071,7 @@ class LightningService(private val context: Context) {
                     _state.value = _state.value.copy(lastChannelError = result.displayReason)
                     channelEvents.saveCloseInfo(event.channelId, result, event.counterpartyNodeId)
                     // Remove from SCB (channel is closing or closed, funds returning)
+                    Log.i(TAG, "SCB remove: channelId=${event.channelId}")
                     scb.removeChannel(event.channelId)
                     // Release network hold if we were holding for this channel
                     if (pendingChannelHolds.remove(event.channelId)) {
