@@ -88,6 +88,7 @@ fun LightningPayScreen(
     val nodeRunning = serviceRunning
     val ldkRunning = lightningState.status == LightningService.LightningState.Status.RUNNING
     val hasActiveChannel = ldkRunning && lightningState.channelCount > 0
+    val hasUsableChannel = ldkRunning && lightningState.usableChannels > 0
 
     // Chain sync status
     val chainSynced = lightningState.chainSynced
@@ -97,7 +98,7 @@ fun LightningPayScreen(
     // Initialize as ready if already running (e.g. returning from another screen)
     var isReady by remember { mutableStateOf(allChecked) }
     // Pay requires chain sync
-    val payReady = isReady && chainSynced
+    val payReady = isReady && chainSynced && hasUsableChannel
 
     // Brief delay after all checks pass so user sees the ticks (only on cold start)
     LaunchedEffect(allChecked) {

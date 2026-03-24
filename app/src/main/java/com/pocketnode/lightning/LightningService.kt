@@ -48,6 +48,7 @@ class LightningService(private val context: Context) {
         val onchainBalanceSats: Long = 0,
         val lightningBalanceSats: Long = 0,
         val channelCount: Int = 0,
+        val usableChannels: Int = 0,
         val totalCapacitySats: Long = 0,
         val totalInboundSats: Long = 0,
         val error: String? = null,
@@ -935,6 +936,7 @@ class LightningService(private val context: Context) {
                 onchainBalanceSats = displayOnchain,
                 lightningBalanceSats = balances.totalLightningBalanceSats.toLong(),
                 channelCount = channels.size,
+                usableChannels = usableChannels,
                 totalCapacitySats = channels.sumOf { it.channelValueSats.toLong() }.also {
                     val prefs = context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
                     if (BalanceTracker.shouldUnlockLightningPay(channels.size)) {
