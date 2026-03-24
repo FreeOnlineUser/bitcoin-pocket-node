@@ -715,7 +715,9 @@ fun LightningScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        var peerAlias = peerAliases.getString(ch.counterpartyNodeId, null)
+                                        var peerAlias by remember(ch.counterpartyNodeId) {
+                                            mutableStateOf(peerAliases.getString(ch.counterpartyNodeId, null))
+                                        }
                                         // Look up alias from gossip graph if not cached
                                         if (peerAlias == null) {
                                             try {
@@ -727,9 +729,25 @@ fun LightningScreen(
                                                 }
                                             } catch (_: Exception) {}
                                         }
+                                        // Lazy mempool.space lookup when Tor is on
+                                        val torOn = com.pocketnode.tor.TorManager.enabledFlow.collectAsState().value
+                                        if (peerAlias == null && torOn) {
+                                            val pubkey = ch.counterpartyNodeId
+                                            LaunchedEffect(pubkey) {
+                                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                                    try {
+                                                        val details = com.pocketnode.lightning.NodeDirectory.getNodeDetails(pubkey)
+                                                        if (details != null && details.alias.isNotEmpty()) {
+                                                            peerAliases.edit().putString(pubkey, details.alias).apply()
+                                                            peerAlias = details.alias
+                                                        }
+                                                    } catch (_: Exception) {}
+                                                }
+                                            }
+                                        }
                                         if (peerAlias != null) {
                                             Text(
-                                                peerAlias,
+                                                peerAlias!!,
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.Bold
                                             )
