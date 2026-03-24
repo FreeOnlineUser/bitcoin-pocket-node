@@ -552,7 +552,9 @@ fun LightningScreen(
                 val scb = remember { lightning.scb }
                 val lostChannels = remember(effectiveState) {
                     val activeIds = try { lightning.listChannels().map { it.channelId }.toSet() } catch (_: Exception) { emptySet() }
-                    scb.getLostChannels(activeIds)
+                    // Also exclude channels with pending close (LDK is already handling them)
+                    val pendingCloseIds = effectiveState.pendingCloseDetails.map { it.channelId }.toSet()
+                    scb.getLostChannels(activeIds).filter { it.channelId !in pendingCloseIds }
                 }
 
                 if (lostChannels.isNotEmpty()) {

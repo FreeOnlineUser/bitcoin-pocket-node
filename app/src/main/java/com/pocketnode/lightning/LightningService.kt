@@ -1053,8 +1053,8 @@ class LightningService(private val context: Context) {
                     Log.w(TAG, "Channel closed: ${event.channelId} reason: ${result.displayReason}")
                     _state.value = _state.value.copy(lastChannelError = result.displayReason)
                     channelEvents.saveCloseInfo(event.channelId, result, event.counterpartyNodeId)
-                    // Remove from SCB (channel is closing, funds returning)
-                    if (!result.isRejection) scb.removeChannel(event.channelId)
+                    // Remove from SCB (channel is closing or closed, funds returning)
+                    scb.removeChannel(event.channelId)
                     // Release network hold if we were holding for this channel
                     if (pendingChannelHolds.remove(event.channelId)) {
                         try {
