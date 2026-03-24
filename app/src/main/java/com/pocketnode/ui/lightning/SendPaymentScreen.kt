@@ -316,7 +316,7 @@ fun SendPaymentScreen(
                                 var msg = e.message ?: "Payment failed"
                                 // Hint if Tor is off and peer is .onion
                                 val torOn = com.pocketnode.tor.TorManager.enabledFlow.value
-                                if (!torOn && msg.contains("route", ignoreCase = true)) {
+                                if (!torOn && (msg.contains("route", ignoreCase = true) || msg.contains("failed to send", ignoreCase = true))) {
                                     val channels = try { lightning.listChannels() } catch (_: Exception) { emptyList() }
                                     val scbEntries = lightning.scb.loadAll()
                                     val allOnion = channels.isNotEmpty() && channels.all { ch ->
