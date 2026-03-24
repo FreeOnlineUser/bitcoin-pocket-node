@@ -87,8 +87,7 @@ fun LightningPayScreen(
     // Bootstrap status
     val nodeRunning = serviceRunning
     val ldkRunning = lightningState.status == LightningService.LightningState.Status.RUNNING
-    val hasActiveChannel = ldkRunning && lightningState.channelCount > 0
-    val hasUsableChannel = ldkRunning && lightningState.usableChannels > 0
+    val hasActiveChannel = ldkRunning && lightningState.usableChannels > 0
 
     // Chain sync status
     val chainSynced = lightningState.chainSynced
@@ -98,7 +97,7 @@ fun LightningPayScreen(
     // Initialize as ready if already running (e.g. returning from another screen)
     var isReady by remember { mutableStateOf(allChecked) }
     // Pay requires chain sync
-    val payReady = isReady && chainSynced && hasUsableChannel
+    val payReady = isReady && chainSynced
 
     // Brief delay after all checks pass so user sees the ticks (only on cold start)
     LaunchedEffect(allChecked) {
@@ -157,6 +156,7 @@ fun LightningPayScreen(
                     nodeRunning = nodeRunning,
                     ldkStatus = lightningState.status,
                     channelCount = lightningState.channelCount,
+                    usableChannels = lightningState.usableChannels,
                     error = lightningState.error
                 )
 
@@ -455,6 +455,7 @@ private fun BootstrapStatus(
     nodeRunning: Boolean,
     ldkStatus: LightningService.LightningState.Status,
     channelCount: Int,
+    usableChannels: Int = 0,
     error: String?
 ) {
     Card(
@@ -479,7 +480,7 @@ private fun BootstrapStatus(
                 // Step indicators
                 StatusStep("Bitcoin node", nodeRunning)
                 StatusStep("Lightning node", ldkStatus == LightningService.LightningState.Status.RUNNING)
-                StatusStep("Channel active", channelCount > 0 && ldkStatus == LightningService.LightningState.Status.RUNNING)
+                StatusStep("Channel active", usableChannels > 0 && ldkStatus == LightningService.LightningState.Status.RUNNING)
 
 
             }
