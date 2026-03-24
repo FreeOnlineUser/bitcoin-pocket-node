@@ -66,11 +66,12 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Discover small-channel-friendly nodes", fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("This probes .onion Lightning nodes to find which ones accept channels of 100,000 sats.",
+                        val displayAmount = probeAmountText.toLongOrNull() ?: 100000
+                        Text("This probes .onion Lightning nodes to find which ones accept channels of ${"%,d".format(displayAmount)} sats.",
                             color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
                         Text("How it works:", fontWeight = FontWeight.Bold, color = Color.White)
                         Text("1. Fetches top .onion nodes from the network", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
-                        Text("2. Connects to each, attempts a 100k sat channel open", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                        Text("2. Connects to each, attempts a ${"%,d".format(probeAmountText.toLongOrNull() ?: 100000)} sat channel open", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                         Text("3. Records the rejection reason or acceptance", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                         Text("4. Disconnects and moves to the next (45s between attempts)", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                         Text("5. Results saved and shared via phone-to-phone", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
@@ -194,7 +195,7 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
                 // Accepted nodes first
                 val accepted = probeState.results.filter { it.outcome == ChannelProbe.Outcome.ACCEPTED }
                 if (accepted.isNotEmpty()) {
-                    Text("✅ Accepts 100k sats (${accepted.size})", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+                    Text("✅ Accepted (${accepted.size})", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                     accepted.forEach { result ->
                         ProbeResultRow(result)
                     }
