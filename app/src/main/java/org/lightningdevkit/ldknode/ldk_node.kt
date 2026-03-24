@@ -1207,6 +1207,8 @@ internal open class UniffiVTableCallbackInterfaceVssHeaderProvider(
 
 
 
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -1249,6 +1251,8 @@ fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rpc(
 fun uniffi_ldk_node_checksum_method_builder_set_chain_source_electrum(
 ): Short
 fun uniffi_ldk_node_checksum_method_builder_set_chain_source_esplora(
+): Short
+fun uniffi_ldk_node_checksum_method_builder_set_closing_fee_floor_sat_per_kw(
 ): Short
 fun uniffi_ldk_node_checksum_method_builder_set_custom_logger(
 ): Short
@@ -1698,6 +1702,8 @@ fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rpc(`ptr`: Point
 fun uniffi_ldk_node_fn_method_builder_set_chain_source_electrum(`ptr`: Pointer,`serverUrl`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 fun uniffi_ldk_node_fn_method_builder_set_chain_source_esplora(`ptr`: Pointer,`serverUrl`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_ldk_node_fn_method_builder_set_closing_fee_floor_sat_per_kw(`ptr`: Pointer,`satPerKw`: Int,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 fun uniffi_ldk_node_fn_method_builder_set_custom_logger(`ptr`: Pointer,`logWriter`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
@@ -2339,6 +2345,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_builder_set_chain_source_esplora() != 1781.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_builder_set_closing_fee_floor_sat_per_kw() != 10657.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_builder_set_custom_logger() != 51232.toShort()) {
@@ -6260,6 +6269,8 @@ public interface BuilderInterface {
     
     fun `setChainSourceEsplora`(`serverUrl`: kotlin.String, `config`: EsploraSyncConfig?)
     
+    fun `setClosingFeeFloorSatPerKw`(`satPerKw`: kotlin.UInt)
+    
     fun `setCustomLogger`(`logWriter`: LogWriter)
     
     fun `setFilesystemLogger`(`logFilePath`: kotlin.String?, `maxLogLevel`: LogLevel?)
@@ -6523,6 +6534,17 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_esplora(
         it, FfiConverterString.lower(`serverUrl`),FfiConverterOptionalTypeEsploraSyncConfig.lower(`config`),_status)
+}
+    }
+    
+    
+
+    override fun `setClosingFeeFloorSatPerKw`(`satPerKw`: kotlin.UInt)
+        = 
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_closing_fee_floor_sat_per_kw(
+        it, FfiConverterUInt.lower(`satPerKw`),_status)
 }
     }
     

@@ -276,6 +276,10 @@ class LightningService(private val context: Context) {
 
             builder.setNetwork(Network.BITCOIN)
 
+            // Accept any peer's cooperative close fee (relay minimum = 253 sat/kw).
+            // Prevents force-closes over minor fee disagreements.
+            builder.setClosingFeeFloorSatPerKw(253u)
+
             builder.setChainSourceBitcoindRpc(
                 "127.0.0.1",
                 rpcPort.toUShort(),
