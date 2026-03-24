@@ -146,12 +146,23 @@ object UpdateChecker {
 
             Log.i(TAG, "APK downloaded: ${apkFile.length()} bytes")
 
-            // Stop bitcoind service before install to avoid orphan processes
+            // Stop Lightning cleanly, then bitcoind, before install
+            try {
+                val ls = com.pocketnode.lightning.LightningService.getInstance(context)
+                val wasRunning = com.pocketnode.lightning.LightningService.stateFlow.value.status ==
+                    com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING
+                if (wasRunning) {
+                    ls.stop()
+                    Log.i(TAG, "Stopped Lightning before update install")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not stop Lightning: ${e.message}")
+            }
             try {
                 val stopIntent = Intent(context, com.pocketnode.service.BitcoindService::class.java)
                 context.stopService(stopIntent)
                 Log.i(TAG, "Stopped BitcoindService before update install")
-                Thread.sleep(3000) // Give bitcoind time to shut down cleanly
+                Thread.sleep(3000) // Give services time to shut down cleanly
             } catch (e: Exception) {
                 Log.w(TAG, "Could not stop bitcoind: ${e.message}")
             }
