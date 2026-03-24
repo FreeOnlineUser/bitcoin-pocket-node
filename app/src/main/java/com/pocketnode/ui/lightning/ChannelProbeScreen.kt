@@ -31,7 +31,7 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
     val probeState by probe.state.collectAsState()
     var confirmed by remember { mutableStateOf(false) }
     var strategy by remember { mutableStateOf(ChannelProbe.Strategy.SMALL_FRIENDLY) }
-    var probeAmountText by remember { mutableStateOf("100000") }
+    var probeAmountText by remember { mutableStateOf("20000") }
     val lightningState by LightningService.stateFlow.collectAsState()
     val isLightningRunning = lightningState.status == LightningService.LightningState.Status.RUNNING
 
@@ -74,6 +74,9 @@ fun ChannelProbeScreen(onBack: () -> Unit) {
                         Text("2. Connects to each, attempts a ${"%,d".format(probeAmountText.toLongOrNull() ?: 100000)} sat channel open", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                         Text("3. Records the rejection reason or acceptance", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                         Text("4. Disconnects and moves to the next (45s between attempts)", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("⚠️ If a node accepts, a real channel opens at the probe amount. Use a small amount you're comfortable locking in a channel.",
+                            color = Color(0xFFFF9800), style = MaterialTheme.typography.bodySmall)
                         Text("5. Results saved and shared via phone-to-phone", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                     }
                 }
