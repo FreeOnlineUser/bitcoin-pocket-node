@@ -413,7 +413,14 @@ fun LightningScreen(
                             }
                         }
 
-                        BalanceRow("On-chain (spendable)", effectiveState.onchainBalanceSats)
+                        // spendableOnchainBalanceSats excludes anchor reserves
+                        val spendable = effectiveState.spendableOnchainSats
+                        val reserved = effectiveState.onchainBalanceSats - spendable
+                        BalanceRow("On-chain (spendable)", spendable)
+                        if (reserved > 0) {
+                            BalanceRow("On-chain (fee reserve)", reserved, Color(0xFF90A4AE),
+                                "Held for channel force-close fees")
+                        }
                         if (effectiveState.scanningForFunds) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 CircularProgressIndicator(
