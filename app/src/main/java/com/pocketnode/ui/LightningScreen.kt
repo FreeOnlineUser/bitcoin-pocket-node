@@ -378,58 +378,77 @@ fun LightningScreen(
                         }
                         Spacer(Modifier.height(12.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column {
-                                Text("On-chain", style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("${"%,d".format(effectiveState.onchainBalanceSats)} sats",
-                                        fontWeight = FontWeight.Bold)
-                                    if (effectiveState.scanningForFunds) {
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(14.dp),
-                                            strokeWidth = 2.dp,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        val pct = effectiveState.scanProgress
-                                        Text(
-                                            if (pct > 0) "scanning chainstate $pct%" else "scanning chainstate…",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                        // Balance breakdown
+                        val pendingCloseSats = effectiveState.pendingCloseSats
+                        val orphanLightning = effectiveState.channelCount == 0 && effectiveState.lightningBalanceSats > 0
+                        val effectivePending = if (orphanLightning) effectiveState.lightningBalanceSats else pendingCloseSats
+                        val activeLightning = effectiveState.lightningBalanceSats - effectivePending
+                        val totalAll = effectiveState.onchainBalanceSats + effectiveState.lightningBalanceSats
+
+                        // Total
+                        Text("${"%,d".format(totalAll)} sats",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
+
+                        // Breakdown rows
+                        @Composable
+                        fun BalanceRow(label: String, amount: Long, color: Color = Color.Unspecified, detail: String? = null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(label, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("${"%,d".format(amount)} sats",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (color != Color.Unspecified) color else Color.Unspecified)
+                                    if (detail != null) {
+                                        Text(detail, style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                                     }
                                 }
                             }
-                            Column(horizontalAlignment = Alignment.End) {
-                                val pendingCloseSats = effectiveState.pendingCloseSats
-                                val orphanLightning = effectiveState.channelCount == 0 && effectiveState.lightningBalanceSats > 0
-                                val effectivePending = if (orphanLightning) effectiveState.lightningBalanceSats else pendingCloseSats
-                                val activeLightning = effectiveState.lightningBalanceSats - effectivePending
+                        }
 
-                                if (activeLightning > 0) {
-                                    Text("Lightning", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                                    Text("${"%,d".format(activeLightning)} sats",
-                                        fontWeight = FontWeight.Bold)
-                                }
-                                if (effectivePending > 0) {
-                                    if (activeLightning > 0) Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Pending Close", style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFFFF9800))
-                                    Text("${"%,d".format(effectivePending)} sats",
-                                        fontWeight = FontWeight.Bold, color = Color(0xFFFF9800))
-                                }
-                                if (activeLightning <= 0 && effectivePending <= 0) {
-                                    Text("Lightning", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                                    Text("0 sats", fontWeight = FontWeight.Bold)
-                                }
+                        BalanceRow("On-chain (spendable)", effectiveState.onchainBalanceSats)
+                        if (effectiveState.scanningForFunds) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(12.dp),
+                                    strokeWidth = 1.5.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                val pct = effectiveState.scanProgress
+                                Text(
+                                    if (pct > 0) "scanning chainstate $pct%" else "scanning chainstate…",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
+                        }
+                        if (activeLightning > 0) {
+                            BalanceRow("Lightning (${effectiveState.channelCount} channel${if (effectiveState.channelCount != 1) "s" else ""})",
+                                activeLightning, Color(0xFF4CAF50))
+                        }
+                        if (effectivePending > 0) {
+                            val details = effectiveState.pendingCloseDetails
+                            val detailStr = when {
+                                details.any { it.status == "Pending broadcast" } -> "waiting to broadcast"
+                                details.any { it.blocksRemaining > 0 } -> {
+                                    val maxBlocks = details.maxOf { it.blocksRemaining }
+                                    "~${maxBlocks} blocks remaining (~${maxBlocks * 10 / 60}h)"
+                                }
+                                details.any { it.status.contains("Confirm") } -> "confirming"
+                                else -> "returning to on-chain"
+                            }
+                            BalanceRow("Pending close", effectivePending, Color(0xFFFF9800), detailStr)
+                        }
+                        if (activeLightning <= 0 && effectivePending <= 0 && effectiveState.channelCount == 0) {
+                            BalanceRow("Lightning", 0)
                         }
                     }
                 }
