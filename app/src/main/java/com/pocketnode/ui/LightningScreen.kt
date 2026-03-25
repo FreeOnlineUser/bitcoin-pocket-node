@@ -394,21 +394,22 @@ fun LightningScreen(
                         // Breakdown rows
                         @Composable
                         fun BalanceRow(label: String, amount: Long, color: Color = Color.Unspecified, detail: String? = null) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(label, style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                                Column(horizontalAlignment = Alignment.End) {
+                            Column(modifier = Modifier.padding(vertical = 1.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(label, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                                     Text("${"%,d".format(amount)} sats",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Bold,
                                         color = if (color != Color.Unspecified) color else Color.Unspecified)
-                                    if (detail != null) {
-                                        Text(detail, style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                                    }
+                                }
+                                if (detail != null) {
+                                    Text(detail, style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        modifier = Modifier.padding(start = 8.dp))
                                 }
                             }
                         }
