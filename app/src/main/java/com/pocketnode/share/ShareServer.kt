@@ -292,6 +292,7 @@ class ShareServer(private val context: Context) {
             files.put(JSONObject().apply {
                 put("path", "blocks/xor.dat")
                 put("size", xorFile.length())
+                put("lastModified", xorFile.lastModified())
             })
             totalSize += xorFile.length()
         }
@@ -308,6 +309,7 @@ class ShareServer(private val context: Context) {
             files.put(JSONObject().apply {
                 put("path", "blocks/${f.name}")
                 put("size", f.length())
+                put("lastModified", f.lastModified())
             })
             totalSize += f.length()
         }
@@ -315,6 +317,7 @@ class ShareServer(private val context: Context) {
             files.put(JSONObject().apply {
                 put("path", "blocks/${f.name}")
                 put("size", f.length())
+                put("lastModified", f.lastModified())
             })
             totalSize += f.length()
         }
@@ -325,6 +328,7 @@ class ShareServer(private val context: Context) {
             files.put(JSONObject().apply {
                 put("path", "fee_estimates.dat")
                 put("size", feeFile.length())
+                put("lastModified", feeFile.lastModified())
             })
             totalSize += feeFile.length()
         }
@@ -465,6 +469,7 @@ class ShareServer(private val context: Context) {
             array.put(JSONObject().apply {
                 put("path", relativePath)
                 put("size", file.length())
+                put("lastModified", file.lastModified())
             })
             size += file.length()
         }

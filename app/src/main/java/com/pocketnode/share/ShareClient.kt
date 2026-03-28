@@ -136,16 +136,18 @@ class ShareClient(private val context: Context) {
             val totalSize = manifest.getLong("totalSize")
 
             // Filter out block filters if not wanted
-            val downloadList = mutableListOf<Pair<String, Long>>() // path, size
+            data class FileEntry(val path: String, val size: Long, val lastModified: Long)
+            val downloadList = mutableListOf<FileEntry>()
             for (i in 0 until files.length()) {
                 val file = files.getJSONObject(i)
                 val path = file.getString("path")
                 val size = file.getLong("size")
+                val modified = file.optLong("lastModified", 0)
                 if (!includeFilters && path.startsWith("indexes/")) continue
-                downloadList.add(path to size)
+                downloadList.add(FileEntry(path, size, modified))
             }
 
-            val filteredTotal = downloadList.sumOf { it.second }
+            val filteredTotal = downloadList.sumOf { it.size }
             var bytesDownloaded = 0L
 
             // Announce session to sender for progress tracking
@@ -176,12 +178,15 @@ class ShareClient(private val context: Context) {
             for ((index, entry) in downloadList.withIndex()) {
                 if (!coroutineContext.isActive) return@withContext false
 
-                val (path, size) = entry
+                val path = entry.path
+                val size = entry.size
                 val targetFile = File(bitcoinDir, path)
                 targetFile.parentFile?.mkdirs()
 
-                // Resume support: skip files that are already fully downloaded
-                if (targetFile.exists() && targetFile.length() == size) {
+                // Resume support: skip files that match size and are not older than source
+                val remoteModified = entry.lastModified
+                if (targetFile.exists() && targetFile.length() == size &&
+                    (remoteModified == 0L || targetFile.lastModified() >= remoteModified)) {
                     bytesDownloaded += size
                     _state.value = _state.value.copy(
                         filesCompleted = index + 1,
