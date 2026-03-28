@@ -1814,8 +1814,8 @@ private fun ActionButtons(
             }
         }
 
-        // Share The Freedom button — only when synced
-        if (isRunning && isSynced) {
+        // Share The Freedom button — visible when synced OR when node is stopped (post-share)
+        if (isSynced || !isRunning) {
             OutlinedButton(
                 onClick = onNavigateToShare,
                 modifier = Modifier.fillMaxWidth(),
