@@ -91,7 +91,11 @@ Block filter support enables Neutrino wallet connections (Zeus, etc.) on pruned 
 - [x] First-run setup screen
 - [x] HTTPS download from utxo.download
 - [x] Electrum server retry on boot (waits for bitcoind RPC)
-- [x] Phone-to-phone node sharing (ShareServer, QR code, landing page, up to 2 concurrent)
+- [x] Phone-to-phone node sharing (ShareServer, QR code, landing page, up to 2 concurrent, tested end-to-end)
+- [x] Relay server support (pocket-node-relay pulls from phone, serves to others)
+- [x] Resume support: skip already-downloaded files on retry
+- [x] Session progress tracking (sender shows "Freedom uploading: X%")
+- [x] LDK Lightning toggle on dashboard (default on, hides Lightning UI when off)
 - [x] In-app update checker (GitHub Releases API, APK download + install)
 - [x] Release signing keystore
 - [x] Seed backup info card ("What does my seed protect?")
