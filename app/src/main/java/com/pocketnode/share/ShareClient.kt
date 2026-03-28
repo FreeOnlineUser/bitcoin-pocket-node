@@ -172,6 +172,16 @@ class ShareClient(private val context: Context) {
                 val targetFile = File(bitcoinDir, path)
                 targetFile.parentFile?.mkdirs()
 
+                // Resume support: skip files that are already fully downloaded
+                if (targetFile.exists() && targetFile.length() == size) {
+                    bytesDownloaded += size
+                    _state.value = _state.value.copy(
+                        filesCompleted = index + 1,
+                        bytesDownloaded = bytesDownloaded
+                    )
+                    continue
+                }
+
                 _state.value = _state.value.copy(
                     currentFile = path,
                     fileProgress = 0,
