@@ -793,6 +793,8 @@ class LightningService(private val context: Context) {
 
     fun updateState() {
         val n = node ?: return
+        // Drain any pending events (ChannelClosed, etc.) before reading state
+        try { handleEvents() } catch (_: Exception) {}
         try {
             val channels = n.listChannels()
             val balances = n.listBalances()
