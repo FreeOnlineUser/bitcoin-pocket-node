@@ -43,7 +43,9 @@ class ShareServer(private val context: Context) {
         val startTime: Long = System.currentTimeMillis(),
         val bytesServed: Long = 0,
         val totalBytes: Long = 0,
-        val currentFile: String = ""
+        val currentFile: String = "",
+        val sessionTotalFiles: Int = 0,     // from POST /start-session
+        val sessionFilesCompleted: Int = 0  // count of completed /file/ requests
     )
 
     private var serverSocket: ServerSocket? = null
@@ -51,6 +53,10 @@ class ShareServer(private val context: Context) {
     private val transferCounter = AtomicInteger(0)
     private val activeConnections = AtomicInteger(0)
     private val transfers = ConcurrentHashMap<Int, TransferInfo>()
+
+    // Session tracking for download progress
+    @Volatile private var sessionTotalFiles: Int = 0
+    private val sessionFilesCompleted = AtomicInteger(0)
 
     private val bitcoinDir: File get() = File(context.filesDir, "bitcoin")
 
@@ -113,13 +119,37 @@ class ShareServer(private val context: Context) {
                 }
 
                 val parts = requestLine.split(" ")
-                if (parts.size < 2 || parts[0] != "GET") {
-                    sendResponse(socket, 405, "Method Not Allowed", "Only GET supported")
+                if (parts.size < 2 || (parts[0] != "GET" && parts[0] != "POST")) {
+                    sendResponse(socket, 405, "Method Not Allowed", "GET or POST supported")
                     return@Thread
                 }
 
+                val method = parts[0]
                 val path = parts[1]
-                Log.d(TAG, "Request: $path")
+                Log.d(TAG, "Request: $method $path")
+
+                // Handle POST endpoints
+                if (method == "POST" && path == "/start-session") {
+                    val contentLength = headers["content-length"]?.toIntOrNull() ?: 0
+                    val body = if (contentLength > 0) {
+                        val buf = CharArray(contentLength)
+                        reader.read(buf, 0, contentLength)
+                        String(buf)
+                    } else ""
+                    try {
+                        val json = org.json.JSONObject(body)
+                        sessionTotalFiles = json.optInt("totalFiles", 0)
+                        sessionFilesCompleted.set(0)
+                        Log.i(TAG, "Session started: $sessionTotalFiles files expected")
+                    } catch (_: Exception) {}
+                    sendResponse(socket, 200, "OK", """{"status":"ok"}""", contentType = "application/json")
+                    return@Thread
+                }
+
+                if (method == "POST") {
+                    sendResponse(socket, 404, "Not Found", "Unknown POST endpoint")
+                    return@Thread
+                }
 
                 when {
                     path == "/" -> serveLandingPage(socket)
@@ -127,6 +157,13 @@ class ShareServer(private val context: Context) {
                     path == "/manifest" -> serveManifest(socket)
                     path == "/apk" -> serveApk(socket)
                     path == "/peer-limits" -> servePeerLimits(socket)
+                    path == "/progress" -> {
+                        val json = org.json.JSONObject().apply {
+                            put("totalFiles", sessionTotalFiles)
+                            put("completedFiles", sessionFilesCompleted.get())
+                        }
+                        sendResponse(socket, 200, "OK", json.toString(), contentType = "application/json")
+                    }
                     path.startsWith("/file/") -> serveFile(socket, path.removePrefix("/file/"))
                     else -> sendResponse(socket, 404, "Not Found", "Unknown path: $path")
                 }
@@ -376,6 +413,7 @@ class ShareServer(private val context: Context) {
             }
             out.flush()
             _completedTransfers.value++
+            sessionFilesCompleted.incrementAndGet()
         } finally {
             activeConnections.decrementAndGet()
             transfers.remove(transferId)
