@@ -1108,48 +1108,8 @@ fun LightningScreen(
                     Text("Stop Lightning Node")
                 }
 
-                if (hasFilters) {
-                    val manager2 = remember { BlockFilterManager(context) }
-                    val sizeGb2 = remember { manager2.localSizeBytes() / (1024.0 * 1024 * 1024) }
-                    var showRemoveConfirm by remember { mutableStateOf(false) }
-
-                    OutlinedButton(
-                        onClick = { showRemoveConfirm = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Remove Lightning Support")
-                    }
-
-                    if (showRemoveConfirm) {
-                        AlertDialog(
-                            onDismissRequest = { showRemoveConfirm = false },
-                            title = { Text("Remove Lightning Support?") },
-                            text = {
-                                Text("This will delete ${"%.1f".format(sizeGb2)} GB of block filter data. Lightning will stop working and your channels may need to be closed.")
-                            },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    showRemoveConfirm = false
-                                    scope.launch {
-                                        lightning.stop()
-                                        manager2.removeLocal(context)
-                                        onNavigateBack()
-                                    }
-                                }) {
-                                    Text("Remove", color = MaterialTheme.colorScheme.error)
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showRemoveConfirm = false }) {
-                                    Text("Cancel")
-                                }
-                            }
-                        )
-                    }
-                }
+                // "Remove Lightning" removed: LDK doesn't depend on block filters.
+                // Filter management available via block filter settings if needed.
             }
         }
     }
