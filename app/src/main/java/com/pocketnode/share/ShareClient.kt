@@ -140,6 +140,23 @@ class ShareClient(private val context: Context) {
             val filteredTotal = downloadList.sumOf { it.second }
             var bytesDownloaded = 0L
 
+            // Announce session to sender for progress tracking
+            try {
+                val sessionConn = URL("http://$host:$port/start-session").openConnection() as HttpURLConnection
+                sessionConn.requestMethod = "POST"
+                sessionConn.doOutput = true
+                sessionConn.setRequestProperty("Content-Type", "application/json")
+                sessionConn.connectTimeout = 5_000
+                sessionConn.readTimeout = 5_000
+                sessionConn.outputStream.use { it.write("""{"totalFiles":${downloadList.size}}""".toByteArray()) }
+                sessionConn.responseCode // trigger the request
+                sessionConn.disconnect()
+                Log.i(TAG, "Announced session: ${downloadList.size} files")
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not announce session: ${e.message}")
+                // Non-fatal, sender just won't show progress
+            }
+
             _state.value = DownloadState(
                 phase = "Downloading ${downloadList.size} files...",
                 totalFiles = downloadList.size,

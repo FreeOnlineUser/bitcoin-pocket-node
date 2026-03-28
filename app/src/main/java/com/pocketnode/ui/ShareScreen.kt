@@ -221,6 +221,30 @@ fun ShareScreen(
                 }
 
                 // Active transfers
+                // Session progress (from POST /start-session)
+                val sessionTotal by ShareServer.sessionTotalFilesFlow.collectAsState()
+                val sessionCompleted by ShareServer.sessionFilesCompletedFlow.collectAsState()
+                if (sessionTotal > 0) {
+                    val pct = (sessionCompleted * 100) / sessionTotal
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D47A1))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("📱 Phone downloading: $pct%", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("$sessionCompleted / $sessionTotal files", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { sessionCompleted.toFloat() / sessionTotal },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = Color(0xFF4CAF50),
+                                trackColor = Color.White.copy(alpha = 0.2f)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+
                 if (activeTransfers.isNotEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),

@@ -36,6 +36,12 @@ class ShareServer(private val context: Context) {
 
         private val _isRunning = MutableStateFlow(false)
         val isRunningFlow: StateFlow<Boolean> = _isRunning
+
+        // Session progress (from POST /start-session)
+        private val _sessionTotalFiles = MutableStateFlow(0)
+        val sessionTotalFilesFlow: StateFlow<Int> = _sessionTotalFiles
+        private val _sessionFilesCompleted = MutableStateFlow(0)
+        val sessionFilesCompletedFlow: StateFlow<Int> = _sessionFilesCompleted
     }
 
     data class TransferInfo(
@@ -43,9 +49,7 @@ class ShareServer(private val context: Context) {
         val startTime: Long = System.currentTimeMillis(),
         val bytesServed: Long = 0,
         val totalBytes: Long = 0,
-        val currentFile: String = "",
-        val sessionTotalFiles: Int = 0,     // from POST /start-session
-        val sessionFilesCompleted: Int = 0  // count of completed /file/ requests
+        val currentFile: String = ""
     )
 
     private var serverSocket: ServerSocket? = null
@@ -55,8 +59,6 @@ class ShareServer(private val context: Context) {
     private val transfers = ConcurrentHashMap<Int, TransferInfo>()
 
     // Session tracking for download progress
-    @Volatile private var sessionTotalFiles: Int = 0
-    private val sessionFilesCompleted = AtomicInteger(0)
 
     private val bitcoinDir: File get() = File(context.filesDir, "bitcoin")
 
@@ -138,9 +140,9 @@ class ShareServer(private val context: Context) {
                     } else ""
                     try {
                         val json = org.json.JSONObject(body)
-                        sessionTotalFiles = json.optInt("totalFiles", 0)
-                        sessionFilesCompleted.set(0)
-                        Log.i(TAG, "Session started: $sessionTotalFiles files expected")
+                        _sessionTotalFiles.value = json.optInt("totalFiles", 0)
+                        _sessionFilesCompleted.value = 0
+                        Log.i(TAG, "Session started: ${_sessionTotalFiles.value} files expected")
                     } catch (_: Exception) {}
                     sendResponse(socket, 200, "OK", """{"status":"ok"}""", contentType = "application/json")
                     return@Thread
@@ -159,8 +161,8 @@ class ShareServer(private val context: Context) {
                     path == "/peer-limits" -> servePeerLimits(socket)
                     path == "/progress" -> {
                         val json = org.json.JSONObject().apply {
-                            put("totalFiles", sessionTotalFiles)
-                            put("completedFiles", sessionFilesCompleted.get())
+                            put("totalFiles", _sessionTotalFiles.value)
+                            put("completedFiles", _sessionFilesCompleted.value)
                         }
                         sendResponse(socket, 200, "OK", json.toString(), contentType = "application/json")
                     }
@@ -413,7 +415,7 @@ class ShareServer(private val context: Context) {
             }
             out.flush()
             _completedTransfers.value++
-            sessionFilesCompleted.incrementAndGet()
+            _sessionFilesCompleted.value++
         } finally {
             activeConnections.decrementAndGet()
             transfers.remove(transferId)
