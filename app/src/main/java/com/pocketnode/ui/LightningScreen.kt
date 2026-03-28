@@ -871,21 +871,38 @@ fun LightningScreen(
                                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                             ) { Text("Cooperative Close") }
                                             Spacer(Modifier.height(8.dp))
-                                            // Force close
+                                            // Force close with confirmation
+                                            var showForceCloseConfirm by remember { mutableStateOf(false) }
                                             OutlinedButton(
-                                                onClick = {
-                                                    closing = true
-                                                    closeError = null
-                                                    scope.launch {
-                                                        lightning.forceCloseChannel(ch.userChannelId, ch.counterpartyNodeId)
-                                                            .onSuccess { selectedChannel = null }
-                                                            .onFailure { closing = false; closeError = it.message }
-                                                    }
-                                                },
+                                                onClick = { showForceCloseConfirm = true },
                                                 enabled = !closing,
                                                 modifier = Modifier.fillMaxWidth(),
                                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                                             ) { Text("Force Close") }
+                                            if (showForceCloseConfirm) {
+                                                AlertDialog(
+                                                    onDismissRequest = { showForceCloseConfirm = false },
+                                                    title = { Text("Force close this channel?") },
+                                                    text = {
+                                                        Text("Your funds will be locked for ~24 hours (144 blocks) before they become spendable on-chain. Use cooperative close instead if the peer is reachable.")
+                                                    },
+                                                    confirmButton = {
+                                                        TextButton(onClick = {
+                                                            showForceCloseConfirm = false
+                                                            closing = true
+                                                            closeError = null
+                                                            scope.launch {
+                                                                lightning.forceCloseChannel(ch.userChannelId, ch.counterpartyNodeId)
+                                                                    .onSuccess { selectedChannel = null }
+                                                                    .onFailure { closing = false; closeError = it.message }
+                                                            }
+                                                        }) { Text("Force Close", color = MaterialTheme.colorScheme.error) }
+                                                    },
+                                                    dismissButton = {
+                                                        TextButton(onClick = { showForceCloseConfirm = false }) { Text("Cancel") }
+                                                    }
+                                                )
+                                            }
                                             Spacer(Modifier.height(8.dp))
                                             // Exit / go back
                                             OutlinedButton(
