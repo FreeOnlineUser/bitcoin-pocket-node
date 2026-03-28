@@ -351,8 +351,10 @@ class ShareServer(private val context: Context) {
         val prefs = context.getSharedPreferences("peer_channel_limits", Context.MODE_PRIVATE)
         val limits = JSONObject()
         prefs.all.forEach { (key, value) ->
-            if (value is Long && value > 0) {
-                limits.put(key, value)
+            when (value) {
+                is Long -> if (value > 0) limits.put(key, value)
+                is Boolean -> limits.put(key, value)
+                else -> {}
             }
         }
         sendResponse(socket, 200, "OK", limits.toString(), "application/json")

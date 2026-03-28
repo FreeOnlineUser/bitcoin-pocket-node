@@ -85,11 +85,19 @@ class ShareClient(private val context: Context) {
             val editor = prefs.edit()
             var merged = 0
             json.keys().forEach { key ->
-                val remote = json.getLong(key)
-                val local = prefs.getLong(key, -1L)
-                if (remote > local) {
-                    editor.putLong(key, remote)
-                    merged++
+                val value = json.get(key)
+                when (value) {
+                    is Long, is Int -> {
+                        val remote = json.getLong(key)
+                        val local = prefs.getLong(key, -1L)
+                        if (remote > local) {
+                            editor.putLong(key, remote)
+                            merged++
+                        }
+                    }
+                    is Boolean -> {
+                        editor.putBoolean(key, value)
+                    }
                 }
             }
             editor.apply()
