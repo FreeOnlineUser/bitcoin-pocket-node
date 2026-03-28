@@ -289,9 +289,15 @@ fun NearbyNodeScreen(
                                 postDone = true
                             }
                         }
-                        if (postDone) {
-                            kotlinx.coroutines.delay(2000) // Show completion briefly
-                            onComplete()
+                    }
+                    if (postDone) {
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = { onComplete() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                        ) {
+                            Text("Go to Dashboard", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
