@@ -1814,18 +1814,19 @@ private fun ActionButtons(
             }
         }
 
-        // Share The Freedom button — visible when synced OR when node is stopped (post-share)
-        if (isSynced || !isRunning) {
-            OutlinedButton(
-                onClick = onNavigateToShare,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    "📡 Share The Freedom",
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
+        // Share The Freedom button — always visible, greyed when syncing
+        val shareEnabled = isSynced || !isRunning
+        OutlinedButton(
+            onClick = onNavigateToShare,
+            enabled = shareEnabled,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+        ) {
+            Text(
+                if (shareEnabled) "📡 Share The Freedom"
+                else "📡 Share The Freedom (syncing...)",
+                style = MaterialTheme.typography.labelSmall
+            )
         }
 
         Button(
