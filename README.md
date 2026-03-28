@@ -9,7 +9,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 ## ✅ Proven
 
 - **Two proven bootstrap paths:** sync from home node (under 1 hour) or download from internet (3-6 hours, on-chain only)
-- **Phone-to-phone sharing (built, untested on second device):** scan a QR code, get a full node. No servers, no accounts
+- **Phone-to-phone and relay sharing:** scan a QR code, get a full node. Resume on failure. Works over WiFi or LAN
 - **3 Bitcoin implementations:** Core 30, Core 29.3, Knots 29.3. One-tap switching, same chainstate. Universal BIP 110 signaling toggle
 - **No thermal load:** phone shows no sign of load or overheat during normal operation
 - ~13 GB total disk (11 GB chainstate + 2 GB pruned blocks). Optional: +13 GB for block filter index (Neutrino wallets only, not needed for Lightning)
@@ -83,25 +83,25 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 
 Three bootstrap paths. Pick whichever suits your situation:
 
-### ⚡ Path 1: Sync from Your Home Node (under 1 hour)
+### 📱 Path 1: Copy from a Trusted Pocket Node or Relay (under 1 hour)
+1. Someone sharing the freedom opens Share, which shows a QR code
+2. You scan it (or enter the IP manually)
+3. Chainstate transfers directly over WiFi or LAN. Resume on failure.
+4. **Full node with Lightning.** No home node needed. Zero accounts, zero servers.
+
+### ⚡ Path 2: Sync from Your Home Node (under 1 hour)
 1. App connects to your home node (Umbrel, Start9, any Bitcoin node) via SSH
-2. Briefly stops bitcoind, archives chainstate + block index + block filters
-3. Downloads the archive (~11 GB chainstate, optional +13 GB block filters), extracts, starts bitcoind
-4. **Full node at chain tip.** Optionally includes block filters if your node has them
+2. Briefly stops bitcoind, archives chainstate + block index
+3. Downloads the archive (~11 GB), extracts, starts bitcoind
+4. **Full node at chain tip.** Optionally includes block filters for Neutrino wallets.
 
-### 📱 Path 2: Copy from a Nearby Phone (under 1 hour)
-1. A friend with Pocket Node opens Share, which shows a QR code
-2. You scan it (or visit the URL on any browser to download the app first)
-3. Chainstate + block filters transfer directly over WiFi, phone to phone
-4. **No home node needed.** Zero accounts, zero servers, just two phones on the same network
-
-### 🔒 Path 3: Download from Internet (AssumeUTXO) (3-6 hours, on-chain only)
+### 🔒 Path 3: Download from Internet (AssumeUTXO) (3-6 hours)
 1. Download a UTXO snapshot (~9 GB) from utxo.download
 2. App loads it via `loadtxoutset` (cryptographically verified by Bitcoin Core)
 3. Phone syncs forward from the snapshot height (~30 min to load, 2-5 hours to reach tip)
 4. Background validation confirms everything independently from genesis
 
-> **Note:** AssumeUTXO does not build block filter indexes during initial load, so Neutrino wallets (Zeus) can't connect until background validation completes. Lightning (LDK) works immediately since it uses bitcoind RPC directly, not block filters.
+> **Note:** Lightning (LDK) works immediately on all paths. Block filter indexes (~13 GB) are optional and only needed for Neutrino wallet connections (Zeus).
 
 See [Direct Chainstate Copy](docs/direct-chainstate-copy.md) for a detailed comparison.
 
