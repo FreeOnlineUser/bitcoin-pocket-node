@@ -661,40 +661,7 @@ fun NodeStatusScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        // Channel rejection/close banner
-                        val channelError = lightningState.lastChannelError
-                        if (channelError != null) {
-                            var showError by remember(channelError) { mutableStateOf(true) }
-                            if (showError) {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (channelError.contains("rejected")) Color(0xFF2D2D2D) else Color(0xFF4A1010)
-                                    )
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                                        verticalAlignment = Alignment.Top,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            channelError,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = if (channelError.contains("rejected")) Color(0xFFFF9800) else Color(0xFFF44336),
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        Text(
-                                            "✕",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color.White.copy(alpha = 0.5f),
-                                            modifier = Modifier
-                                                .clickable { showError = false }
-                                                .padding(start = 8.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        // Lightning errors shown on Lightning screen, not here
                     }
                 }
 
