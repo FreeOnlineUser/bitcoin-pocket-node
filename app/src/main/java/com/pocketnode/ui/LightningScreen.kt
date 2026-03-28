@@ -163,7 +163,7 @@ fun LightningScreen(
                                     "Blocks were pruned while offline. Connect to WiFi to re-download."
                                 isRecovering ->
                                     "Re-downloading blocks pruned while offline (${effectiveState.recoveryBlocksDone}/${effectiveState.recoveryBlocksNeeded})"
-                                isStarting -> "Connecting to bitcoind and syncing"
+                                isStarting -> effectiveState.error ?: "Connecting to bitcoind and syncing"
                                 isError -> effectiveState.error ?: "Lightning node encountered an error"
                                 else -> "Lightning will start when bitcoind is synced"
                             },

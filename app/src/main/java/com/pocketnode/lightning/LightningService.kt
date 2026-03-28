@@ -462,6 +462,11 @@ class LightningService(private val context: Context) {
                     lastError = e
                     if (e.message?.contains("fee rate", ignoreCase = true) == true && attempt < 10) {
                         Log.w(TAG, "Fee estimates not ready, retry $attempt/10 in 60s...")
+                        _state.value = _state.value.copy(
+                            status = LightningState.Status.STARTING,
+                            error = "Waiting for fee estimates from bitcoind ($attempt/10). " +
+                                "This is normal on first start. Bitcoind needs mempool data to estimate fees."
+                        )
                         Thread.sleep(60_000)
                     } else {
                         throw e
