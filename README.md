@@ -101,7 +101,7 @@ Three bootstrap paths. Pick whichever suits your situation:
 3. Phone syncs forward from the snapshot height (~30 min to load, 2-5 hours to reach tip)
 4. Background validation confirms everything independently from genesis
 
-> **Note:** AssumeUTXO does not build block filter indexes, so Lightning is not available until background validation completes. Good for on-chain use (BlueWallet, Electrum) while validation runs.
+> **Note:** AssumeUTXO does not build block filter indexes during initial load, so Neutrino wallets (Zeus) can't connect until background validation completes. Lightning (LDK) works immediately since it uses bitcoind RPC directly, not block filters.
 
 See [Direct Chainstate Copy](docs/direct-chainstate-copy.md) for a detailed comparison.
 

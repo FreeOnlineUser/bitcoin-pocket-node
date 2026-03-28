@@ -58,7 +58,7 @@
 - [x] Confirmation dialog with auto-restart when switching
 
 ### Lightning Phase 1: Block Filter Infrastructure ✅
-Block filter support enables Lightning on pruned nodes. Filters are copied from a home node or another Bitcoin Pocket Node.
+Block filter support enables Neutrino wallet connections (Zeus, etc.) on pruned nodes. Filters are copied from a home node or another Bitcoin Pocket Node. Note: LDK Lightning does NOT need block filters (uses bitcoind RPC directly).
 
 **Historical note:** The original approach used Zeus with embedded LND, which worked but had a fundamental limitation: our pruned bitcoind advertises `NODE_NETWORK_LIMITED` instead of `NODE_NETWORK`. LND's Neutrino requires `NODE_NETWORK` from peers, so it silently rejected our local node and fell back to internet peers. This meant two independent sync engines on the phone and no true local sovereignty. This limitation drove the decision to migrate to LDK (Phase 4), which connects to bitcoind via RPC instead of P2P, bypassing service bit checks entirely.
 
