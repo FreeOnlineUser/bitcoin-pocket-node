@@ -635,11 +635,9 @@ fun NodeStatusScreen(
                     }
                 }
 
-                // Lightning node button — shown at top when filters installed
+                // Lightning node button — always shown (LDK uses RPC, not block filters)
                 run {
-                    val filterDir = java.io.File(LocalContext.current.filesDir, "bitcoin/indexes/blockfilter/basic")
-                    val hasFilters = filterDir.exists() && (filterDir.listFiles()?.size ?: 0) > 1
-                    if (hasFilters) {
+                    if (true) {
                         val lightningState by com.pocketnode.lightning.LightningService.stateFlow.collectAsState()
                         Button(
                             onClick = onNavigateToLightning,
