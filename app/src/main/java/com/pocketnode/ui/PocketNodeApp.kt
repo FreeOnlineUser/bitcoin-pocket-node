@@ -481,7 +481,10 @@ fun PocketNodeApp(
                         navController.currentBackStackEntry?.savedStateHandle?.remove<String>("scanned_qr")
                     },
                     onComplete = {
-                        navController.popBackStack("status", inclusive = false)
+                        // Navigate to dashboard, clearing the back stack
+                        navController.navigate("status") {
+                            popUpTo(0) { inclusive = true }
+                        }
                     },
                     onScanQr = { _ ->
                         navController.navigate("qr_scanner")
