@@ -376,20 +376,36 @@ fun NearbyNodeScreen(
                     onClick = {
                         onScanQr { qrData ->
                             try {
+                                // Try JSON format first: {"host": "...", "port": ...}
                                 val json = JSONObject(qrData)
                                 host = json.getString("host")
                                 port = json.optInt("port", ShareServer.PORT)
-                                // Auto-connect after scan
-                                connecting = true
-                                scope.launch {
-                                    serverInfo = client.getInfo(host, port)
-                                    connecting = false
-                                    if (serverInfo == null) {
-                                        error = "Could not connect to $host:$port"
+                            } catch (_: Exception) {
+                                try {
+                                    // Try URL format: http://10.0.1.X:8432
+                                    val url = java.net.URL(qrData)
+                                    host = url.host
+                                    port = if (url.port > 0) url.port else ShareServer.PORT
+                                } catch (_: Exception) {
+                                    // Try plain host:port
+                                    val parts = qrData.split(":")
+                                    if (parts.size >= 2) {
+                                        host = parts[0]
+                                        port = parts[1].toIntOrNull() ?: ShareServer.PORT
+                                    } else {
+                                        error = "Invalid QR code"
+                                        return@onScanQr
                                     }
                                 }
-                            } catch (e: Exception) {
-                                error = "Invalid QR code"
+                            }
+                            // Auto-connect after scan
+                            connecting = true
+                            scope.launch {
+                                serverInfo = client.getInfo(host, port)
+                                connecting = false
+                                if (serverInfo == null) {
+                                    error = "Could not connect to $host:$port"
+                                }
                             }
                         }
                     },
