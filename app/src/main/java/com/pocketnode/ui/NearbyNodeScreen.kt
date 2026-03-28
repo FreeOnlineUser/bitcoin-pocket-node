@@ -319,7 +319,7 @@ fun NearbyNodeScreen(
                         Text("Block height: ${"%,d".format(serverInfo!!.chainHeight)}", color = Color.White.copy(alpha = 0.9f))
                         Text("App version: ${serverInfo!!.version}", color = Color.White.copy(alpha = 0.9f))
                         if (serverInfo!!.hasFilters) {
-                            Text("Lightning block filters available ⚡", color = Color(0xFF81C784))
+                            Text("Block filters available (for Neutrino wallets)", color = Color(0xFF81C784))
                         }
                         Text(
                             "${serverInfo!!.activeTransfers}/${serverInfo!!.maxConcurrent} transfers active",
@@ -337,7 +337,7 @@ fun NearbyNodeScreen(
                         Column {
                             Text("Include block filters", fontWeight = FontWeight.Medium)
                             Text(
-                                "Required for Lightning. Adds ~12 GB to download.",
+                                "For Neutrino wallets (Zeus). Not needed for Lightning. Adds ~1.3 GB.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
