@@ -12,7 +12,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 - **Phone-to-phone sharing (built, untested on second device):** scan a QR code, get a full node. No servers, no accounts
 - **3 Bitcoin implementations:** Core 30, Core 29.3, Knots 29.3. One-tap switching, same chainstate. Universal BIP 110 signaling toggle
 - **No thermal load:** phone shows no sign of load or overheat during normal operation
-- ~26 GB total disk with Lightning (11 GB chainstate + 2 GB pruned blocks + 13 GB block filters), ~13 GB without
+- ~13 GB total disk (11 GB chainstate + 2 GB pruned blocks). Optional: +13 GB for block filter index (Neutrino wallets only, not needed for Lightning)
 - **Pure Kotlin Electrum server** with wallet tracking: balance, transactions, UTXOs all served from your own pruned node
 - **Built-in Lightning wallet** powered by LDK: send, receive, BOLT12 offers, open/close channels, peer browser, QR codes
 - **LNDHub API** for external Lightning wallets (BlueWallet)
@@ -87,7 +87,7 @@ Three bootstrap paths. Pick whichever suits your situation:
 1. App connects to your home node (Umbrel, Start9, any Bitcoin node) via SSH
 2. Briefly stops bitcoind, archives chainstate + block index + block filters
 3. Downloads the archive (~24 GB with Lightning filters), extracts, starts bitcoind
-4. **Full node at chain tip.** Includes block filters for Lightning if your node has them
+4. **Full node at chain tip.** Optionally includes block filters if your node has them
 
 ### 📱 Path 2: Copy from a Nearby Phone (under 1 hour)
 1. A friend with Pocket Node opens Share, which shows a QR code
@@ -175,7 +175,7 @@ The app tries saved `pocketnode` SFTP credentials first. If a snapshot already e
 ### From Internet
 Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset` flow, just a different download source. The snapshot is cryptographically verified against the block hash compiled into Bitcoin Core before loading.
 
-**Note:** This path provides an on-chain node only. Lightning support requires block filters (~13 GB) which can be added later by copying from a home node via SSH.
+**Note:** Lightning (LDK) works immediately on this path. Block filters (~13 GB) are optional and only needed for Neutrino wallet connections (Zeus).
 
 ## Architecture
 

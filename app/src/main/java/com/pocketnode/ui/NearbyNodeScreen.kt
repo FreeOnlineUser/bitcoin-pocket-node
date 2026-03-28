@@ -54,7 +54,7 @@ fun NearbyNodeScreen(
     var connecting by remember { mutableStateOf(false) }
     var downloading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var includeFilters by remember { mutableStateOf(true) }
+    var includeFilters by remember { mutableStateOf(false) }
 
     // Process QR scan result from navigation
     LaunchedEffect(scannedQrData) {

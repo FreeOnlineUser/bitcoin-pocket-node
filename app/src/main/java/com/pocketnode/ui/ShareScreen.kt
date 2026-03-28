@@ -114,7 +114,7 @@ fun ShareScreen(
                         Text("What gets shared:", fontWeight = FontWeight.Bold)
                         Text("• Chainstate (validated UTXO set)")
                         Text("• Block index + tip blocks")
-                        if (hasFilters) Text("• Block filters (Lightning support)")
+                        if (hasFilters) Text("• Block filters (Neutrino wallets)")
                         Text("• Pocket Node APK")
                         Spacer(Modifier.height(4.dp))
                         Text(
