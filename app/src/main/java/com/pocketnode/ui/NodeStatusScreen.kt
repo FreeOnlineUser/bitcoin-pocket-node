@@ -648,13 +648,13 @@ fun NodeStatusScreen(
                                 when (lightningState.status) {
                                     com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING ->
                                         if (lightningState.channelCount > 0)
-                                            "⚡ Lightning Node (${lightningState.channelCount} channel${if (lightningState.channelCount != 1) "s" else ""})"
-                                        else "⚡ Lightning Node"
+                                            "⚡ LDK Lightning (${lightningState.channelCount} channel${if (lightningState.channelCount != 1) "s" else ""})"
+                                        else "⚡ LDK Lightning"
                                     com.pocketnode.lightning.LightningService.LightningState.Status.STARTING ->
                                         "⚡ Lightning Starting..."
                                     com.pocketnode.lightning.LightningService.LightningState.Status.ERROR ->
                                         "⚡ Lightning Error"
-                                    else -> "⚡ Lightning Node"
+                                    else -> "⚡ LDK Lightning"
                                 },
                                 fontWeight = FontWeight.Bold
                             )
@@ -1796,21 +1796,8 @@ private fun ActionButtons(
             ) { Text("Connect", maxLines = 1, style = MaterialTheme.typography.labelSmall) }
         }
 
-        // Add Lightning Support — shown when filters NOT yet installed
-        val filterDir = LocalContext.current.filesDir.resolve("bitcoin/indexes/blockfilter/basic")
-        val hasFilters = filterDir.exists() && (filterDir.listFiles()?.size ?: 0) > 1
-        if (!hasFilters) {
-            OutlinedButton(
-                onClick = onNavigateToBlockFilter,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    "⚡ Add Lightning Support",
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        }
+        // "Add Lightning Support" removed: LDK works without block filters.
+        // Block filter install still available via Settings if needed for Neutrino wallets.
 
         // Share The Freedom button — always visible, greyed when syncing
         val shareEnabled = isSynced || !isRunning

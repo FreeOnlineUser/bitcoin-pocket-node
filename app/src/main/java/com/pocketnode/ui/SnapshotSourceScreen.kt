@@ -73,19 +73,19 @@ fun SnapshotSourceScreen(
             )
 
             SnapshotOption(
-                icon = Icons.Outlined.Lan,
-                title = "Sync from your node (fastest)",
-                subtitle = "Copy chainstate directly from your node over LAN. " +
-                    "Instant full node at chain tip. ~9 GB, ~20 minutes.",
-                onClick = onPullFromNode
+                icon = Icons.Outlined.PhoneAndroid,
+                title = "Copy from a trusted Pocket Node or relay",
+                subtitle = "Scan a QR code from someone sharing the freedom. " +
+                    "Works over WiFi or LAN. ~13 GB, ~20 minutes. Includes Lightning.",
+                onClick = onNearbyNode
             )
 
             SnapshotOption(
-                icon = Icons.Outlined.PhoneAndroid,
-                title = "Copy from nearby phone",
-                subtitle = "Someone at a meetup sharing their node? " +
-                    "Scan their QR code and copy over WiFi. ~20 minutes.",
-                onClick = onNearbyNode
+                icon = Icons.Outlined.Lan,
+                title = "Sync from your own node",
+                subtitle = "Copy chainstate directly from your node over LAN. " +
+                    "Instant full node at chain tip. ~9 GB, ~20 minutes.",
+                onClick = onPullFromNode
             )
 
             Spacer(Modifier.height(8.dp))
