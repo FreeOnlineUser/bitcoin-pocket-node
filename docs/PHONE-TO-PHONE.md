@@ -38,7 +38,7 @@ Same data as a home node chainstate copy:
 - **Chainstate** (~11 GB): the validated UTXO set
 - **Block index**: so the receiver's bitcoind knows what's been validated
 - **XOR obfuscation key** + recent block files
-- **Block filters** (optional, ~1.3 GB): if sender has Lightning, receiver gets filter index too
+- **Block filters** (optional, ~13 GB): if sender has them, receiver gets filter index for Neutrino wallets (Zeus). Not needed for Lightning (LDK uses RPC).
 
 The receiver's phone validates everything locally after copy. The sender's chainstate is a starting point, not a trust relationship.
 

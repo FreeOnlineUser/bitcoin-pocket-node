@@ -337,7 +337,7 @@ fun NearbyNodeScreen(
                         Column {
                             Text("Include block filters", fontWeight = FontWeight.Medium)
                             Text(
-                                "For Neutrino wallets (Zeus). Not needed for Lightning. Adds ~1.3 GB.",
+                                "For Neutrino wallets (Zeus). Not needed for Lightning. Adds ~13 GB.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
