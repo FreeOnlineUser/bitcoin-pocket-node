@@ -78,18 +78,11 @@ Sender Phone                              Receiver Phone
 
 ### QR Code Contents
 
-```json
-{
-  "host": "192.168.43.1",
-  "port": 8432,
-  "pin": "7291",
-  "version": "0.11-alpha",
-  "chainHeight": 938201,
-  "hasFilters": true
-}
+```
+http://192.168.43.1:8432
 ```
 
-Receiver scans, auto-fills connection details, shows what's available (chainstate + optional filters).
+Receiver scans, app parses URL (also accepts JSON and host:port), auto-connects, shows node info.
 
 ## Meetup Flow
 
@@ -149,15 +142,9 @@ The share server serves the APK directly at `/apk`. Receiver opens a browser lin
 - `SetupChecklistScreen.kt` / setup flow: "Scan QR from nearby node" option alongside existing SSH/HTTPS paths
 - `SnapshotDownloader.kt`: add HTTP download source (currently SFTP only)
 
-### Estimated Effort
+### Status: Shipped
 
-Small scope. The chainstate copy logic already exists. Main new work:
-- HTTP server (~200 lines)
-- QR generation + scanning (zxing already in the project)
-- Share UI screen
-- HTTP download client in setup flow
-
-~1 week of focused work.
+All implemented and tested end-to-end. ShareServer serves files, ShareClient downloads with resume support, QR scanning works, session progress tracking shows sender-side progress. Also works with the pocket-node-relay for remote sharing over LAN.
 
 ## Power Mode Interaction
 
