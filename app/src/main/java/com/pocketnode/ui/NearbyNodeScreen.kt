@@ -315,12 +315,39 @@ fun NearbyNodeScreen(
                     onClick = {
                         downloading = true
                         scope.launch {
+                            // Stop Lightning and bitcoind before downloading (safe state)
+                            try {
+                                val ls = com.pocketnode.lightning.LightningService.getInstance(context)
+                                val wasRunning = com.pocketnode.lightning.LightningService.stateFlow.value.status ==
+                                    com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING
+                                if (wasRunning) {
+                                    ls.stop()
+                                    context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                                        .edit().putBoolean("lightning_was_running", true).apply()
+                                }
+                            } catch (_: Exception) {}
+                            try {
+                                context.stopService(android.content.Intent(context, com.pocketnode.service.BitcoindService::class.java))
+                                kotlinx.coroutines.delay(3000) // let services shut down
+                            } catch (_: Exception) {}
+
                             // Merge peer channel limits (lightweight, runs first)
                             client.fetchPeerLimits(host, port)
                             val success = client.downloadChainstate(host, port, includeFilters)
-                            if (!success) {
+                            if (success) {
+                                // Restart bitcoind (Lightning auto-starts if flag set)
+                                try {
+                                    context.startForegroundService(
+                                        android.content.Intent(context, com.pocketnode.service.BitcoindService::class.java))
+                                } catch (_: Exception) {}
+                            } else {
                                 downloading = false
                                 error = "Download failed. Check connection and try again."
+                                // Restart node even on failure
+                                try {
+                                    context.startForegroundService(
+                                        android.content.Intent(context, com.pocketnode.service.BitcoindService::class.java))
+                                } catch (_: Exception) {}
                             }
                         }
                     },
