@@ -344,6 +344,7 @@ fun NearbyNodeScreen(
                 Button(
                     onClick = {
                         downloading = true
+                        error = null  // Clear previous error on retry
                         scope.launch {
                             // Stop Lightning and bitcoind before downloading (safe state)
                             try {
