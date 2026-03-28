@@ -106,7 +106,7 @@ Realistic scenario at a Bitcoin meetup:
 9. Brad is now serving two downloads simultaneously
 10. Later: Alice can share with others the same way
 
-**With Lightning:** if Brad has block filters, Alice gets them too. She walks away with a full node AND Lightning-ready in under an hour. Set up a wallet, open a channel, start paying.
+**With Lightning:** Alice walks away with a full node AND Lightning-ready in under an hour. LDK Lightning works without block filters. Set up a wallet, open a channel, start paying.
 
 **Viral loop:** every new user becomes a potential sender. The network grows without any central infrastructure.
 

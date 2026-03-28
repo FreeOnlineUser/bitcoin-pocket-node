@@ -86,7 +86,7 @@ Three bootstrap paths. Pick whichever suits your situation:
 ### ⚡ Path 1: Sync from Your Home Node (under 1 hour)
 1. App connects to your home node (Umbrel, Start9, any Bitcoin node) via SSH
 2. Briefly stops bitcoind, archives chainstate + block index + block filters
-3. Downloads the archive (~24 GB with Lightning filters), extracts, starts bitcoind
+3. Downloads the archive (~11 GB chainstate, optional +13 GB block filters), extracts, starts bitcoind
 4. **Full node at chain tip.** Optionally includes block filters if your node has them
 
 ### 📱 Path 2: Copy from a Nearby Phone (under 1 hour)
