@@ -386,8 +386,9 @@ class BitcoindService : Service() {
                                 bwt.start(saveState = false)
                                 Log.i(TAG, "Auto-started BWT from service (node synced)")
                             }
-                            // Auto-start Lightning when synced (if it was previously running)
-                            if (prefs.getBoolean("lightning_was_running", false)) {
+                            // Auto-start Lightning when synced (if enabled and was previously running)
+                            val ldkEnabled = prefs.getBoolean("ldk_lightning_enabled", true)
+                            if (ldkEnabled && prefs.getBoolean("lightning_was_running", false)) {
                                 val crashCount = prefs.getInt("lightning_crash_count", 0)
                                 if (crashCount >= 3) {
                                     Log.e(TAG, "Lightning crash circuit breaker: $crashCount consecutive crashes. Not auto-restarting. User must start manually.")

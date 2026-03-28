@@ -635,9 +635,11 @@ fun NodeStatusScreen(
                     }
                 }
 
-                // Lightning node button — always shown (LDK uses RPC, not block filters)
+                // Lightning node button — shown when LDK Lightning is enabled
                 run {
-                    if (true) {
+                    val ldkEnabled = LocalContext.current.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                        .getBoolean("ldk_lightning_enabled", true)
+                    if (ldkEnabled) {
                         val lightningState by com.pocketnode.lightning.LightningService.stateFlow.collectAsState()
                         Button(
                             onClick = onNavigateToLightning,
@@ -1279,6 +1281,41 @@ private fun ActionButtons(
                 onCheckedChange = {
                     autoStartOnBoot = it
                     bootPrefs.edit().putBoolean("auto_start_on_boot", it).apply()
+                },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = Color(0xFFFF9800)
+                )
+            )
+        }
+
+        // LDK Lightning toggle
+        val ldkContext = LocalContext.current
+        val ldkPrefs = ldkContext.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+        var lightningEnabled by remember { mutableStateOf(ldkPrefs.getBoolean("ldk_lightning_enabled", true)) }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "⚡ LDK Lightning",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Switch(
+                checked = lightningEnabled,
+                onCheckedChange = {
+                    lightningEnabled = it
+                    ldkPrefs.edit().putBoolean("ldk_lightning_enabled", it).apply()
+                    if (!it) {
+                        // Stop Lightning when disabled
+                        Thread {
+                            try {
+                                com.pocketnode.lightning.LightningService.getInstance(ldkContext).stop()
+                            } catch (_: Exception) {}
+                        }.start()
+                        ldkPrefs.edit().putBoolean("lightning_was_running", false).apply()
+                    }
                 },
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = Color(0xFFFF9800)
