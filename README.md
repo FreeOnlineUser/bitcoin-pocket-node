@@ -22,6 +22,9 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 - **Channel safety**: WAL checkpoint after every state change, Static Channel Backup (SCB) for recovery, circuit breaker for crash loops
 - **Power modes**: Max (continuous), Low (15 min bursts), Away (60 min bursts) with auto-detect based on WiFi/cellular/battery
 - **Channel probe scanner**: discover which Lightning nodes accept small channels before committing funds
+- **Relay sharing**: pull chainstate from any Pocket Node over LAN, resume on failure, session progress tracking
+- **Cooperative close fix**: configurable fee floor prevents force-closes over minor fee disagreements
+- **Detailed balance view**: on-chain spendable, fee reserve, lightning, pending close, all accounted for
 
 ## Screenshots
 

@@ -350,6 +350,11 @@ See [Tor Integration](docs/tor-integration.md) for the full design document.
 ### Chainstate Copy
 - [ ] XOR re-encoding: decode source obfuscation keys, re-encode with locally generated keys so every node is unique on disk
 - [x] Phone-to-phone chainstate copy (WiFi Direct / hotspot)
+- [x] Resume support: skip already-downloaded files on retry
+- [x] Session progress tracking (POST /start-session, GET /progress)
+- [x] QR scan: parses URL, JSON, and host:port formats
+- [x] Cleartext HTTP for LAN connections
+- [x] Safe service shutdown before receiving downloads
 
 ### Remote Node Sharing (Tor)
 Share the Freedom page: two bootstrap options from the same screen.
