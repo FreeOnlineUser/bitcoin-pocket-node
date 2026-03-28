@@ -289,7 +289,10 @@ fun NearbyNodeScreen(
                                 postDone = true
                             }
                         }
-                        if (postDone) onComplete()
+                        if (postDone) {
+                            kotlinx.coroutines.delay(2000) // Show completion briefly
+                            onComplete()
+                        }
                     }
                 }
 
