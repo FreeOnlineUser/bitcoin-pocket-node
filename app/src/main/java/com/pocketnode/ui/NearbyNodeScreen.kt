@@ -39,7 +39,9 @@ fun NearbyNodeScreen(
     onComplete: () -> Unit,
     onScanQr: ((String) -> Unit) -> Unit = {},
     initialHost: String? = null,
-    initialPort: Int? = null
+    initialPort: Int? = null,
+    scannedQrData: String? = null,
+    onConsumeQr: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -53,6 +55,34 @@ fun NearbyNodeScreen(
     var downloading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var includeFilters by remember { mutableStateOf(true) }
+
+    // Process QR scan result from navigation
+    LaunchedEffect(scannedQrData) {
+        if (scannedQrData != null) {
+            onConsumeQr()
+            try {
+                val json = org.json.JSONObject(scannedQrData)
+                host = json.getString("host")
+                port = json.optInt("port", ShareServer.PORT)
+            } catch (_: Exception) {
+                try {
+                    val url = java.net.URL(scannedQrData)
+                    host = url.host
+                    port = if (url.port > 0) url.port else ShareServer.PORT
+                } catch (_: Exception) {
+                    val parts = scannedQrData.split(":")
+                    if (parts.size >= 2) {
+                        host = parts[0]
+                        port = parts[1].toIntOrNull() ?: ShareServer.PORT
+                    }
+                }
+            }
+            if (host.isNotEmpty()) {
+                serverInfo = client.getInfo(host, port)
+                if (serverInfo == null) error = "Could not connect to $host:$port"
+            }
+        }
+    }
 
     // Auto-connect if opened via deep link with host
     LaunchedEffect(initialHost) {

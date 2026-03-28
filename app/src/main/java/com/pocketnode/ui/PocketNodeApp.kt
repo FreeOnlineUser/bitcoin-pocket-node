@@ -468,15 +468,22 @@ fun PocketNodeApp(
             ) { backStackEntry ->
                 val deepLinkHost = backStackEntry.arguments?.getString("host")?.takeIf { it.isNotEmpty() }
                 val deepLinkPort = backStackEntry.arguments?.getString("port")?.takeIf { it.isNotEmpty() }?.toIntOrNull()
+                // Read QR result from scanner via savedStateHandle
+                val scannedQr = navController.currentBackStackEntry
+                    ?.savedStateHandle?.get<String>("scanned_qr")
+
                 NearbyNodeScreen(
                     onBack = { navController.popBackStack() },
                     initialHost = deepLinkHost,
                     initialPort = deepLinkPort,
+                    scannedQrData = scannedQr,
+                    onConsumeQr = {
+                        navController.currentBackStackEntry?.savedStateHandle?.remove<String>("scanned_qr")
+                    },
                     onComplete = {
                         navController.popBackStack("status", inclusive = false)
                     },
-                    onScanQr = { callback ->
-                        // Store callback and navigate to QR scanner
+                    onScanQr = { _ ->
                         navController.navigate("qr_scanner")
                     }
                 )
