@@ -451,10 +451,15 @@ fun NearbyNodeScreen(
                 Text("Or enter manually:", style = MaterialTheme.typography.bodyMedium)
 
                 OutlinedTextField(
-                    value = host,
-                    onValueChange = { host = it; error = null },
+                    value = if (port != ShareServer.PORT) "$host:$port" else host,
+                    onValueChange = { input ->
+                        error = null
+                        val parts = input.split(":")
+                        host = parts[0]
+                        port = parts.getOrNull(1)?.toIntOrNull() ?: ShareServer.PORT
+                    },
                     label = { Text("IP Address") },
-                    placeholder = { Text("192.168.43.1") },
+                    placeholder = { Text("192.168.43.1:${ShareServer.PORT}") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
