@@ -183,10 +183,8 @@ class ShareClient(private val context: Context) {
                 val targetFile = File(bitcoinDir, path)
                 targetFile.parentFile?.mkdirs()
 
-                // Resume support: skip files that match size and are not older than source
-                val remoteModified = entry.lastModified
-                if (targetFile.exists() && targetFile.length() == size &&
-                    (remoteModified == 0L || targetFile.lastModified() >= remoteModified)) {
+                // Resume support: skip files with matching size
+                if (targetFile.exists() && targetFile.length() == size) {
                     bytesDownloaded += size
                     _state.value = _state.value.copy(
                         filesCompleted = index + 1,
