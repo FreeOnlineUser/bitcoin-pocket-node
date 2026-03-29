@@ -102,6 +102,7 @@ class ShareServer(private val context: Context) {
         serverSocket = null
         serverThread = null
         transfers.clear()
+        activeConnections.set(0)
         _activeTransfers.value = emptyMap()
         _completedTransfers.value = 0
         _isRunning.value = false
