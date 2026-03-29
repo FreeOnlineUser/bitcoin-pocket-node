@@ -178,6 +178,16 @@ class ShareClient(private val context: Context) {
 
             val bitcoinDir = File(context.filesDir, "bitcoin")
 
+            // Always clean consistency-critical dirs before download
+            // Chainstate + block index must come as a matched set
+            for (criticalDir in listOf("chainstate", "blocks/index")) {
+                val dir = File(bitcoinDir, criticalDir)
+                if (dir.exists()) {
+                    dir.deleteRecursively()
+                    Log.i(TAG, "Cleaned $criticalDir (consistency-critical)")
+                }
+            }
+
             for ((index, entry) in downloadList.withIndex()) {
                 if (!coroutineContext.isActive) return@withContext false
 
