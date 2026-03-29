@@ -217,27 +217,36 @@ class ShareClient(private val context: Context) {
                     return@withContext false
                 }
 
-                fileConn.inputStream.use { input ->
-                    targetFile.outputStream().use { output ->
-                        val buffer = ByteArray(65536)
-                        var fileDownloaded = 0L
-                        var read: Int
-                        while (input.read(buffer).also { read = it } != -1) {
-                            if (!coroutineContext.isActive) return@withContext false
-                            output.write(buffer, 0, read)
-                            fileDownloaded += read
-                            bytesDownloaded += read
+                try {
+                    fileConn.inputStream.use { input ->
+                        targetFile.outputStream().use { output ->
+                            val buffer = ByteArray(65536)
+                            var fileDownloaded = 0L
+                            var read: Int
+                            while (input.read(buffer).also { read = it } != -1) {
+                                if (!coroutineContext.isActive) {
+                                    targetFile.delete()
+                                    return@withContext false
+                                }
+                                output.write(buffer, 0, read)
+                                fileDownloaded += read
+                                bytesDownloaded += read
 
-                            // Update progress
-                            val filePercent = if (size > 0) ((fileDownloaded * 100) / size).toInt() else 100
-                            val totalPercent = if (filteredTotal > 0) ((bytesDownloaded * 100) / filteredTotal).toInt() else 0
-                            _state.value = _state.value.copy(
-                                fileProgress = filePercent,
-                                totalProgress = totalPercent,
-                                bytesDownloaded = bytesDownloaded
-                            )
+                                // Update progress
+                                val filePercent = if (size > 0) ((fileDownloaded * 100) / size).toInt() else 100
+                                val totalPercent = if (filteredTotal > 0) ((bytesDownloaded * 100) / filteredTotal).toInt() else 0
+                                _state.value = _state.value.copy(
+                                    fileProgress = filePercent,
+                                    totalProgress = totalPercent,
+                                    bytesDownloaded = bytesDownloaded
+                                )
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    // Delete partial file so resume doesn't skip a corrupt file
+                    try { targetFile.delete() } catch (_: Exception) {}
+                    throw e
                 }
             }
 
