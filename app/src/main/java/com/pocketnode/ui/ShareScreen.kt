@@ -190,14 +190,16 @@ fun ShareScreen(
                             val sessionDone by ShareServer.sessionCompleteFlow.collectAsState()
                             Text(if (sessionDone) "✅ Freedom shared!" else "📡 Freedom uploading: $pct%",
                                 fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("$sessionCompleted / $sessionTotal files", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.height(4.dp))
-                            LinearProgressIndicator(
-                                progress = { sessionCompleted.toFloat() / sessionTotal },
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color(0xFF4CAF50),
-                                trackColor = Color.White.copy(alpha = 0.2f)
-                            )
+                            if (!sessionDone) {
+                                Text("$sessionCompleted / $sessionTotal files", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                                Spacer(Modifier.height(4.dp))
+                                LinearProgressIndicator(
+                                    progress = { sessionCompleted.toFloat() / sessionTotal },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = Color(0xFF4CAF50),
+                                    trackColor = Color.White.copy(alpha = 0.2f)
+                                )
+                            }
                         }
                     }
                 }
