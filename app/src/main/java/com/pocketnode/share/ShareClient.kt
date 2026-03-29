@@ -74,8 +74,10 @@ class ShareClient(private val context: Context) {
     suspend fun getInfo(host: String, port: Int = ShareServer.PORT): ShareInfo? = withContext(Dispatchers.IO) {
         try {
             val conn = openConn("http://$host:$port/info", host)
-            conn.connectTimeout = 5_000
-            conn.readTimeout = 5_000
+            if (!host.endsWith(".onion")) {
+                conn.connectTimeout = 5_000
+                conn.readTimeout = 5_000
+            }
             if (conn.responseCode != 200) return@withContext null
 
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
@@ -99,8 +101,10 @@ class ShareClient(private val context: Context) {
     suspend fun fetchPeerLimits(host: String, port: Int = ShareServer.PORT): Int = withContext(Dispatchers.IO) {
         try {
             val conn = openConn("http://$host:$port/peer-limits", host)
-            conn.connectTimeout = 5_000
-            conn.readTimeout = 5_000
+            if (!host.endsWith(".onion")) {
+                conn.connectTimeout = 5_000
+                conn.readTimeout = 5_000
+            }
             if (conn.responseCode != 200) return@withContext 0
 
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
