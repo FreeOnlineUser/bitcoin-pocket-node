@@ -186,10 +186,12 @@ class ShareClient(private val context: Context) {
                 val targetFile = File(bitcoinDir, path)
                 targetFile.parentFile?.mkdirs()
 
-                // Resume support: skip files with matching size
+                // Resume support: skip files with matching size and date
                 // Always re-download chainstate (small, must be consistent with blocks)
                 val isChainstate = path.startsWith("chainstate/")
-                if (!isChainstate && targetFile.exists() && targetFile.length() == size) {
+                val remoteModified = entry.lastModified
+                val sameDate = remoteModified == 0L || targetFile.lastModified() >= remoteModified
+                if (!isChainstate && targetFile.exists() && targetFile.length() == size && sameDate) {
                     bytesDownloaded += size
                     _state.value = _state.value.copy(
                         filesCompleted = index + 1,
