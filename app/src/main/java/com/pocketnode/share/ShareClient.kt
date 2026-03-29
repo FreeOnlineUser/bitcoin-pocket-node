@@ -85,20 +85,23 @@ class ShareClient(private val context: Context) {
             val editor = prefs.edit()
             var merged = 0
             json.keys().forEach { key ->
-                val value = json.get(key)
-                when (value) {
-                    is Long, is Int -> {
-                        val remote = json.getLong(key)
-                        val local = prefs.getLong(key, -1L)
-                        if (remote > local) {
-                            editor.putLong(key, remote)
+                try {
+                    val value = json.get(key)
+                    when (value) {
+                        is Number -> {
+                            val remote = value.toLong()
+                            val local = prefs.getLong(key, -1L)
+                            if (remote > 0 && remote > local) {
+                                editor.putLong(key, remote)
+                                merged++
+                            }
+                        }
+                        is Boolean -> {
+                            editor.putBoolean(key, value)
                             merged++
                         }
                     }
-                    is Boolean -> {
-                        editor.putBoolean(key, value)
-                    }
-                }
+                } catch (_: Exception) {}
             }
             editor.apply()
             Log.i(TAG, "Merged $merged peer limits from $host")
