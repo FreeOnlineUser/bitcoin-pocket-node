@@ -461,7 +461,7 @@ fun NearbyNodeScreen(
                 Text("Or enter manually:", style = MaterialTheme.typography.bodyMedium)
 
                 OutlinedTextField(
-                    value = if (host.isNotEmpty() && port > 0) "$host:$port" else host,
+                    value = host,
                     onValueChange = { input ->
                         error = null
                         val parts = input.split(":")
