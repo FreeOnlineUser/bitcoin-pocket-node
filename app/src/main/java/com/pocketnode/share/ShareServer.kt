@@ -42,6 +42,8 @@ class ShareServer(private val context: Context) {
         val sessionTotalFilesFlow: StateFlow<Int> = _sessionTotalFiles
         private val _sessionFilesCompleted = MutableStateFlow(0)
         val sessionFilesCompletedFlow: StateFlow<Int> = _sessionFilesCompleted
+        private val _sessionComplete = MutableStateFlow(false)
+        val sessionCompleteFlow: StateFlow<Boolean> = _sessionComplete
     }
 
     data class TransferInfo(
@@ -142,8 +144,16 @@ class ShareServer(private val context: Context) {
                         val json = org.json.JSONObject(body)
                         _sessionTotalFiles.value = json.optInt("totalFiles", 0)
                         _sessionFilesCompleted.value = 0
+                        _sessionComplete.value = false
                         Log.i(TAG, "Session started: ${_sessionTotalFiles.value} files expected")
                     } catch (_: Exception) {}
+                    sendResponse(socket, 200, "OK", """{"status":"ok"}""", contentType = "application/json")
+                    return@Thread
+                }
+
+                if (method == "POST" && path == "/complete") {
+                    _sessionComplete.value = true
+                    Log.i(TAG, "Session complete: receiver confirmed all files received")
                     sendResponse(socket, 200, "OK", """{"status":"ok"}""", contentType = "application/json")
                     return@Thread
                 }

@@ -187,7 +187,8 @@ fun ShareScreen(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF0D47A1))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(if (sessionCompleted >= sessionTotal) "✅ Freedom shared!" else "📡 Freedom uploading: $pct%",
+                            val sessionDone by ShareServer.sessionCompleteFlow.collectAsState()
+                            Text(if (sessionDone) "✅ Freedom shared!" else "📡 Freedom uploading: $pct%",
                                 fontWeight = FontWeight.Bold, color = Color.White)
                             Text("$sessionCompleted / $sessionTotal files", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.height(4.dp))

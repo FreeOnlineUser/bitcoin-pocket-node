@@ -241,6 +241,18 @@ class ShareClient(private val context: Context) {
             )
 
             Log.i(TAG, "Chainstate download complete: ${downloadList.size} files, $bytesDownloaded bytes")
+
+            // Notify sender that download is complete
+            try {
+                val completeConn = URL("http://$host:$port/complete").openConnection() as HttpURLConnection
+                completeConn.requestMethod = "POST"
+                completeConn.doOutput = true
+                completeConn.connectTimeout = 5_000
+                completeConn.outputStream.use { it.write("{}".toByteArray()) }
+                completeConn.responseCode
+                completeConn.disconnect()
+            } catch (_: Exception) {}
+
             true
         } catch (e: Exception) {
             Log.e(TAG, "Download failed: ${e.message}", e)
