@@ -187,7 +187,9 @@ class ShareClient(private val context: Context) {
                 targetFile.parentFile?.mkdirs()
 
                 // Resume support: skip files with matching size
-                if (targetFile.exists() && targetFile.length() == size) {
+                // Always re-download chainstate (small, must be consistent with blocks)
+                val isChainstate = path.startsWith("chainstate/")
+                if (!isChainstate && targetFile.exists() && targetFile.length() == size) {
                     bytesDownloaded += size
                     _state.value = _state.value.copy(
                         filesCompleted = index + 1,
