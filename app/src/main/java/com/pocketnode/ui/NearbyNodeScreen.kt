@@ -56,20 +56,6 @@ fun NearbyNodeScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var includeFilters by remember { mutableStateOf(false) }
 
-    // Ensure Tor is running for .onion connections
-    suspend fun ensureTor(): Boolean {
-        if (!host.endsWith(".onion")) return true
-        val torMgr = com.pocketnode.tor.TorManager.getInstance(context)
-        if (com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING) return true
-        torMgr.start()
-        var waited = 0
-        while (com.pocketnode.tor.TorManager.statusFlow.value != com.pocketnode.tor.TorManager.TorStatus.RUNNING && waited < 30) {
-            kotlinx.coroutines.delay(1000)
-            waited++
-        }
-        return com.pocketnode.tor.TorManager.statusFlow.value == com.pocketnode.tor.TorManager.TorStatus.RUNNING
-    }
-
     // Process QR scan result from navigation
     LaunchedEffect(scannedQrData) {
         if (scannedQrData != null) {
@@ -92,7 +78,6 @@ fun NearbyNodeScreen(
                 }
             }
             if (host.isNotEmpty()) {
-                if (!ensureTor()) { error = "Tor failed to start for .onion"; return@LaunchedEffect }
                 serverInfo = client.getInfo(host, port)
                 if (serverInfo == null) error = "Could not connect to $host:$port"
             }
@@ -105,7 +90,6 @@ fun NearbyNodeScreen(
             connecting = true
             error = null
             try {
-                if (!ensureTor()) { error = "Tor failed to start for .onion"; connecting = false; return@LaunchedEffect }
                 serverInfo = client.getInfo(host, port)
                 if (serverInfo == null) error = "Could not connect to $host:$port"
             } catch (e: Exception) {
@@ -387,13 +371,6 @@ fun NearbyNodeScreen(
                                 kotlinx.coroutines.delay(3000) // let services shut down
                             } catch (_: Exception) {}
 
-                            // Ensure Tor is running for .onion downloads
-                            if (!ensureTor()) {
-                                error = "Tor failed to start. Cannot connect to .onion address."
-                                downloading = false
-                                return@launch
-                            }
-
                             // Merge peer channel limits (lightweight, runs first)
                             client.fetchPeerLimits(host, port)
                             val success = client.downloadChainstate(host, port, includeFilters)
@@ -464,7 +441,6 @@ fun NearbyNodeScreen(
                             // Auto-connect after scan
                             connecting = true
                             scope.launch {
-                                if (!ensureTor()) { error = "Tor failed to start for .onion"; connecting = false; return@launch }
                                 serverInfo = client.getInfo(host, port)
                                 connecting = false
                                 if (serverInfo == null) {
@@ -503,7 +479,6 @@ fun NearbyNodeScreen(
                         connecting = true
                         error = null
                         scope.launch {
-                            if (!ensureTor()) { error = "Tor failed to start for .onion"; connecting = false; return@launch }
                             serverInfo = client.getInfo(host, port)
                             connecting = false
                             if (serverInfo == null) {

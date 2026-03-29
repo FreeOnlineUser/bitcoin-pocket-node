@@ -8,11 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import com.pocketnode.tor.TorManager
 import java.io.File
 import java.net.HttpURLConnection
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.net.URL
 import kotlin.coroutines.coroutineContext
 
@@ -24,26 +21,6 @@ class ShareClient(private val context: Context) {
 
     companion object {
         private const val TAG = "ShareClient"
-    }
-
-    /** Get proxy for .onion connections via Tor SOCKS5 */
-    private fun proxyFor(host: String): Proxy {
-        return if (host.endsWith(".onion")) {
-            Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", TorManager.SOCKS_PORT))
-        } else {
-            Proxy.NO_PROXY
-        }
-    }
-
-    /** Open HTTP connection, routing .onion through Tor */
-    private fun openConn(url: String, host: String): HttpURLConnection {
-        val conn = URL(url).openConnection(proxyFor(host)) as HttpURLConnection
-        // Tor is slower — use longer timeouts for .onion
-        if (host.endsWith(".onion")) {
-            conn.connectTimeout = 30_000
-            conn.readTimeout = 120_000
-        }
-        return conn
     }
 
     data class ShareInfo(
@@ -73,11 +50,9 @@ class ShareClient(private val context: Context) {
      */
     suspend fun getInfo(host: String, port: Int = ShareServer.PORT): ShareInfo? = withContext(Dispatchers.IO) {
         try {
-            val conn = openConn("http://$host:$port/info", host)
-            if (!host.endsWith(".onion")) {
-                conn.connectTimeout = 5_000
-                conn.readTimeout = 5_000
-            }
+            val conn = URL("http://$host:$port/info").openConnection() as HttpURLConnection
+            conn.connectTimeout = 5_000
+            conn.readTimeout = 5_000
             if (conn.responseCode != 200) return@withContext null
 
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
@@ -100,11 +75,9 @@ class ShareClient(private val context: Context) {
      */
     suspend fun fetchPeerLimits(host: String, port: Int = ShareServer.PORT): Int = withContext(Dispatchers.IO) {
         try {
-            val conn = openConn("http://$host:$port/peer-limits", host)
-            if (!host.endsWith(".onion")) {
-                conn.connectTimeout = 5_000
-                conn.readTimeout = 5_000
-            }
+            val conn = URL("http://$host:$port/peer-limits").openConnection() as HttpURLConnection
+            conn.connectTimeout = 5_000
+            conn.readTimeout = 5_000
             if (conn.responseCode != 200) return@withContext 0
 
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
@@ -152,7 +125,7 @@ class ShareClient(private val context: Context) {
             _state.value = DownloadState(phase = "Fetching file list...")
 
             // Get manifest
-            val manifestConn = openConn("http://$host:$port/manifest", host)
+            val manifestConn = URL("http://$host:$port/manifest").openConnection() as HttpURLConnection
             manifestConn.connectTimeout = 10_000
             manifestConn.readTimeout = 30_000
             if (manifestConn.responseCode != 200) {
@@ -182,7 +155,7 @@ class ShareClient(private val context: Context) {
 
             // Announce session to sender for progress tracking
             try {
-                val sessionConn = openConn("http://$host:$port/start-session", host)
+                val sessionConn = URL("http://$host:$port/start-session").openConnection() as HttpURLConnection
                 sessionConn.requestMethod = "POST"
                 sessionConn.doOutput = true
                 sessionConn.setRequestProperty("Content-Type", "application/json")
@@ -244,7 +217,7 @@ class ShareClient(private val context: Context) {
                 )
 
                 // Download file
-                val fileConn = openConn("http://$host:$port/file/$path", host)
+                val fileConn = URL("http://$host:$port/file/$path").openConnection() as HttpURLConnection
                 fileConn.connectTimeout = 10_000
                 fileConn.readTimeout = 60_000
                 
@@ -297,7 +270,7 @@ class ShareClient(private val context: Context) {
 
             // Notify sender that download is complete
             try {
-                val completeConn = openConn("http://$host:$port/complete", host)
+                val completeConn = URL("http://$host:$port/complete").openConnection() as HttpURLConnection
                 completeConn.requestMethod = "POST"
                 completeConn.doOutput = true
                 completeConn.connectTimeout = 5_000
