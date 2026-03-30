@@ -29,7 +29,8 @@ class PowerModeManager private constructor(private val context: Context) {
         // Burst sync intervals
         private const val LOW_BURST_INTERVAL_MS = 15 * 60 * 1000L   // 15 min
         private const val AWAY_BURST_INTERVAL_MS = 60 * 60 * 1000L  // 60 min
-        private const val BURST_SYNC_TIMEOUT_MS = 120 * 1000L       // 2 min max per burst
+        private const val BURST_SYNC_TIMEOUT_MS = 10 * 60 * 1000L   // 10 min safety cap per burst
+        private const val LDK_GRACE_PERIOD_MS = 15 * 1000L          // 15s extra for LDK after sync
 
         // Peer counts during burst
         private const val MAX_PEERS = 8
@@ -423,26 +424,40 @@ class PowerModeManager private constructor(private val context: Context) {
                 return
             }
 
-            // 3. Wait for headers to update (peers send new headers quickly, ~1-2s)
-            delay(2_000)
+            // 3. Wait for headers to advance (proves peers told us about new blocks)
+            //    If headers don't move within 10s of having peers, nothing's new.
+            var headers = preBlocks
+            val headerWaitStart = System.currentTimeMillis()
+            while (System.currentTimeMillis() - headerWaitStart < 10_000) {
+                val cur = client.getBlockchainInfo()
+                headers = cur?.optLong("headers", 0L) ?: 0L
+                if (headers > preBlocks) break  // Peers sent new headers
+                delay(1_000)
+            }
 
-            // 4. Check if new blocks need downloading
-            val info = client.getBlockchainInfo()
-            val headers = info?.optLong("headers", 0L) ?: 0L
-            val blocks = info?.optLong("blocks", 0L) ?: 0L
+            // 4. Sync blocks if headers advanced
+            val blocks = try {
+                client.getBlockchainInfo()?.optLong("blocks", 0L) ?: 0L
+            } catch (_: Exception) { 0L }
+            var hadNewBlocks = false
 
             if (headers > blocks) {
-                // New blocks to download. Wait for sync.
+                // New blocks to download. Wait until fully synced.
+                hadNewBlocks = true
                 Log.i(TAG, "Burst: downloading blocks $blocks -> $headers")
                 val syncStart = System.currentTimeMillis()
                 while (System.currentTimeMillis() - syncStart < BURST_SYNC_TIMEOUT_MS) {
                     val cur = client.getBlockchainInfo()
                     val curBlocks = cur?.optLong("blocks", 0L) ?: 0L
                     val curHeaders = cur?.optLong("headers", 0L) ?: 0L
-                    if (curBlocks >= curHeaders && curHeaders > 0) break
+                    if (curBlocks >= curHeaders && curHeaders > 0) {
+                        Log.i(TAG, "Burst: bitcoind synced to $curBlocks")
+                        break
+                    }
                     delay(2_000)
                 }
             } else if (blocks > preBlocks) {
+                hadNewBlocks = true
                 Log.i(TAG, "Burst: blocks already advanced $preBlocks -> $blocks")
             } else {
                 Log.i(TAG, "Burst: no new blocks (at $blocks)")
@@ -465,9 +480,16 @@ class PowerModeManager private constructor(private val context: Context) {
                 }
             }
 
+            // 6. Grace period: if new blocks arrived, keep network up a bit longer
+            //    so LDK can process gossip, pending HTLCs, scoring updates
+            if (hadNewBlocks && getLdkHeight != null) {
+                Log.i(TAG, "Burst: grace period (${LDK_GRACE_PERIOD_MS / 1000}s) for LDK post-sync")
+                delay(LDK_GRACE_PERIOD_MS)
+            }
+
             Log.i(TAG, "Burst: complete (was $preBlocks, now $finalBlocks)")
 
-            // 6. Network off
+            // 7. Network off
             if (_modeFlow.value != Mode.MAX) {
                 setNetworkActive(client, false)
             }
