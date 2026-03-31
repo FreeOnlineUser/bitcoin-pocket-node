@@ -656,8 +656,38 @@ class PowerModeManager private constructor(private val context: Context) {
             val params = JSONArray().apply { put(active) }
             client.call("setnetworkactive", params)
             Log.d(TAG, "setnetworkactive($active)")
+            // Disconnect all peers when going offline to stop traffic immediately
+            if (!active) {
+                disconnectAllPeers(client)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "setnetworkactive failed: ${e.message}")
+        }
+    }
+
+    /** Disconnect all connected peers to stop traffic immediately */
+    private suspend fun disconnectAllPeers(client: BitcoinRpcClient) {
+        try {
+            val peers = client.call("getpeerinfo") ?: return
+            // call() wraps array results as {"value": [...]}
+            val peerArray = peers.optJSONArray("value") ?: return
+            var disconnected = 0
+            for (i in 0 until peerArray.length()) {
+                val peer = peerArray.getJSONObject(i)
+                val addr = peer.optString("addr", "")
+                if (addr.isNotEmpty()) {
+                    try {
+                        val params = JSONArray().apply { put(addr) }
+                        client.call("disconnectnode", params)
+                        disconnected++
+                    } catch (_: Exception) {}
+                }
+            }
+            if (disconnected > 0) {
+                Log.i(TAG, "Disconnected $disconnected peers")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "disconnectAllPeers failed: ${e.message}")
         }
     }
 }
