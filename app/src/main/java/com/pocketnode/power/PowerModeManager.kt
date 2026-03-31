@@ -333,11 +333,13 @@ class PowerModeManager private constructor(private val context: Context) {
                 _nextBurstFlow.value = 0L
             }
             Mode.LOW -> {
-                // Burst sync every 15 minutes: sync to tip, then sleep
+                // Ensure network is off + peers disconnected before starting burst cycle
+                // (handles transition from IBD or mode change where old burst was cancelled)
+                setNetworkActive(client, false)
                 startBurstCycle(LOW_BURST_INTERVAL_MS)
             }
             Mode.AWAY -> {
-                // Start burst sync cycle: sync now, then sleep
+                setNetworkActive(client, false)
                 startBurstCycle(AWAY_BURST_INTERVAL_MS)
             }
         }
