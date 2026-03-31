@@ -320,8 +320,8 @@ See [Tor Integration](docs/tor-integration.md) for the full design document.
 - **ldk-node [#822](https://github.com/lightningdevkit/ldk-node/pull/822):** Wallet birthday support for seed restore. Draft, waiting on review.
 
 ### Grant Applications
-- **OpenSats:** Application submitted ($36k / 12 months)
-- **HRF Bitcoin Development Fund:** Application submitted ($36k / 12 months)
+- **OpenSats:** Application submitted
+- **HRF Bitcoin Development Fund:** Application submitted
 
 ### Hardening
 - [ ] Block LDK startup until prune recovery confirms completion (not just triggered)
