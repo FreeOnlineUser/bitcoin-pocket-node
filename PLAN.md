@@ -403,3 +403,4 @@ rpcpassword=<generated>
 **Why no `blocksonly=1`?** Partial mempool (50MB cap) for fee estimation, payment detection, privacy cover traffic, and compact block reconstruction.
 
 **Why Core 29.3 as default?** Includes BIP 110 consensus code (v72t's port from vanilla Core), standard relay rules, and universal `-signalbip110` toggle. Users who want the latest Core features (relaxed OP_RETURN) can switch to Core 30. Users who want stricter relay policy can switch to Knots 29.3. BIP 110 signaling works on both 29.3 binaries.
+
