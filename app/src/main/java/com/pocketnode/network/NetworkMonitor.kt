@@ -70,6 +70,8 @@ class NetworkMonitor private constructor(private val context: Context) {
     private val uid: Int = android.os.Process.myUid()
     private var lastRxBytes: Long = TrafficStats.getUidRxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
     private var lastTxBytes: Long = TrafficStats.getUidTxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
+    private var lastLoRx: Long = readLoopbackRx()
+    private var lastLoTx: Long = readLoopbackTx()
     private var lastNetworkState: NetworkState = NetworkState.OFFLINE
 
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -155,14 +157,45 @@ class NetworkMonitor private constructor(private val context: Context) {
         }
     }
 
+    /** Read loopback RX bytes from /proc/net/dev */
+    private fun readLoopbackRx(): Long {
+        return try {
+            java.io.File("/proc/net/dev").readLines()
+                .find { it.trimStart().startsWith("lo:") }
+                ?.trim()?.split("\\s+".toRegex())
+                ?.getOrNull(1)?.toLongOrNull() ?: 0L
+        } catch (_: Exception) { 0L }
+    }
+
+    /** Read loopback TX bytes from /proc/net/dev */
+    private fun readLoopbackTx(): Long {
+        return try {
+            java.io.File("/proc/net/dev").readLines()
+                .find { it.trimStart().startsWith("lo:") }
+                ?.trim()?.split("\\s+".toRegex())
+                ?.getOrNull(9)?.toLongOrNull() ?: 0L
+        } catch (_: Exception) { 0L }
+    }
+
     private fun sampleDataUsage() {
         val currentRx = TrafficStats.getUidRxBytes(uid)
         val currentTx = TrafficStats.getUidTxBytes(uid)
 
         if (currentRx == TrafficStats.UNSUPPORTED.toLong()) return
 
-        val deltaRx = (currentRx - lastRxBytes).coerceAtLeast(0)
-        val deltaTx = (currentTx - lastTxBytes).coerceAtLeast(0)
+        // Subtract loopback traffic (RPC to bitcoind on localhost)
+        val currentLoRx = readLoopbackRx()
+        val currentLoTx = readLoopbackTx()
+        val loopbackDeltaRx = (currentLoRx - lastLoRx).coerceAtLeast(0)
+        val loopbackDeltaTx = (currentLoTx - lastLoTx).coerceAtLeast(0)
+        lastLoRx = currentLoRx
+        lastLoTx = currentLoTx
+
+        val rawDeltaRx = (currentRx - lastRxBytes).coerceAtLeast(0)
+        val rawDeltaTx = (currentTx - lastTxBytes).coerceAtLeast(0)
+        // Remove loopback from the count (loopback counts in both directions)
+        val deltaRx = (rawDeltaRx - loopbackDeltaRx).coerceAtLeast(0)
+        val deltaTx = (rawDeltaTx - loopbackDeltaTx).coerceAtLeast(0)
 
         lastRxBytes = currentRx
         lastTxBytes = currentTx
