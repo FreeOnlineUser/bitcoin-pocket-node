@@ -89,8 +89,6 @@ fun NodeStatusScreen(
     var isRunning by remember { mutableStateOf(BitcoindService.isRunningFlow.value) }
     var assumeUtxoActive by remember { mutableStateOf(false) }
     val appPrefs = remember { context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE) }
-    var showPrice by remember { mutableStateOf(appPrefs.getBoolean("show_price", true)) }
-    var showFairTrade by remember { mutableStateOf(appPrefs.getBoolean("show_fair_trade", true)) }
     var oraclePrice by remember { mutableStateOf<Int?>(null) }
     val dashboardScrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -707,23 +705,17 @@ fun NodeStatusScreen(
                     }
                 }
 
-                // UTXOracle price card — always processing, visibility controlled by toggle
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = showPrice,
-                    enter = androidx.compose.animation.expandVertically(),
-                    exit = androidx.compose.animation.shrinkVertically()
-                ) {
-                    com.pocketnode.ui.components.OracleCard(
-                        isNodeSynced = nodeStatus.startsWith("Synced"),
-                        blockHeight = blockHeight,
-                        onPriceUpdate = { oraclePrice = it },
-                        onExpanded = null
-                    )
-                }
+                // UTXOracle price card
+                com.pocketnode.ui.components.OracleCard(
+                    isNodeSynced = nodeStatus.startsWith("Synced"),
+                    blockHeight = blockHeight,
+                    onPriceUpdate = { oraclePrice = it },
+                    onExpanded = null
+                )
 
                 // Fair Trade converter card
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = showFairTrade && oraclePrice != null,
+                    visible = oraclePrice != null,
                     enter = androidx.compose.animation.expandVertically(),
                     exit = androidx.compose.animation.shrinkVertically()
                 ) {
@@ -742,10 +734,7 @@ fun NodeStatusScreen(
                 ActionButtons(
                     isRunning = isRunning,
                     isSynced = nodeStatus.startsWith("Synced"),
-                    showPrice = showPrice,
-                    onShowPriceChange = { showPrice = it; appPrefs.edit().putBoolean("show_price", it).apply() },
-                    showFairTrade = showFairTrade,
-                    onShowFairTradeChange = { showFairTrade = it; appPrefs.edit().putBoolean("show_fair_trade", it).apply() },
+
                     onNavigateToDataUsage = onNavigateToDataUsage,
                     onNavigateToNetworkSettings = onNavigateToNetworkSettings,
                     onNavigateToSnapshot = onNavigateToSnapshot,
@@ -1207,10 +1196,7 @@ private fun PeerDetailsDialog(rpcUser: String, rpcPassword: String, onDismiss: (
 private fun ActionButtons(
     isRunning: Boolean,
     isSynced: Boolean = false,
-    showPrice: Boolean,
-    onShowPriceChange: (Boolean) -> Unit,
-    showFairTrade: Boolean,
-    onShowFairTradeChange: (Boolean) -> Unit,
+
     onNavigateToDataUsage: () -> Unit,
     onNavigateToNetworkSettings: () -> Unit,
     onNavigateToSnapshot: () -> Unit,
@@ -1226,44 +1212,7 @@ private fun ActionButtons(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         val bootPrefs = LocalContext.current.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
-        // Show price toggle (above Start on boot)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Show price",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Switch(
-                checked = showPrice,
-                onCheckedChange = { onShowPriceChange(it) },
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = Color(0xFFFF9800)
-                )
-            )
-        }
-        // Fair Trade toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Sovereign Converter",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Switch(
-                checked = showFairTrade,
-                onCheckedChange = { onShowFairTradeChange(it) },
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = Color(0xFFFF9800)
-                )
-            )
-        }
+
         // Auto-start on boot toggle
         var autoStartOnBoot by remember { mutableStateOf(bootPrefs.getBoolean("auto_start_on_boot", false)) }
         Row(
