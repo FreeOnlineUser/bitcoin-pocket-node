@@ -368,6 +368,9 @@ class AddressIndex(private val rpc: BitcoinRpcClient, private val context: Conte
      * Refreshes wallet transactions and persists any new ones.
      */
     suspend fun refreshOnNewBlock() {
+        // Skip if no addresses are tracked (avoids pointless wallet RPC calls)
+        if (addressToScripthash.isEmpty()) return
+
         // Query wallet for recent transactions (picks up newly confirmed + new incoming)
         val txResult = walletRpc("listtransactions", JSONArray().apply {
             put("*"); put(50); put(0); put(true)  // last 50 txs, include watchonly

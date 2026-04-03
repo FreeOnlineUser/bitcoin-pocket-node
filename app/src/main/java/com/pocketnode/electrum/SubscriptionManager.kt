@@ -104,24 +104,27 @@ class SubscriptionManager(
             lastTipHeight = currentHeight
         }
 
-        // Refresh wallet transactions every poll (catches unconfirmed txs between blocks)
-        try {
-            addressIndex.refreshOnNewBlock()
-        } catch (e: Exception) {
-            Log.d(TAG, "Tx refresh failed: ${e.message}")
-        }
-
-        // Check for scripthash changes on ALL tracked addresses
-        // Push unsolicited notifications so wallets like BlueWallet
-        // (which don't explicitly subscribe) still get notified
+        // Only poll wallet RPCs if addresses are actually tracked
         val allScripthashes = addressIndex.getAllTrackedScripthashes()
-        for (scripthash in allScripthashes) {
-            val newHash = addressIndex.getStatusHash(scripthash)
-            val oldHash = lastStatusHashes[scripthash]
-            if (newHash != oldHash) {
-                notifications.add(Notification.ScripthashChanged(scripthash, newHash))
-                lastStatusHashes[scripthash] = newHash
-                Log.i(TAG, "Scripthash changed: ${scripthash.take(16)}... (unsolicited notify)")
+        if (allScripthashes.isNotEmpty()) {
+            // Refresh wallet transactions (catches unconfirmed txs between blocks)
+            try {
+                addressIndex.refreshOnNewBlock()
+            } catch (e: Exception) {
+                Log.d(TAG, "Tx refresh failed: ${e.message}")
+            }
+
+            // Check for scripthash changes on ALL tracked addresses
+            // Push unsolicited notifications so wallets like BlueWallet
+            // (which don't explicitly subscribe) still get notified
+            for (scripthash in allScripthashes) {
+                val newHash = addressIndex.getStatusHash(scripthash)
+                val oldHash = lastStatusHashes[scripthash]
+                if (newHash != oldHash) {
+                    notifications.add(Notification.ScripthashChanged(scripthash, newHash))
+                    lastStatusHashes[scripthash] = newHash
+                    Log.i(TAG, "Scripthash changed: ${scripthash.take(16)}... (unsolicited notify)")
+                }
             }
         }
 
