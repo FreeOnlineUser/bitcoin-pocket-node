@@ -18,6 +18,7 @@ import com.pocketnode.util.BinaryExtractor
 import com.pocketnode.util.ConfigGenerator
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.pocketnode.lightning.LightningService
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -80,6 +81,7 @@ class BitcoindService : Service() {
     var syncController: SyncController? = null
         private set
     var batteryMonitor: BatteryMonitor? = null
+    var screenMonitor: ScreenMonitor? = null
         private set
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -103,6 +105,7 @@ class BitcoindService : Service() {
         syncController?.stop()
         networkMonitor?.stop()
         batteryMonitor?.stop()
+        screenMonitor?.stop()
         activeNetworkMonitor = null
         activeSyncController = null
         activeBatteryMonitor = null
@@ -183,6 +186,9 @@ class BitcoindService : Service() {
                             bm.start()
                             batteryMonitor = bm
                             activeBatteryMonitor = bm
+                            val sm = ScreenMonitor(this@BitcoindService)
+                            sm.start()
+                            screenMonitor = sm
                             startNotificationUpdater(testRpc)
                             val pmm = PowerModeManager.getInstance(this@BitcoindService)
                             pmm.reloadFromPrefs() // Re-read saved mode in case statics are stale
@@ -191,6 +197,42 @@ class BitcoindService : Service() {
                             pmm.startAutoIfEnabled(monitor.networkState, bm.state, serviceScope)
                             powerModeManager = pmm
                             _activePowerModeManager.value = pmm
+                            // Stop LDK on screen lock in Low/Away mode (no channels = safe to pause)
+                            serviceScope.launch {
+                                sm.isLockedFlow.collect { locked ->
+                                    val mode = PowerModeManager.modeFlow.value
+                                    if (mode == PowerModeManager.Mode.MAX) return@collect
+                                    val ls = LightningService.getInstance(this@BitcoindService)
+                                    if (locked) {
+                                        val channels = try {
+                                            ls.listChannels().size
+                                        } catch (_: Exception) { 1 }  // assume channels on error
+                                        if (channels == 0) {
+                                            val running = LightningService.stateFlow.value.status ==
+                                                LightningService.LightningState.Status.RUNNING
+                                            if (running) {
+                                                Log.i(TAG, "Screen locked, no channels: pausing LDK")
+                                                ls.stop()
+                                            }
+                                        }
+                                    } else {
+                                        // Screen unlocked: restart LDK if it was running before
+                                        val shouldRun = getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                                            .getBoolean("lightning_was_running", false)
+                                        val running = LightningService.stateFlow.value.status ==
+                                            LightningService.LightningState.Status.RUNNING
+                                        if (shouldRun && !running) {
+                                            val rpcPrefs = getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                                            val rpcUser2 = rpcPrefs.getString("rpc_user", "pocketnode") ?: "pocketnode"
+                                            val rpcPass2 = rpcPrefs.getString("rpc_password", "") ?: ""
+                                            if (rpcPass2.isNotEmpty()) {
+                                                Log.i(TAG, "Screen unlocked: resuming LDK")
+                                                ls.start(rpcUser2, rpcPass2)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             Log.i(TAG, "Attached to existing bitcoind, network control started")
 
                             // Stay alive — poll until bitcoind stops responding
