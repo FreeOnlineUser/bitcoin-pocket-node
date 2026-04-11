@@ -86,9 +86,6 @@ class PowerModeManager private constructor(private val context: Context) {
         /** Single mutex shared across all PowerModeManager instances */
         val burstMutex = kotlinx.coroutines.sync.Mutex()
 
-        /** Last known outbound peer addresses for sticky reconnect */
-        private val stickyPeers = mutableListOf<String>()
-
         @Volatile
         private var instance: PowerModeManager? = null
 
@@ -400,18 +397,11 @@ class PowerModeManager private constructor(private val context: Context) {
             client.getBlockchainInfo()?.optLong("blocks", 0L) ?: 0L
         } catch (_: Exception) { 0L }
 
-        // Snapshot network bytes before burst for cost measurement
-        val netBefore = try { client.call("getnettotals") } catch (_: Exception) { null }
-        val sentBefore = netBefore?.optLong("totalbytessent", 0) ?: 0
-        val recvBefore = netBefore?.optLong("totalbytesrecv", 0) ?: 0
-
         Log.i(TAG, "Burst: starting at block $preBlocks")
 
         try {
             // 1. Enable network
             setNetworkActive(client, true)
-            // Try reconnecting to last known peers first (faster than DNS discovery)
-            restoreStickyPeers(client)
 
             // 2. Wait for at least one peer (up to 30s — cold start needs longer)
             var hasPeers = false
@@ -498,16 +488,6 @@ class PowerModeManager private constructor(private val context: Context) {
                 Log.i(TAG, "Burst: grace period (${LDK_GRACE_PERIOD_MS / 1000}s) for LDK post-sync")
                 delay(LDK_GRACE_PERIOD_MS)
             }
-
-            // Log burst cost
-            try {
-                val netAfter = client.call("getnettotals")
-                val sentAfter = netAfter?.optLong("totalbytessent", 0) ?: 0
-                val recvAfter = netAfter?.optLong("totalbytesrecv", 0) ?: 0
-                val sentKB = (sentAfter - sentBefore) / 1024
-                val recvKB = (recvAfter - recvBefore) / 1024
-                Log.i(TAG, "Burst cost: sent=${sentKB}KB recv=${recvKB}KB newBlocks=$hadNewBlocks")
-            } catch (_: Exception) {}
 
             Log.i(TAG, "Burst: complete (was $preBlocks, now $finalBlocks)")
 
@@ -693,16 +673,10 @@ class PowerModeManager private constructor(private val context: Context) {
             val peers = client.call("getpeerinfo") ?: return
             // call() wraps array results as {"value": [...]}
             val peerArray = peers.optJSONArray("value") ?: return
-            val saved = mutableListOf<String>()
             var disconnected = 0
             for (i in 0 until peerArray.length()) {
                 val peer = peerArray.getJSONObject(i)
                 val addr = peer.optString("addr", "")
-                val connType = peer.optString("connection_type", "")
-                // Only save outbound full-relay peers for sticky reconnect
-                if (addr.isNotEmpty() && (connType == "outbound-full-relay" || connType.isEmpty())) {
-                    saved.add(addr)
-                }
                 if (addr.isNotEmpty()) {
                     try {
                         val params = JSONArray().apply { put(addr) }
@@ -711,35 +685,11 @@ class PowerModeManager private constructor(private val context: Context) {
                     } catch (_: Exception) {}
                 }
             }
-            if (saved.isNotEmpty()) {
-                synchronized(stickyPeers) {
-                    stickyPeers.clear()
-                    stickyPeers.addAll(saved.take(4))  // Keep up to 4
-                }
-                Log.d(TAG, "Saved ${saved.size} sticky peer(s)")
-            }
             if (disconnected > 0) {
                 Log.i(TAG, "Disconnected $disconnected peers")
             }
         } catch (e: Exception) {
             Log.e(TAG, "disconnectAllPeers failed: ${e.message}")
         }
-    }
-
-    /** Reconnect to previously known peers to skip DNS discovery */
-    private suspend fun restoreStickyPeers(client: BitcoinRpcClient) {
-        val peers = synchronized(stickyPeers) { stickyPeers.toList() }
-        if (peers.isEmpty()) return
-        var restored = 0
-        for (addr in peers) {
-            try {
-                val params = JSONArray().apply { put(""); put(addr) }
-                client.call("addnode", params.also { it.put("onetry") }.let {
-                    JSONArray().apply { put(addr); put("onetry") }
-                })
-                restored++
-            } catch (_: Exception) {}
-        }
-        if (restored > 0) Log.d(TAG, "Restored $restored sticky peer(s)")
     }
 }
