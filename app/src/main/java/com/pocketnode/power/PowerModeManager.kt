@@ -397,6 +397,11 @@ class PowerModeManager private constructor(private val context: Context) {
             client.getBlockchainInfo()?.optLong("blocks", 0L) ?: 0L
         } catch (_: Exception) { 0L }
 
+        // Snapshot network totals before burst for cost measurement
+        val netBefore = try { client.call("getnettotals") } catch (_: Exception) { null }
+        val sentBefore = netBefore?.optLong("totalbytessent", 0) ?: 0
+        val recvBefore = netBefore?.optLong("totalbytesrecv", 0) ?: 0
+
         Log.i(TAG, "Burst: starting at block $preBlocks")
 
         try {
@@ -488,6 +493,14 @@ class PowerModeManager private constructor(private val context: Context) {
                 Log.i(TAG, "Burst: grace period (${LDK_GRACE_PERIOD_MS / 1000}s) for LDK post-sync")
                 delay(LDK_GRACE_PERIOD_MS)
             }
+
+            // Log burst cost (useful for diagnosing which phase uses data)
+            try {
+                val netAfter = client.call("getnettotals")
+                val sentKB = ((netAfter?.optLong("totalbytessent", 0) ?: 0) - sentBefore) / 1024
+                val recvKB = ((netAfter?.optLong("totalbytesrecv", 0) ?: 0) - recvBefore) / 1024
+                Log.i(TAG, "Burst cost: sent=${sentKB}KB recv=${recvKB}KB newBlocks=$hadNewBlocks")
+            } catch (_: Exception) {}
 
             Log.i(TAG, "Burst: complete (was $preBlocks, now $finalBlocks)")
 
