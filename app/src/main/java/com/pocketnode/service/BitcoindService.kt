@@ -16,6 +16,7 @@ import com.pocketnode.rpc.BitcoinRpcClient
 import com.pocketnode.power.PowerModeManager
 import com.pocketnode.util.BinaryExtractor
 import com.pocketnode.util.ConfigGenerator
+import org.json.JSONArray
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.pocketnode.lightning.LightningService
@@ -68,12 +69,18 @@ class BitcoindService : Service() {
         /** Whether bitcoind is currently running — observed by dashboard on launch */
         private val _isRunning = MutableStateFlow(false)
         val isRunningFlow: StateFlow<Boolean> = _isRunning
+
+        /** Callback to restart bitcoind with different args (set by service instance) */
+        var restartForBurstMode: (suspend (burstMode: Boolean) -> Unit)? = null
     }
 
     private var bitcoindProcess: Process? = null
     private var notificationJob: Job? = null
     private var powerModeManager: PowerModeManager? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var cachedBinaryPath: File? = null
+    private var cachedDataDir: File? = null
+    @Volatile private var isRestarting = false
 
     // Network-aware sync control
     var networkMonitor: NetworkMonitor? = null
@@ -197,6 +204,11 @@ class BitcoindService : Service() {
                             pmm.startAutoIfEnabled(monitor.networkState, bm.state, serviceScope)
                             powerModeManager = pmm
                             _activePowerModeManager.value = pmm
+                            // Wire up restart callback
+                            restartForBurstMode = { burstMode -> restartForMode(burstMode) }
+                            // Cache paths for restart
+                            cachedBinaryPath = binaryPath
+                            cachedDataDir = dataDir
                             // Stop LDK on screen lock in Low/Away mode (no channels = safe to pause)
                             serviceScope.launch {
                                 sm.isLockedFlow.collect { locked ->
@@ -238,6 +250,7 @@ class BitcoindService : Service() {
                             // Stay alive — poll until bitcoind stops responding
                             while (_isRunning.value) {
                                 delay(10_000)
+                                if (isRestarting) continue  // Don't break during intentional restart
                                 try {
                                     val check = testRpc.getBlockchainInfo()
                                     if (check == null) {
@@ -245,6 +258,7 @@ class BitcoindService : Service() {
                                         break
                                     }
                                 } catch (_: Exception) {
+                                    if (isRestarting) continue
                                     Log.w(TAG, "Existing bitcoind RPC failed")
                                     break
                                 }
@@ -260,36 +274,14 @@ class BitcoindService : Service() {
             }
 
             // Step 3: Start the process
-            val nativeLibDir = applicationInfo.nativeLibraryDir
-
-            val args = mutableListOf(
-                binaryPath.absolutePath,
-                "-datadir=${dataDir.absolutePath}",
-                "-conf=${dataDir.resolve("bitcoin.conf").absolutePath}"
-            )
-
-            // BIP 110 signaling: pass flag when enabled (works with both Core and Knots)
-            // Also bump maxconnections to 8 because peer filtering caps
-            // non-BIP110 peers at 2, which starves a 4-connection node
-            if (BinaryExtractor.isSignalBip110(this)) {
-                args.add("-signalbip110=1")
-                args.add("-uacomment=BIP-110")
-                args.add("-maxconnections=8")
-            }
-
-            // Tor: route all P2P through SOCKS proxy when enabled
-            if (com.pocketnode.tor.TorManager.enabledFlow.value) {
-                args.add("-proxy=127.0.0.1:${com.pocketnode.tor.TorManager.SOCKS_PORT}")
-                args.add("-onlynet=onion")
-                args.add("-dnsseed=0")
-            }
-
-            val pb = ProcessBuilder(args)
-            pb.directory(dataDir)
-            pb.environment()["LD_LIBRARY_PATH"] = nativeLibDir
-            pb.redirectErrorStream(true)
-
-            val process = pb.start()
+            cachedBinaryPath = binaryPath
+            cachedDataDir = dataDir
+            // Reload saved mode before reading the flow: the static defaults to LOW,
+            // so a fresh process would otherwise launch bitcoind with burst args
+            // even when the saved mode is Max.
+            PowerModeManager.getInstance(this@BitcoindService).reloadFromPrefs()
+            val isBurstMode = PowerModeManager.modeFlow.value != PowerModeManager.Mode.MAX
+            val process = startBitcoindProcess(binaryPath, dataDir, isBurstMode)
             bitcoindProcess = process
 
             _isRunning.value = true
@@ -323,6 +315,14 @@ class BitcoindService : Service() {
                 pmm.startAutoIfEnabled(monitor.networkState, bm.state, serviceScope)
                 powerModeManager = pmm
                 _activePowerModeManager.value = pmm
+
+                // Wire up restart callback so PMM can restart bitcoind on mode change
+                restartForBurstMode = { burstMode -> restartForMode(burstMode) }
+
+                // Clear any block-index invalidity inherited from a stricter
+                // previously-active binary (see reconsiderInheritedInvalidBlocks).
+                serviceScope.launch(Dispatchers.IO) { reconsiderInheritedInvalidBlocks(rpc) }
+
                 Log.i(TAG, "Network-aware sync control started")
             }
 
@@ -339,15 +339,215 @@ class BitcoindService : Service() {
                 }
             }
 
-            // Wait for process to exit
+            // Wait for process to exit — but if it was replaced by restartForMode,
+            // the new process is already running, so don't mark as stopped
             val exitCode = withContext(Dispatchers.IO) { process.waitFor() }
-            _isRunning.value = false
-            Log.i(TAG, "bitcoind exited with code $exitCode")
-            updateNotification("Stopped (exit: $exitCode)")
+            if (bitcoindProcess === process) {
+                // This was the active process — it exited for real
+                _isRunning.value = false
+                Log.i(TAG, "bitcoind exited with code $exitCode")
+                updateNotification("Stopped (exit: $exitCode)")
+            } else {
+                Log.i(TAG, "bitcoind process replaced by restart (exit: $exitCode)")
+            }
         } catch (e: Exception) {
             _isRunning.value = false
             Log.e(TAG, "Failed to start bitcoind", e)
             updateNotification("Error: ${e.message}")
+        }
+    }
+
+    /**
+     * Build args and start the bitcoind process.
+     * burstMode=true adds -blocksonly and -maxconnections=3 for Low/Away modes.
+     */
+    private fun startBitcoindProcess(binaryPath: File, dataDir: File, burstMode: Boolean): Process {
+        val nativeLibDir = applicationInfo.nativeLibraryDir
+
+        val args = mutableListOf(
+            binaryPath.absolutePath,
+            "-datadir=${dataDir.absolutePath}",
+            "-conf=${dataDir.resolve("bitcoin.conf").absolutePath}"
+        )
+
+        // BIP 110 signaling
+        if (BinaryExtractor.isSignalBip110(this)) {
+            args.add("-signalbip110=1")
+            args.add("-uacomment=BIP-110")
+        }
+
+        // Tor: route all P2P through SOCKS proxy when enabled
+        if (com.pocketnode.tor.TorManager.enabledFlow.value) {
+            args.add("-proxy=127.0.0.1:${com.pocketnode.tor.TorManager.SOCKS_PORT}")
+            args.add("-onlynet=onion")
+            args.add("-dnsseed=0")
+        }
+
+        // Low/Away mode: suppress mempool relay and limit peers
+        if (burstMode) {
+            args.add("-blocksonly=1")
+            args.add("-maxconnections=3")
+            Log.i(TAG, "Burst mode: -blocksonly=1 -maxconnections=3")
+        } else {
+            args.add("-maxconnections=8")
+        }
+
+        val pb = ProcessBuilder(args)
+        pb.directory(dataDir)
+        pb.environment()["LD_LIBRARY_PATH"] = nativeLibDir
+        pb.redirectErrorStream(true)
+
+        val process = pb.start()
+        Log.i(TAG, "bitcoind started (burstMode=$burstMode)")
+        return process
+    }
+
+    /**
+     * Restart bitcoind with different args for a mode change (Max <-> Low/Away).
+     * Stops the current process via RPC, waits for exit, starts with new args.
+     */
+    suspend fun restartForMode(burstMode: Boolean) {
+        val binaryPath = cachedBinaryPath ?: return
+        val dataDir = cachedDataDir ?: return
+
+        Log.i(TAG, "Restarting bitcoind for ${if (burstMode) "burst" else "max"} mode")
+        updateNotification("Restarting...")
+        isRestarting = true
+
+        // Stop current process
+        stopBitcoind()
+        isRestarting = false
+
+        // Start with new args
+        val process = startBitcoindProcess(binaryPath, dataDir, burstMode)
+        bitcoindProcess = process
+        _isRunning.value = true
+        updateNotification("Running")
+
+        // Re-establish RPC connection for PowerModeManager
+        val creds = ConfigGenerator.readCredentials(this@BitcoindService)
+        if (creds != null) {
+            // Wait for RPC to be ready (up to 10s)
+            val rpc = BitcoinRpcClient(creds.first, creds.second)
+            var ready = false
+            for (i in 1..20) {
+                try {
+                    if (rpc.getBlockchainInfo() != null) {
+                        ready = true
+                        break
+                    }
+                } catch (_: Exception) {}
+                delay(500)
+            }
+            if (ready) {
+                powerModeManager?.setRpc(rpc)
+                Log.i(TAG, "RPC reconnected after restart")
+            } else {
+                Log.w(TAG, "RPC not ready after restart")
+            }
+        }
+
+        // Log stdout in background
+        serviceScope.launch {
+            try {
+                process.inputStream.bufferedReader().useLines { lines ->
+                    lines.forEach { line -> Log.d(TAG, "bitcoind: $line") }
+                }
+            } catch (_: java.io.InterruptedIOException) {}
+            catch (_: java.io.IOException) {}
+        }
+    }
+
+    /**
+     * Clear block-index "invalid" flags inherited from a previously-active
+     * binary with stricter consensus rules.
+     *
+     * The BLOCK_FAILED flag lives in the datadir's block index, not in the
+     * binary. If a stricter build (e.g. a BIP-110 / UASF reduced-data Knots
+     * build) marks a mainnet block invalid, then the active binary is later
+     * swapped for a non-enforcing one (e.g. Core v30), the new binary inherits
+     * the verdict and refuses to sync past that block even though it would
+     * accept the block under its own rules. reconsiderblock clears the flag
+     * (block + ancestors + descendants) so sync resumes.
+     *
+     * A stricter binary can mark MANY blocks invalid (e.g. a mandatory-signaling
+     * UASF rejects every non-signaling block), and those flags only surface as
+     * blockers progressively, as the node downloads up to each one during
+     * catch-up. So this runs for the service lifetime as a periodic healer, not
+     * a one-shot: it keeps sweeping getchaintips for "invalid" branches and
+     * clearing them. It does NOT stop when the chain first looks synced —
+     * blocks==headers is true transiently during catch-up (in the lull after
+     * consuming the known headers, before the next batch carrying the next
+     * poisoned block arrives), so exiting there would strand a later blocker.
+     * Instead it announces "synced" once and drops to a slow heartbeat sweep,
+     * which also self-heals any future occurrence (e.g. another binary swap).
+     * Safe on a clean index: getchaintips reports no invalid branches, nothing
+     * is cleared, and the heartbeat stays quiet.
+     */
+    private suspend fun reconsiderInheritedInvalidBlocks(rpc: BitcoinRpcClient) {
+        // Wait for RPC to finish warmup. During warmup the daemon returns
+        // error -28, which call() surfaces as a NON-null {"_rpc_error":true}
+        // object — so checking for non-null isn't enough, we must confirm a
+        // real (non-error) result before issuing the sweep.
+        var ready = false
+        for (i in 1..60) {
+            val info = rpc.getBlockchainInfo()
+            if (info != null && !info.optBoolean("_rpc_error", false)) { ready = true; break }
+            delay(1_000)
+        }
+        if (!ready) {
+            Log.w(TAG, "reconsider: RPC not ready after 60s, skipping invalid-block sweep")
+            return
+        }
+
+        var totalCleared = 0
+        var announcedSynced = false
+        while (currentCoroutineContext().isActive) {
+            val info = rpc.getBlockchainInfo()
+            if (info == null || info.optBoolean("_rpc_error", false)) { delay(10_000); continue }
+            val blocks = info.optLong("blocks", 0)
+            val headers = info.optLong("headers", 0)
+            val ibd = info.optBoolean("initialblockdownload", true)
+
+            var clearedThisPass = 0
+            try {
+                val result = rpc.call("getchaintips")
+                val tips = if (result != null && !result.optBoolean("_rpc_error", false))
+                    result.optJSONArray("value") else null
+                if (tips != null) {
+                    for (i in 0 until tips.length()) {
+                        val tip = tips.getJSONObject(i)
+                        if (tip.optString("status") == "invalid") {
+                            val hash = tip.optString("hash")
+                            val height = tip.optLong("height")
+                            Log.w(TAG, "reconsider: invalid branch tip at $height ($hash) — clearing")
+                            try {
+                                rpc.call("reconsiderblock", JSONArray().apply { put(hash) })
+                                clearedThisPass++
+                                totalCleared++
+                            } catch (e: Exception) {
+                                Log.e(TAG, "reconsider: reconsiderblock failed for $hash: ${e.message}")
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "reconsider: getchaintips sweep failed: ${e.message}")
+            }
+
+            if (clearedThisPass > 0) {
+                announcedSynced = false  // a new blocker appeared; not done
+                Log.i(TAG, "reconsider: cleared $clearedThisPass invalid branch(es) (total $totalCleared), resuming sync")
+                delay(8_000)  // let it reconnect/advance, then re-check soon
+            } else {
+                if (!ibd && blocks >= headers - 1 && !announcedSynced) {
+                    announcedSynced = true
+                    Log.i(TAG, "reconsider: chain synced ($blocks/$headers), $totalCleared invalid branch(es) cleared total")
+                }
+                // Slow heartbeat once synced; faster while still catching up so a
+                // freshly-surfaced blocker is cleared promptly.
+                delay(if (announcedSynced) 120_000 else 20_000)
+            }
         }
     }
 

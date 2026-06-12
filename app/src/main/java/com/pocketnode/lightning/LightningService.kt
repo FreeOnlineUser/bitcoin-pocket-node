@@ -249,7 +249,7 @@ class LightningService(private val context: Context) {
                 val staleThreshold = 500 // blocks behind before we reset
                 if (lastLdkHeight > 0 && bitcoindHeight > 0 && (bitcoindHeight - lastLdkHeight) > staleThreshold) {
                     Log.w(TAG, "LDK chain state is stale: LDK at $lastLdkHeight, bitcoind at $bitcoindHeight (${bitcoindHeight - lastLdkHeight} blocks behind)")
-                    Log.w(TAG, "Resetting chain state to avoid synchronize_listeners hang. Seed and channels preserved.")
+                    Log.w(TAG, "Requesting chain state reset to avoid synchronize_listeners hang (refused if channel monitors exist).")
                     recovery.resetChainState(storageDir)
                 }
             }

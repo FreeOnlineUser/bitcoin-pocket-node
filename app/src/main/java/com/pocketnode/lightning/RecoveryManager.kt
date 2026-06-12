@@ -332,7 +332,19 @@ class RecoveryManager(private val context: Context) {
     // ── Chain State Reset ────────────────────────────────────────────
 
     fun resetChainState(storageDir: File) {
-        val preserveNames = setOf("keys_seed", "keys_seed.bak", "mnemonic", "channel_manager", "monitors", "wallet_birthday")
+        // Fund-safety guard: with the SQLite store, channel_manager and all
+        // monitors live inside ldk_node_data.sqlite. If any monitors exist,
+        // deleting the store destroys channel state (HARD RULE: never
+        // auto-delete wallet/channel state). A stale sync is recoverable;
+        // lost monitors are not.
+        val monitorCount = countStoredMonitors(storageDir)
+        if (monitorCount != 0) {
+            Log.w(TAG, "resetChainState: REFUSING to reset. " +
+                    if (monitorCount > 0) "$monitorCount channel monitor(s) in store."
+                    else "Monitor check failed; assuming monitors present.")
+            return
+        }
+        val preserveNames = setOf("keys_seed", "keys_seed.bak", "mnemonic", "channel_manager", "monitors", "wallet_birthday", "channel_backups.json")
         storageDir.listFiles()?.forEach { file ->
             if (file.name !in preserveNames) {
                 val deleted = file.deleteRecursively()
@@ -340,6 +352,32 @@ class RecoveryManager(private val context: Context) {
             } else {
                 Log.d(TAG, "resetChainState: preserved ${file.name}")
             }
+        }
+    }
+
+    /**
+     * Counts channel monitors inside the LDK SQLite store.
+     * Returns 0 only when the store is confirmed monitor-free (or absent);
+     * returns -1 when the check fails, so callers fail safe.
+     */
+    private fun countStoredMonitors(storageDir: File): Int {
+        val sqliteFile = File(storageDir, "ldk_node_data.sqlite")
+        if (!sqliteFile.exists()) return 0
+        return try {
+            android.database.sqlite.SQLiteDatabase.openDatabase(
+                sqliteFile.absolutePath, null,
+                android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+            ).use { db ->
+                db.rawQuery(
+                    "SELECT COUNT(*) FROM ldk_node_data WHERE primary_namespace='monitors'",
+                    null
+                ).use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getInt(0) else -1
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "countStoredMonitors failed: ${e.message}")
+            -1
         }
     }
 

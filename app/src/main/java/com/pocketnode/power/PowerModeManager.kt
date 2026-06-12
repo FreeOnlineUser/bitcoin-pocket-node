@@ -32,10 +32,9 @@ class PowerModeManager private constructor(private val context: Context) {
         private const val BURST_SYNC_TIMEOUT_MS = 10 * 60 * 1000L   // 10 min safety cap per burst
         private const val LDK_GRACE_PERIOD_MS = 15 * 1000L          // 15s extra for LDK after sync
 
-        // Peer counts during burst
+        // Peer counts
         private const val MAX_PEERS = 8
-        private const val LOW_PEERS = 8
-        private const val AWAY_PEERS = 8
+        private const val BURST_PEERS = 3  // Low/Away: fewer peers = less overhead
 
         private const val PREF_KEY_AUTO_POWER = "power_mode_auto"
         private const val PREF_KEY_MANUAL_MODE = "power_mode_manual"
@@ -238,8 +237,19 @@ class PowerModeManager private constructor(private val context: Context) {
         _burstStateFlow.value = BurstState.IDLE
         _nextBurstFlow.value = 0L
 
-        scope.launch(Dispatchers.IO) {
-            applyMode(mode)
+        // Restart bitcoind when crossing Max <-> Low/Away boundary
+        // (blocksonly + maxconnections change requires process restart)
+        val wasBurst = previous != Mode.MAX
+        val isBurst = mode != Mode.MAX
+        if (wasBurst != isBurst) {
+            scope.launch(Dispatchers.IO) {
+                com.pocketnode.service.BitcoindService.restartForBurstMode?.invoke(isBurst)
+                applyMode(mode)
+            }
+        } else {
+            scope.launch(Dispatchers.IO) {
+                applyMode(mode)
+            }
         }
     }
 
