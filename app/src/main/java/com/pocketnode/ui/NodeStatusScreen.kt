@@ -146,6 +146,7 @@ fun NodeStatusScreen(
 
     // Startup detail from debug.log (shown when RPC has no data yet)
     var startupDetail by remember { mutableStateOf("") }
+    var deferredDetail by remember { mutableStateOf("") }
     // Mini log — last few meaningful lines from debug.log during startup
     var miniLog by remember { mutableStateOf(listOf<String>()) }
     // Track whether we've already auto-started BWT this session
@@ -338,8 +339,17 @@ fun NodeStatusScreen(
                     } else 0.0
 
                     val blocksBehind = if (headerHeight > 0 && blockHeight > 0) headerHeight - blockHeight else 0L
+                    // Blocks intentionally deferred: on metered, bursts only fetch
+                    // headers and block download waits for WiFi or Max mode
+                    val deferred = blocksBehind > 1 && !ibd && syncProgress >= 0.9999 &&
+                        PowerModeManager.modeFlow.value != PowerModeManager.Mode.MAX &&
+                        NetworkMonitor.getInstance(context).networkState.value == NetworkState.CELLULAR
+                    deferredDetail = if (deferred) {
+                        "$blocksBehind block${if (blocksBehind == 1L) "" else "s"} waiting for WiFi (saving mobile data)"
+                    } else ""
                     val newStatus = when {
                         assumeUtxoActive -> "Synced (validating)"
+                        deferred -> "Synced (deferred)"
                         syncProgress >= 0.9999 && !ibd && blocksBehind <= 1 -> "Synced"
                         syncProgress >= 0.9999 && !ibd && blocksBehind > 1 -> "Catching up"
                         syncProgress >= 0.9999 -> "Almost synced"
@@ -664,7 +674,12 @@ fun NodeStatusScreen(
                 }
 
                 // Status indicator
-                StatusHeader(nodeStatus = nodeStatus, chain = chain, detail = startupDetail, miniLog = miniLog)
+                StatusHeader(
+                    nodeStatus = nodeStatus,
+                    chain = chain,
+                    detail = deferredDetail.ifEmpty { startupDetail },
+                    miniLog = miniLog
+                )
 
                 // Chainstate copy progress (visible from dashboard while copy runs)
                 ChainstateProgressCard(context)
@@ -792,6 +807,7 @@ private fun StatusHeader(nodeStatus: String, chain: String, detail: String = "",
             nodeStatus == "Pruning" -> Color(0xFFFFC107)
             nodeStatus == "Starting network" -> Color(0xFF03A9F4)
             nodeStatus == "Catching up" -> Color(0xFF2196F3)
+            nodeStatus == "Synced (deferred)" -> Color(0xFF26A69A)
             nodeStatus == "Starting" -> Color(0xFFFFC107)
             nodeStatus == "Error" -> Color(0xFFF44336)
             else -> Color(0xFF757575)
