@@ -383,11 +383,15 @@ class BitcoindService : Service() {
             args.add("-dnsseed=0")
         }
 
-        // Low/Away mode: suppress mempool relay and limit peers
+        // Low/Away mode: suppress mempool relay, limit peers, cap upload.
+        // Inbound is already loopback-only via bind=127.0.0.1 in bitcoin.conf
+        // (-listen=0 would fatally conflict with that bind line), so
+        // -maxuploadtarget just caps what outbound peers can pull (MiB/24h).
         if (burstMode) {
             args.add("-blocksonly=1")
             args.add("-maxconnections=3")
-            Log.i(TAG, "Burst mode: -blocksonly=1 -maxconnections=3")
+            args.add("-maxuploadtarget=50")
+            Log.i(TAG, "Burst mode: -blocksonly=1 -maxconnections=3 -maxuploadtarget=50")
         } else {
             args.add("-maxconnections=8")
         }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.pocketnode.rpc.BitcoinRpcClient
+import com.pocketnode.network.HeadersClient
+import com.pocketnode.network.NetworkMonitor
 import com.pocketnode.network.NetworkState
 import com.pocketnode.service.BatteryMonitor
 import kotlinx.coroutines.*
@@ -35,6 +37,13 @@ class PowerModeManager private constructor(private val context: Context) {
         // Peer counts
         private const val MAX_PEERS = 8
         private const val BURST_PEERS = 3  // Low/Away: fewer peers = less overhead
+
+        // Metered deferral: on cellular, bursts fetch headers only (80 bytes each)
+        // and block download waits for WiFi/Max. Past this many blocks behind,
+        // sync anyway: the prune window is 2048 blocks and falling out of it
+        // means a full re-bootstrap, far worse than the data cost.
+        private const val METERED_FORCE_SYNC_BLOCKS = 1440L
+        private const val PREF_KEY_PROBE_PEERS = "headers_probe_peers"
 
         private const val PREF_KEY_AUTO_POWER = "power_mode_auto"
         private const val PREF_KEY_MANUAL_MODE = "power_mode_manual"
@@ -142,6 +151,10 @@ class PowerModeManager private constructor(private val context: Context) {
     /** Set the RPC client once bitcoind is running */
     fun setRpc(client: BitcoinRpcClient) {
         rpc = client
+        // Seed the headers probe with the live peers captured last session
+        prefs.getString(PREF_KEY_PROBE_PEERS, null)
+            ?.split(",")
+            ?.let { HeadersClient.rememberLivePeers(it) }
         // If burst sync should be running but wasn't started (rpc was null during applyMode),
         // kick it off now. This ensures burst sync always starts even if setRpc is called
         // after setMode.
@@ -402,6 +415,41 @@ class PowerModeManager private constructor(private val context: Context) {
         }
         _burstStateFlow.value = BurstState.SYNCING
 
+        // Metered gate: on cellular, learn the tip from an 80-byte-per-header
+        // P2P probe instead of enabling bitcoind's network. Block download
+        // waits for WiFi/Max unless we risk falling out of the prune window.
+        val onMetered = try {
+            NetworkMonitor.getInstance(context).networkState.value == NetworkState.CELLULAR
+        } catch (_: Exception) { false }
+        if (onMetered) {
+            try {
+                val probe = HeadersClient.probe(client)
+                val info = client.getBlockchainInfo()?.takeIf { !it.optBoolean("_rpc_error", false) }
+                val blocksNow = info?.optLong("blocks", 0L) ?: 0L
+                val headersNow = info?.optLong("headers", 0L) ?: 0L
+                val behind = headersNow - blocksNow
+                if (probe.success && behind <= METERED_FORCE_SYNC_BLOCKS) {
+                    Log.i(TAG, "Burst: metered, headers-only — +${probe.headersFetched} " +
+                        "header(s) from ${probe.peer}, $behind block(s) deferred until WiFi/Max")
+                    _burstStateFlow.value = BurstState.IDLE
+                    burstMutex.unlock()
+                    return
+                }
+                if (!probe.success) {
+                    Log.w(TAG, "Burst: headers probe failed (${probe.error}) — full sync fallback")
+                } else {
+                    Log.w(TAG, "Burst: $behind blocks behind on metered (cap $METERED_FORCE_SYNC_BLOCKS) " +
+                        "— syncing blocks now to stay inside the prune window")
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _burstStateFlow.value = BurstState.IDLE
+                burstMutex.unlock()
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Burst: headers probe error (${e.message}) — full sync fallback")
+            }
+        }
+
         // Snapshot current state before enabling network
         val preBlocks = try {
             client.getBlockchainInfo()?.optLong("blocks", 0L) ?: 0L
@@ -513,6 +561,25 @@ class PowerModeManager private constructor(private val context: Context) {
             } catch (_: Exception) {}
 
             Log.i(TAG, "Burst: complete (was $preBlocks, now $finalBlocks)")
+
+            // Remember the peers we were actually connected to: they are the
+            // only verified-live candidates the next headers probe can get
+            // (addrman gossip is mostly dead addresses).
+            try {
+                val peers = client.call("getpeerinfo")?.optJSONArray("value")
+                if (peers != null && peers.length() > 0) {
+                    val addrs = mutableListOf<String>()
+                    for (i in 0 until peers.length()) {
+                        val addr = peers.getJSONObject(i).optString("addr")
+                        if (addr.isNotEmpty()) addrs.add(addr)
+                    }
+                    if (addrs.isNotEmpty()) {
+                        HeadersClient.rememberLivePeers(addrs)
+                        prefs.edit().putString(PREF_KEY_PROBE_PEERS, addrs.joinToString(",")).apply()
+                        Log.d(TAG, "Burst: remembered ${addrs.size} live peer(s) for headers probes")
+                    }
+                }
+            } catch (_: Exception) {}
 
             // 7. Network off
             if (_modeFlow.value != Mode.MAX) {
