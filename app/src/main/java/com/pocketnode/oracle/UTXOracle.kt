@@ -262,13 +262,24 @@ class UTXOracle(private val rpc: BitcoinRpcClient) {
         if (currentTipHeight <= lastCachedHeight) return@withContext null // no new blocks
 
         val newBlockCount = currentTipHeight - lastCachedHeight
-        emit("Updating: $newBlockCount new block${if (newBlockCount > 1) "s" else ""}...")
+        // If the gap exceeds the window, every cached block slides out anyway,
+        // and heights below the prune point make getblock fail — which used to
+        // wedge this update permanently on a stale cache. Rebuild from the
+        // most recent 144 blocks instead.
+        val startHeight = if (newBlockCount >= 144) {
+            emit("Cache $newBlockCount blocks behind, rebuilding window...")
+            cachedBlocks.clear()
+            currentTipHeight - 143
+        } else {
+            emit("Updating: $newBlockCount new block${if (newBlockCount > 1) "s" else ""}...")
+            lastCachedHeight + 1
+        }
 
         // Fetch and process new blocks
         val allTxids = HashSet<String>()
         cachedBlocks.forEach { allTxids.addAll(it.txids) }
 
-        for (h in (lastCachedHeight + 1)..currentTipHeight) {
+        for (h in startHeight..currentTipHeight) {
             emit("Block $h...")
             kotlinx.coroutines.yield()
             val hash = getBlockHash(h)

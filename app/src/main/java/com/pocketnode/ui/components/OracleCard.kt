@@ -209,8 +209,10 @@ fun OracleCard(
         }
     }
 
-    // Incremental update when block height changes
-    LaunchedEffect(blockHeight) {
+    // Incremental update when a new block lands, or when the restored oracle
+    // instance becomes available (keying on oracle.value closes the gap where
+    // the height was already current before the cache finished loading).
+    LaunchedEffect(blockHeight, oracle.value) {
         if (blockHeight <= 0 || !isNodeSynced || isRunning) return@LaunchedEffect
         if (blockHeight <= lastUpdatedHeight) return@LaunchedEffect
 
@@ -231,6 +233,8 @@ fun OracleCard(
                 saveResult(r)
                 saveCachedBlocks(oracleInstance.cachedBlocks)
                 lastUpdatedHeight = blockHeight
+                android.util.Log.i("OracleCard",
+                    "Oracle updated: $${r.price} through block ${r.blockRange.last}")
             }
             progressJob.cancel()
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -238,7 +242,22 @@ fun OracleCard(
             throw e
         } catch (e: Exception) {
             android.util.Log.e("OracleCard", "Incremental update failed", e)
-            // Don't show error for incremental — cached result still valid
+            // A getblock failure means the cached window fell below the prune
+            // height. Rebuild from recent blocks rather than staying wedged
+            // on a stale price forever.
+            if (e.message?.contains("getblock", ignoreCase = true) == true) {
+                try {
+                    val r = oracleInstance.getPriceRecentBlocks()
+                    result = r
+                    onPriceUpdate?.invoke(r.price)
+                    saveResult(r)
+                    saveCachedBlocks(oracleInstance.cachedBlocks)
+                    lastUpdatedHeight = r.blockRange.last.toLong()
+                    android.util.Log.i("OracleCard", "Rebuilt oracle window after pruned-cache wedge")
+                } catch (e2: Exception) {
+                    android.util.Log.e("OracleCard", "Full rescan fallback failed", e2)
+                }
+            }
         } finally {
             isRunning = false
             progressText = ""
@@ -314,15 +333,21 @@ fun OracleCard(
                             fontFamily = FontFamily.Monospace,
                             color = Color(0xFFFF9800) // Bitcoin orange
                         )
+                        // Flag a price whose window trails the chain by more
+                        // than a day: better an honest "stale" than a wrong
+                        // number that looks current.
+                        val resultEnd = result!!.blockRange.last
+                        val stale = blockHeight > 0 && blockHeight - resultEnd > 144
                         val displayText = if (result!!.date == "recent-blocks") {
-                            "Block ${"%,d".format(result!!.blockRange.last)}"
+                            "Block ${"%,d".format(resultEnd)}" + if (stale) " (stale, updating…)" else ""
                         } else {
                             result!!.date
                         }
                         Text(
                             displayText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            color = if (stale) Color(0xFFFFB74D)
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
                 }
