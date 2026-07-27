@@ -7,6 +7,8 @@ import com.pocketnode.rpc.BitcoinRpcClient
 import com.pocketnode.network.HeadersClient
 import com.pocketnode.network.NetworkMonitor
 import com.pocketnode.network.NetworkState
+import com.pocketnode.network.SpvFetcher
+import com.pocketnode.network.SpvTracker
 import com.pocketnode.service.BatteryMonitor
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -155,6 +157,7 @@ class PowerModeManager private constructor(private val context: Context) {
         prefs.getString(PREF_KEY_PROBE_PEERS, null)
             ?.split(",")
             ?.let { HeadersClient.rememberLivePeers(it) }
+        SpvTracker.initialize(context)
         // If burst sync should be running but wasn't started (rpc was null during applyMode),
         // kick it off now. This ensures burst sync always starts even if setRpc is called
         // after setMode.
@@ -431,6 +434,24 @@ class PowerModeManager private constructor(private val context: Context) {
                 if (probe.success && behind <= METERED_FORCE_SYNC_BLOCKS) {
                     Log.i(TAG, "Burst: metered, headers-only — +${probe.headersFetched} " +
                         "header(s) from ${probe.peer}, $behind block(s) deferred until WiFi/Max")
+                    // SPV peek into the deferred region: filters first, full
+                    // block only on a wallet match. Failure just means the
+                    // confirmation waits for WiFi.
+                    if (behind > 0) {
+                        try {
+                            val watched = SpvTracker.watchedScripts(context)
+                            if (watched.isNotEmpty()) {
+                                val found = SpvFetcher.scan(context, client, watched)
+                                if (found > 0) {
+                                    Log.i(TAG, "Burst: SPV detected $found wallet payment(s) in deferred blocks")
+                                }
+                            }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Burst: SPV scan error: ${e.message}")
+                        }
+                    }
                     _burstStateFlow.value = BurstState.IDLE
                     burstMutex.unlock()
                     return

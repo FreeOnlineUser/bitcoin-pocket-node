@@ -345,7 +345,11 @@ fun NodeStatusScreen(
                         PowerModeManager.modeFlow.value != PowerModeManager.Mode.MAX &&
                         NetworkMonitor.getInstance(context).networkState.value == NetworkState.CELLULAR
                     deferredDetail = if (deferred) {
-                        "$blocksBehind block${if (blocksBehind == 1L) "" else "s"} waiting for WiFi (saving mobile data)"
+                        val spvPending = com.pocketnode.network.SpvTracker.pendingCount(blockHeight)
+                        val spvNote = if (spvPending > 0) {
+                            " • $spvPending payment${if (spvPending == 1) "" else "s"} received (SPV)"
+                        } else ""
+                        "$blocksBehind block${if (blocksBehind == 1L) "" else "s"} waiting for WiFi (saving mobile data)$spvNote"
                     } else ""
                     val newStatus = when {
                         assumeUtxoActive -> "Synced (validating)"
