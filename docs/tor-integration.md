@@ -6,6 +6,7 @@ Route all Pocket Node traffic through Tor. One toggle: "Route all traffic throug
 
 - **Arti 0.39.0** already embedded (Rust Tor implementation)
 - **Watchtower** already connects via Tor to .onion watchtowers
+- **bitreq SOCKS5** (the proxy path for HTTP/RGS/scoring calls) is **merged upstream** as corepc [#533](https://git.rust-bitcoin.org/rust-bitcoin/corepc/pulls/533) (rust-bitcoin, 2026-07-23), the first of our upstream PRs to land. The app currently builds against our bitreq fork; adopting the released crate is also what unblocks the upstream ldk-node TorConfig IP-leak fix ([#834](https://github.com/lightningdevkit/ldk-node/issues/834)), which is waiting on a bitreq crates.io release (≥ 0.3.8) carrying #533.
 - Everything else is clearnet
 
 ## Architecture
