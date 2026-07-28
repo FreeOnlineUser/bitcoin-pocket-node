@@ -316,8 +316,9 @@ See [Tor Integration](docs/tor-integration.md) for the full design document.
 **UI features:** 🧅 on notification title, peer count badge, peer browser, connected peers dialog. Tor toggle auto-restarts bitcoind+LDK. Tor preference persists across force-kill. Connected Peers dialog shows node aliases from network graph.
 
 ### Upstream Contributions
-- **rust-lightning [#4453](https://github.com/lightningdevkit/rust-lightning/pull/4453):** Justice transaction API improvements for watchtower use. Draft, waiting on review.
-- **ldk-node [#822](https://github.com/lightningdevkit/ldk-node/pull/822):** Wallet birthday support for seed restore. Draft, waiting on review.
+- **rust-lightning [#4453](https://git.rust-bitcoin.org/lightningdevkit/rust-lightning/pulls/4453):** Watchtower justice-tx API (`get_pending_justice_txs`). Development moved to the rust-lightning Forgejo (GitHub is now a mirror). Option-2 retention-list foundation pushed 2026-07-28, awaiting review; `WatchtowerPersist` trait + ChainMonitor gating are follow-up commits.
+- **corepc [#533](https://git.rust-bitcoin.org/rust-bitcoin/corepc/pulls/533):** SOCKS5 proxy support for bitreq (Tor routing). **Merged 2026-07-23.**
+- **ldk-node [#822](https://github.com/lightningdevkit/ldk-node/pull/822):** Wallet birthday support for seed restore. Closed 2026-06-30, superseded by tnull's [#884](https://github.com/lightningdevkit/ldk-node/pull/884) (merged, 0.8 milestone).
 
 ### Grant Applications
 - **OpenSats:** Application submitted

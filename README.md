@@ -455,8 +455,8 @@ app/src/main/java/com/pocketnode/
 
 ## Roadmap
 
-- **LDK upstream contribution:** improving watchtower API in rust-lightning ChannelMonitor ([#813](https://github.com/lightningdevkit/ldk-node/issues/813)). Draft PR submitted.
-- **Upstream PRs:** rust-lightning [#4453](https://github.com/lightningdevkit/rust-lightning/pull/4453) (justice tx API), ldk-node [#822](https://github.com/lightningdevkit/ldk-node/pull/822) (wallet birthday), rust-lightning [#4485](https://github.com/lightningdevkit/rust-lightning/issues/4485) (anchor downgrade bug)
+- **LDK upstream contribution:** improving the watchtower API in rust-lightning ChannelMonitor ([#813](https://github.com/lightningdevkit/ldk-node/issues/813)). Retention-list foundation pushed to the rust-lightning Forgejo, awaiting review.
+- **Upstream PRs:** corepc [#533](https://git.rust-bitcoin.org/rust-bitcoin/corepc/pulls/533) (bitreq SOCKS5 — **merged**), rust-lightning [#4453](https://git.rust-bitcoin.org/lightningdevkit/rust-lightning/pulls/4453) (watchtower justice-tx API — active on Forgejo), ldk-node [#822](https://github.com/lightningdevkit/ldk-node/pull/822) (wallet birthday — superseded by upstream [#884](https://github.com/lightningdevkit/ldk-node/pull/884))
 - **Desktop port:** Same app on Linux, macOS, Windows via Compose Multiplatform. See [design doc](docs/DESKTOP-PORT.md)
 - **iOS port:** Burst sync + watchtower + in-process LDK make iOS viable. See [feasibility analysis](docs/IOS-PORT.md)
 
