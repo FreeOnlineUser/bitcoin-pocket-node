@@ -405,7 +405,7 @@ The ldk-sample project is especially interesting because it **uses Bitcoin Core 
 - A watchtower is a service that watches the blockchain on your behalf while you're offline
 - If your channel partner broadcasts an old state, the watchtower can submit the punishment transaction for you
 - **Options:** Run your own (on a server), use a third-party watchtower service
-- **ldk-node status:** Watchtower support is not built into ldk-node yet. this would need external tooling
+- **ldk-node status:** No native watchtower support yet, so this needs external tooling. Two efforts are under way: our own LDK-to-LND watchtower bridge (see `LDK-WATCHTOWER-BRIDGE.md`), and the upstream rust-lightning justice-tx API (PR #4453, Matt's Option-2 retention-list design) that native watchtower support will build on, active and awaiting review on the rust-lightning Forgejo.
 
 ### 🟡 Significant Challenges
 

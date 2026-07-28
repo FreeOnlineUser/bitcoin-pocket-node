@@ -112,7 +112,7 @@ The phone never needs to be online for punishment. The tower handles it autonomo
 
 ### Complete
 
-- **ldk-node fork** (`FreeOnlineUser/ldk-node`, branch `watchtower-bridge`)
+- **ldk-node fork** (`FreeOnlineUser/ldk-node`, branch `watchtower-bridge-v2`)
   - `WatchtowerPersister` wrapping `MonitorUpdatingPersister` -- intercepts all Persist callbacks
   - `watchtower_list_monitors()`, `watchtower_export_monitors()`, `watchtower_drain_justice_blobs()` on Node
   - `watchtower_set_sweep_address()` for configuring where swept funds go
@@ -160,9 +160,11 @@ The phone never needs to be online for punishment. The tower handles it autonomo
 
 This is the **first cross-implementation watchtower bridge** in the Lightning ecosystem. No one has connected LDK to LND's watchtower protocol before. The ldk-node changes are designed to be clean enough to PR upstream, benefiting any LDK-based mobile wallet that wants to use existing LND tower infrastructure.
 
+**Upstream relationship:** the justice-tx primitive this bridge relies on is being standardized upstream as rust-lightning [#4453](https://git.rust-bitcoin.org/lightningdevkit/rust-lightning/pulls/4453) (Matt's Option-2 design: a not-rotated retention list of revoked counterparty commitments on the monitor, `get_pending_justice_txs` sourced from it, `mark_justice_persisted` to drain it, plus a `WatchtowerPersist` trait with ChainMonitor gating for crash-safety). The foundation is pushed and awaiting review on the rust-lightning Forgejo; the trait and gating are held follow-ups. Pocket Node is the downstream consumer and keeps this hand-rolled bridge until the `WatchtowerPersist` trait lands, at which point the capture path migrates onto it. See `LDK-UPSTREAM-CONTRIBUTION.md` for the full upstream status.
+
 ## Repositories
 
-- **ldk-node fork**: https://github.com/FreeOnlineUser/ldk-node/tree/watchtower-bridge
+- **ldk-node fork**: https://github.com/FreeOnlineUser/ldk-node/tree/watchtower-bridge-v2
 - **Watchtower client**: https://github.com/FreeOnlineUser/ldk-watchtower-client
 - **Bitcoin Pocket Node**: https://github.com/FreeOnlineUser/bitcoin-pocket-node
 
