@@ -83,10 +83,12 @@ class SnapshotDownloader(private val context: Context) {
             // Check existing partial download for resume
             val existingBytes = if (destFile.exists()) destFile.length() else 0L
 
-            val url = URL(downloadUrl)
-            val conn = url.openConnection() as HttpURLConnection
+            // Route .onion relay URLs through the Arti SOCKS proxy; clearnet
+            // (utxo.download) stays direct unless the user has Tor on.
+            val conn = com.pocketnode.tor.TorAwareHttp.openRouted(downloadUrl)
             conn.connectTimeout = 15_000
-            conn.readTimeout = 30_000
+            // .onion is slow; give the first byte room before timing out.
+            conn.readTimeout = if (URL(downloadUrl).host.endsWith(".onion")) 120_000 else 30_000
 
             // Resume support
             if (existingBytes > 0) {

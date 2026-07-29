@@ -58,6 +58,35 @@ object TorAwareHttp {
     }
 
     /**
+     * Open a connection, choosing the proxy by the target rather than by the
+     * global Tor toggle:
+     *  - a .onion host is unreachable without Tor, so it always routes through
+     *    the Arti SOCKS proxy (and fails clearly if Tor isn't running);
+     *  - a clearnet host routes through Tor only when Tor is running, so a
+     *    public snapshot (utxo.download) isn't dragged through a slow circuit
+     *    when the user hasn't opted into Tor.
+     *
+     * On Android, HttpURLConnection is OkHttp-backed and hands the hostname to
+     * the SOCKS proxy for resolution, so .onion names resolve inside Tor (same
+     * path openConnection() already uses for mempool).
+     */
+    fun openRouted(url: String): HttpURLConnection {
+        val host = URL(url).host.lowercase()
+        val isOnion = host.endsWith(".onion")
+        val torRunning = TorManager.enabledFlow.value &&
+            TorManager.statusFlow.value == TorManager.TorStatus.RUNNING
+        if (isOnion && !torRunning) {
+            throw java.io.IOException("Tor must be running to reach a .onion address")
+        }
+        val proxy = if (isOnion || torRunning) {
+            Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", TorManager.SOCKS_PORT))
+        } else {
+            Proxy.NO_PROXY
+        }
+        return URL(url).openConnection(proxy) as HttpURLConnection
+    }
+
+    /**
      * Get a SOCKS proxy for use with OkHttp or other HTTP clients.
      * Returns Proxy.NO_PROXY if Tor is not running.
      */

@@ -50,9 +50,9 @@ class ShareClient(private val context: Context) {
      */
     suspend fun getInfo(host: String, port: Int = ShareServer.PORT): ShareInfo? = withContext(Dispatchers.IO) {
         try {
-            val conn = URL("http://$host:$port/info").openConnection() as HttpURLConnection
+            val conn = com.pocketnode.tor.TorAwareHttp.openRouted("http://$host:$port/info")
             conn.connectTimeout = 5_000
-            conn.readTimeout = 5_000
+            conn.readTimeout = if (host.endsWith(".onion")) 30_000 else 5_000
             if (conn.responseCode != 200) return@withContext null
 
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
@@ -75,9 +75,9 @@ class ShareClient(private val context: Context) {
      */
     suspend fun fetchPeerLimits(host: String, port: Int = ShareServer.PORT): Int = withContext(Dispatchers.IO) {
         try {
-            val conn = URL("http://$host:$port/peer-limits").openConnection() as HttpURLConnection
+            val conn = com.pocketnode.tor.TorAwareHttp.openRouted("http://$host:$port/peer-limits")
             conn.connectTimeout = 5_000
-            conn.readTimeout = 5_000
+            conn.readTimeout = if (host.endsWith(".onion")) 30_000 else 5_000
             if (conn.responseCode != 200) return@withContext 0
 
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
@@ -125,9 +125,9 @@ class ShareClient(private val context: Context) {
             _state.value = DownloadState(phase = "Fetching file list...")
 
             // Get manifest
-            val manifestConn = URL("http://$host:$port/manifest").openConnection() as HttpURLConnection
+            val manifestConn = com.pocketnode.tor.TorAwareHttp.openRouted("http://$host:$port/manifest")
             manifestConn.connectTimeout = 10_000
-            manifestConn.readTimeout = 30_000
+            manifestConn.readTimeout = if (host.endsWith(".onion")) 60_000 else 30_000
             if (manifestConn.responseCode != 200) {
                 val error = manifestConn.inputStream.bufferedReader().readText()
                 _state.value = _state.value.copy(phase = "Error: $error")
@@ -155,7 +155,7 @@ class ShareClient(private val context: Context) {
 
             // Announce session to sender for progress tracking
             try {
-                val sessionConn = URL("http://$host:$port/start-session").openConnection() as HttpURLConnection
+                val sessionConn = com.pocketnode.tor.TorAwareHttp.openRouted("http://$host:$port/start-session")
                 sessionConn.requestMethod = "POST"
                 sessionConn.doOutput = true
                 sessionConn.setRequestProperty("Content-Type", "application/json")
@@ -217,9 +217,9 @@ class ShareClient(private val context: Context) {
                 )
 
                 // Download file
-                val fileConn = URL("http://$host:$port/file/$path").openConnection() as HttpURLConnection
+                val fileConn = com.pocketnode.tor.TorAwareHttp.openRouted("http://$host:$port/file/$path")
                 fileConn.connectTimeout = 10_000
-                fileConn.readTimeout = 60_000
+                fileConn.readTimeout = if (host.endsWith(".onion")) 120_000 else 60_000
                 
                 if (fileConn.responseCode != 200) {
                     Log.e(TAG, "Failed to download $path: HTTP ${fileConn.responseCode}")
@@ -270,7 +270,7 @@ class ShareClient(private val context: Context) {
 
             // Notify sender that download is complete
             try {
-                val completeConn = URL("http://$host:$port/complete").openConnection() as HttpURLConnection
+                val completeConn = com.pocketnode.tor.TorAwareHttp.openRouted("http://$host:$port/complete")
                 completeConn.requestMethod = "POST"
                 completeConn.doOutput = true
                 completeConn.connectTimeout = 5_000
