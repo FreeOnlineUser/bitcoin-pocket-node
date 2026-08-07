@@ -72,6 +72,34 @@ class BitcoindService : Service() {
 
         /** Callback to restart bitcoind with different args (set by service instance) */
         var restartForBurstMode: (suspend (burstMode: Boolean) -> Unit)? = null
+
+        /**
+         * Curated .onion peers used to bootstrap Tor-only mode. Sampled from Bitcoin
+         * Core's canonical fixed-seed list (contrib/seeds/nodes_main.txt). Passed as
+         * -seednode when Tor is on so bitcoind has reachable onion peers to getaddr
+         * from; without these it sits at 0 peers because onlynet=onion + dnsseed=0
+         * leaves a clearnet-primed addrman with no usable addresses and the built-in
+         * onion fixed-seeds never trigger (addrman looks "full"). Refresh occasionally
+         * as nodes rot; even a few live ones repopulate addrman with fresh onion peers.
+         */
+        val TOR_ONION_SEEDS = listOf(
+            "2boy2eupcrkymvf456swszxglxgckeoasshdasbgp4kt6jobovnmb5ad.onion:8333",
+            "4ihjwclm44ggwsoe62fx2brb3fwfc5c3l4kcnjukv6hvlicjackhpmid.onion:8333",
+            "5yqo4k3ilzbvygfzspslh3sye3d3h27ewbd736oj3qssoe3jgq7jrgqd.onion:8333",
+            "a2awwh5yhapt7xlxti5jaycsntfcy6d5pi4hidqbaw5eyzncfyr6ljid.onion:8333",
+            "cs24aeobszprs3ceb6epx23ptna2otehv2pwufuuikeihmfygvwuekad.onion:8333",
+            "etircbgqsobng3ik6ayi6imfz445zjxccoieeccaxdmjqzh5zrx263yd.onion:8333",
+            "h6biucjste2pqqexaotpox2ortlc66kxqvs2uh6zjzxcsakd2f7dngqd.onion:8333",
+            "jtkcue6fq52tmfhavyggne3cuvxl4q5m4frwb3uahzk6sebnumvlnsyd.onion:8333",
+            "lce6pre6ead7boqlapnmtvyhiaqezs5ljdckocxj5frfypeymvkewsid.onion:8333",
+            "naliiaalxxb2xerzq44qk7vyl5emkj4mdax37xbfzvtwrxrgbnzc4pad.onion:8333",
+            "p2yyfyqo5v25lw74665uejgtu5uiwajbt53op67lnj4egb5acq4bujqd.onion:8333",
+            "rky7zz76yvft4ofwmkdsprm2b4tbqxygxxqbvh4s2erhrjelr5wgcryd.onion:8333",
+            "svezmh24cgqujtbgvp77rbutwu5b5detv5zddah42i7hypwqu62cvzqd.onion:8333",
+            "ugsrgkkhboxydoy4jv3zd2temr7z2vdhkajluipymyck3oldax7gv7ad.onion:8333",
+            "wh3bulh3t5s6cg3zo4nxneja5ske2d322kktyuknzzox6lu2cc7jclqd.onion:8333",
+            "y6ildbrwjr45rnzrv345mwpxoogp6xkeg4fnuqadk6guknjxdqrkfead.onion:8333",
+        )
     }
 
     private var bitcoindProcess: Process? = null
@@ -247,20 +275,31 @@ class BitcoindService : Service() {
                             }
                             Log.i(TAG, "Attached to existing bitcoind, network control started")
 
-                            // Stay alive — poll until bitcoind stops responding
+                            // Stay alive — poll until bitcoind stops responding.
+                            // Tolerate transient RPC misses (bitcoind busy flushing
+                            // during IBD, a momentary timeout, brief unresponsiveness
+                            // under load): require 3 consecutive failures (~30s) before
+                            // declaring it stopped. A single hiccup used to flip the
+                            // status to "Stopped" while the process was alive and still
+                            // holding its peers (peer badge froze at last-good count).
+                            var misses = 0
                             while (_isRunning.value) {
                                 delay(10_000)
                                 if (isRestarting) continue  // Don't break during intentional restart
-                                try {
+                                val ok = try {
                                     val check = testRpc.getBlockchainInfo()
-                                    if (check == null) {
-                                        Log.w(TAG, "Existing bitcoind stopped responding")
-                                        break
-                                    }
+                                    check != null && !check.has("_rpc_error")
                                 } catch (_: Exception) {
                                     if (isRestarting) continue
-                                    Log.w(TAG, "Existing bitcoind RPC failed")
+                                    false
+                                }
+                                if (ok) {
+                                    misses = 0
+                                } else if (++misses >= 3) {
+                                    Log.w(TAG, "Existing bitcoind unresponsive ${misses}x — marking stopped")
                                     break
+                                } else {
+                                    Log.w(TAG, "Existing bitcoind RPC miss ($misses/3), still treating as alive")
                                 }
                             }
                             _isRunning.value = false
@@ -381,6 +420,10 @@ class BitcoindService : Service() {
             args.add("-proxy=127.0.0.1:${com.pocketnode.tor.TorManager.SOCKS_PORT}")
             args.add("-onlynet=onion")
             args.add("-dnsseed=0")
+            // Bootstrap onion peers: without this, onlynet=onion + dnsseed=0 over a
+            // clearnet-primed addrman yields 0 peers forever (see TOR_ONION_SEEDS).
+            for (seed in TOR_ONION_SEEDS) args.add("-seednode=$seed")
+            Log.i(TAG, "Tor on: seeding ${TOR_ONION_SEEDS.size} onion peers")
         }
 
         // Low/Away mode: suppress mempool relay, limit peers, cap upload.
