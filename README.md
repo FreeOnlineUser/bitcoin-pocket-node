@@ -10,7 +10,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 
 - **Two proven bootstrap paths:** sync from home node (under 1 hour) or download from internet (3-6 hours, on-chain only)
 - **Phone-to-phone and relay sharing:** scan a QR code, get a full node. Resume on failure. Works over WiFi or LAN
-- **3 Bitcoin implementations:** Core 30, Core 29.3, Knots 29.3. One-tap switching, same chainstate. Universal BIP 110 signaling toggle
+- **Two Bitcoin Core versions:** Core 29.3 (default) and Core 30. One-tap switching, same chainstate
 - **No thermal load:** phone shows no sign of load or overheat during normal operation
 - ~13 GB total disk (11 GB chainstate + 2 GB pruned blocks). Optional: +13 GB for block filter index (Neutrino wallets only, not needed for Lightning)
 - **Pure Kotlin Electrum server** with wallet tracking: balance, transactions, UTXOs all served from your own pruned node
@@ -107,23 +107,20 @@ See [Direct Chainstate Copy](docs/direct-chainstate-copy.md) for a detailed comp
 
 ## Version Selection
 
-3 Bitcoin implementations with one-tap switching: Core 30, Core 29.3, Knots 29.3. Universal BIP 110 signaling toggle.
+Two Bitcoin Core versions with one-tap switching, differing only in relay / OP_RETURN policy.
 
 | Implementation | Size | Policy |
 |---|---|---|
+| **Bitcoin Core 29.3** (default) | 8 MB | Standard relay rules and OP_RETURN limits |
 | **Bitcoin Core 30** | 8.6 MB | Permissive: larger OP_RETURN data allowed |
-| **Bitcoin Core 29.3** | 8 MB | Standard relay rules, BIP 110 compatible (v72t's port) |
-| **Bitcoin Knots 29.3** | 12 MB | Restrictive: filters non-standard transactions |
 
-All three share the same chainstate format. Switch without re-syncing. Tap "Change" on the dashboard, confirm, and the node restarts with the new binary.
+Both share the same chainstate format. Switch without re-syncing. Tap "Change" on the dashboard, confirm, and the node restarts with the new binary.
 
-**BIP 110** ([bip110.dev](https://bip110.dev/)) temporarily limits arbitrary data embedding at the consensus level. The universal toggle enables version bit 4 signaling and peer preference for reduced data carriers on Core 29.3 and Knots. Built from Dathon Ohm's [reference implementation](https://github.com/bitcoinknots/bitcoin/compare/29.x-knots...dathonohm:bitcoin:uasf-modified-bip9) with a 55% activation threshold.
-
-See [Version Selection Design](docs/VERSION-SELECTION.md) and [BIP 110 Research](docs/BIP110-RESEARCH.md) for details.
+See [Version Selection Design](docs/VERSION-SELECTION.md) for details.
 
 ## Features
 
-- **3 Bitcoin implementations** with one-tap switching: Core 30, Core 29.3, Knots 29.3. BIP 110 signaling toggle on Core 29.3 and Knots
+- **Two Bitcoin Core versions** with one-tap switching: Core 29.3 (default) and Core 30
 - **Two proven bootstrap paths:** home node or internet download (phone-to-phone built, untested)
 - **Pure Kotlin Electrum server** purpose-built for pruned nodes: the only Electrum server that works with `prune=2048`. Balances from the UTXO set, transaction history persisted forever (survives pruning), unsolicited notifications push new transactions to BlueWallet in real time
 - **Built-in Lightning node** powered by LDK (send, receive, channels, peer browser, seed backup/restore with automatic fund recovery)
@@ -190,8 +187,7 @@ Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset
 │       │              │              │                 │
 │  ┌────┴──────────────┴──────────────┴──────────────┐  │
 │  │  bitcoind (ARM64), user selects:                │  │
-│  │  Core 30 | Core 29.3 | Knots 29.3              │  │
-│  │  (BIP 110 toggle on Core 29.3 + Knots)         │  │
+│  │  Core 29.3 (default)  |  Core 30               │  │
 │  │  Foreground service, local RPC                  │  │
 │  │  Tor mode: -proxy=127.0.0.1:9050 -onlynet=onion│  │
 │  └────────────────┬────────────────────────────────┘  │
@@ -282,8 +278,8 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 
 - **OS:** Android 7+ (tested on GrapheneOS, EMUI, Samsung OneUI)
 - **Hardware:** Any ARM64 device (tested on Pixel, Samsung, Huawei)
-- **Default:** Bitcoin Core 29.3 (BIP 110 compatible, standard relay rules)
-- **Also bundled:** Core 30, Knots 29.3 (user selects from dashboard, BIP 110 toggle on Core 29.3 + Knots)
+- **Default:** Bitcoin Core 29.3 (standard relay rules and OP_RETURN limits)
+- **Also bundled:** Bitcoin Core 30 (user selects from dashboard; permissive OP_RETURN)
 - **AssumeUTXO heights:** 840k (upstream) + 880k, 910k (backported from Core 30)
 
 ## Building
@@ -292,7 +288,7 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 - macOS or Linux build machine
 - Android SDK + NDK r27
 - JDK 17
-- Bitcoin Core 29.3 source (with BIP 110 and chainparams patches)
+- Bitcoin Core 29.3 source (with chainparams patches)
 
 ### Build bitcoind for ARM64
 See [docs/cross-compile-android.md](docs/cross-compile-android.md)
@@ -421,7 +417,7 @@ app/src/main/java/com/pocketnode/
 │   └── UTXOracle.kt            # Sovereign price discovery from on-chain data
 └── util/
     ├── ConfigGenerator.kt      # Mobile-optimized bitcoin.conf
-    ├── BinaryExtractor.kt      # Version selection, 3 bundled bitcoind binaries
+    ├── BinaryExtractor.kt      # Version selection, 2 bundled bitcoind binaries
     ├── UpdateChecker.kt         # GitHub release update checker
     └── SetupChecker.kt         # Auto-detect completed setup steps
 ```
@@ -464,7 +460,7 @@ app/src/main/java/com/pocketnode/
 
 | Device | SoC | OS | Result |
 |--------|-----|----|--------|
-| Pixel 9 | Tensor G4 | GrapheneOS | ✅ Full stack: chainstate copy, LDK Lightning, BIP 110, all features verified |
+| Pixel 9 | Tensor G4 | GrapheneOS | ✅ Full stack: chainstate copy, LDK Lightning, all features verified |
 | Samsung Galaxy Z Fold | Snapdragon | Android | ✅ Dual-pane foldable layout working, IBD syncing |
 | Huawei Mate 20 Lite | Kirin 710 | EMUI | ✅ Clean install, IBD syncing from genesis |
 | Pixel 9 | Tensor G4 | GrapheneOS | ✅ Lightning send/receive verified, 7-day uptime confirmed by independent tester |

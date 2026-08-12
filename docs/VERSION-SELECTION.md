@@ -1,5 +1,11 @@
 # Bitcoin Core Version Selection
 
+> **Update (2026-08, v0.36-alpha):** Bitcoin Knots and the BIP-110 signaling toggle
+> were removed. BIP-110 never activated, and Knots diverged from mainnet consensus,
+> so bundling it shipped a consensus-incompatible binary. The app now bundles Bitcoin
+> Core 29.3 (default) and Core 30 only; a saved Knots selection migrates to Core on
+> next start. Sections below that describe Knots / BIP-110 are kept as design history.
+
 ## Overview
 
 Let users choose which Bitcoin implementation runs on their phone. Bundle multiple

@@ -487,8 +487,8 @@
       <div class="stat-label">Zero to full node</div>
     </div>
     <div class="stat">
-      <div class="stat-value">3</div>
-      <div class="stat-label">Bitcoin implementations</div>
+      <div class="stat-value">2</div>
+      <div class="stat-label">Bitcoin Core versions</div>
     </div>
     <div class="stat">
       <div class="stat-value">78 MB</div>
@@ -549,7 +549,7 @@
       <div class="feature-card">
         <div class="feature-icon">🔄</div>
         <h3>Version Selection</h3>
-        <p>Core 30, Core 29.3, or Knots 29.3. BIP 110 signaling toggle works on any compatible implementation. Switch with one tap, same chainstate.</p>
+        <p>Bitcoin Core 29.3 or Core 30, differing only in relay policy. Switch with one tap, same chainstate.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🔋</div>
@@ -637,22 +637,17 @@
     <h2>Choose your implementation</h2>
     <div class="version-cards">
       <div class="version-card">
+        <h3>Bitcoin Core 29.3 (default)</h3>
+        <div class="size">8 MB</div>
+        <div class="policy">Standard relay policy</div>
+      </div>
+      <div class="version-card">
         <h3>Bitcoin Core 30</h3>
-        <div class="size">8 MB</div>
-        <div class="policy">Latest release</div>
-      </div>
-      <div class="version-card">
-        <h3>Bitcoin Core 29.3</h3>
-        <div class="size">8 MB</div>
-        <div class="policy">BIP 110 compatible</div>
-      </div>
-      <div class="version-card">
-        <h3>Bitcoin Knots 29.3</h3>
-        <div class="size">12 MB</div>
-        <div class="policy">Restrictive relay + BIP 110</div>
+        <div class="size">8.6 MB</div>
+        <div class="policy">Permissive OP_RETURN</div>
       </div>
     </div>
-    <p style="text-align: center; margin-top: 24px; color: var(--text-dim);">All share the same chainstate. Switch without re-syncing. Universal BIP 110 signaling toggle.</p>
+    <p style="text-align: center; margin-top: 24px; color: var(--text-dim);">Both share the same chainstate. Switch without re-syncing.</p>
   </div>
 </section>
 
