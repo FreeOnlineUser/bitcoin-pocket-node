@@ -1443,10 +1443,7 @@ private fun ActionButtons(
         var selectedVersion by remember { mutableStateOf(com.pocketnode.util.BinaryExtractor.getSelectedVersion(versionContext)) }
         var showVersionPicker by remember { mutableStateOf(false) }
         var pendingVersion by remember { mutableStateOf<com.pocketnode.util.BinaryExtractor.BitcoinVersion?>(null) }
-        var pendingBip110Toggle by remember { mutableStateOf<Boolean?>(null) }
-        var signalBip110 by remember { mutableStateOf(com.pocketnode.util.BinaryExtractor.isSignalBip110(versionContext)) }
         val availableVersions = remember { com.pocketnode.util.BinaryExtractor.availableVersions(versionContext) }
-        val allVersions = com.pocketnode.util.BinaryExtractor.BitcoinVersion.entries
 
         Row(
             modifier = Modifier
@@ -1464,9 +1461,8 @@ private fun ActionButtons(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                val isBip110Active = signalBip110
                 Text(
-                    "${selectedVersion.displayName} ${selectedVersion.versionString}${if (isBip110Active) " + BIP 110" else ""}",
+                    "${selectedVersion.displayName} ${selectedVersion.versionString}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFFF9800)
                 )
@@ -1486,9 +1482,6 @@ private fun ActionButtons(
                 onDismissRequest = { showVersionPicker = false },
                 title = { Text("Choose Implementation") },
                 text = {
-                    val bip110Versions = allVersions.filter { it.supportsBip110 }
-                    val otherVersions = allVersions.filter { !it.supportsBip110 }
-
                     @Composable
                     fun VersionCard(version: com.pocketnode.util.BinaryExtractor.BitcoinVersion) {
                         val isAvailable = version in availableVersions
@@ -1545,57 +1538,8 @@ private fun ActionButtons(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.verticalScroll(rememberScrollState())
                     ) {
-                        // Latest first
-                        otherVersions.forEach { version -> VersionCard(version) }
-
-                        // Separator
-                        Spacer(Modifier.height(4.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-                        Spacer(Modifier.height(2.dp))
-
-                        // BIP 110 section
-                        Text(
-                            "BIP 110 Compatible",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF7931A)
-                        )
-                        bip110Versions.forEach { version -> VersionCard(version) }
-
-                        // BIP 110 toggle
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "Signal BIP 110",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    if (signalBip110) "Signaling reduced data support"
-                                    else "Not signaling",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (signalBip110) Color(0xFFF7931A)
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                            }
-                            Switch(
-                                checked = signalBip110,
-                                onCheckedChange = { enabled ->
-                                    pendingBip110Toggle = enabled
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color(0xFFF7931A),
-                                    checkedTrackColor = Color(0xFFF7931A).copy(alpha = 0.3f)
-                                )
-                            )
+                        com.pocketnode.util.BinaryExtractor.BitcoinVersion.entries.forEach { version ->
+                            VersionCard(version)
                         }
                     }
                 },
@@ -1679,75 +1623,6 @@ private fun ActionButtons(
                 },
                 dismissButton = {
                     TextButton(onClick = { pendingVersion = null }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
-
-        // BIP 110 toggle restart confirmation
-        pendingBip110Toggle?.let { enabled ->
-            AlertDialog(
-                onDismissRequest = { pendingBip110Toggle = null },
-                title = { Text(if (enabled) "Enable BIP 110 Signaling?" else "Disable BIP 110 Signaling?") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            if (enabled)
-                                "Your node will signal support for BIP 110 (version bit 4) and prefer peers that also signal."
-                            else
-                                "Your node will stop signaling BIP 110 and connect to all peers equally.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        if (isRunning) {
-                            Text(
-                                "Your node will be stopped and restarted to apply this change.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFFFF9800)
-                            )
-                        } else {
-                            Text(
-                                "The change will take effect next time you start the node.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        com.pocketnode.util.BinaryExtractor.setSignalBip110(versionContext, enabled)
-                        signalBip110 = enabled
-                        pendingBip110Toggle = null
-                        showVersionPicker = false
-                        // Restart if running — stop Lightning first
-                        if (isRunning) {
-                            Thread({
-                                try {
-                                    val ls = com.pocketnode.lightning.LightningService.getInstance(versionContext)
-                                    val wasRunning = com.pocketnode.lightning.LightningService.stateFlow.value.status == com.pocketnode.lightning.LightningService.LightningState.Status.RUNNING
-                                    if (wasRunning) {
-                                        ls.stop()
-                                        versionContext.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
-                                            .edit().putBoolean("lightning_was_running", true).apply()
-                                    }
-                                } catch (_: Exception) {}
-
-                                versionContext.stopService(android.content.Intent(versionContext, BitcoindService::class.java))
-                                var attempts = 0
-                                while (BitcoindService.isRunningFlow.value && attempts < 30) {
-                                    Thread.sleep(1000)
-                                    attempts++
-                                }
-                                versionContext.startForegroundService(android.content.Intent(versionContext, BitcoindService::class.java))
-                            }, "bip110-restart").start()
-                        }
-                    }) {
-                        Text(if (enabled) "Enable" else "Disable", color = Color(0xFFF7931A))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { pendingBip110Toggle = null }) {
                         Text("Cancel")
                     }
                 }

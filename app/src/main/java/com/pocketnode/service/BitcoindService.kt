@@ -409,11 +409,6 @@ class BitcoindService : Service() {
             "-conf=${dataDir.resolve("bitcoin.conf").absolutePath}"
         )
 
-        // BIP 110 signaling
-        if (BinaryExtractor.isSignalBip110(this)) {
-            args.add("-signalbip110=1")
-            args.add("-uacomment=BIP-110")
-        }
 
         // Tor: route all P2P through SOCKS proxy when enabled
         if (com.pocketnode.tor.TorManager.enabledFlow.value) {
