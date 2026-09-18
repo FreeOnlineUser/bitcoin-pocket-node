@@ -4,17 +4,20 @@ import android.content.Intent
 import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.pocketnode.rpc.BitcoinRpcClient
 import com.pocketnode.service.BitcoindService
@@ -27,6 +30,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.net.URI
+
+private const val DefaultSnapshotUrl = "https://utxo.download/mainnet-910000-utxos.dat"
+private const val SnapshotDownloadPreferences = "snapshot_download"
+private const val SnapshotSourceKey = "source_url"
+private const val InvalidSnapshotUrlMessage = "Enter a valid HTTP or HTTPS snapshot URL."
 
 private enum class DownloadStep { NOT_STARTED, DOWNLOADING, VALIDATING, PREPARING, LOADING, COMPLETE, ERROR }
 
@@ -60,7 +69,10 @@ fun InternetDownloadScreen(
     var loadElapsedMin by remember { mutableStateOf(0L) }
     var isRunning by remember { mutableStateOf(false) }
 
-    val snapshotUrl = "https://utxo.download/utxo-910000.dat"
+	var snapshotUrl by rememberSaveable { mutableStateOf(DefaultSnapshotUrl) }
+	val downloadUrl = snapshotUrl.trim()
+	val snapshotUri = remember(downloadUrl) { runCatching { URI(downloadUrl) }.getOrNull() }
+	val isSnapshotUrlValid = snapshotUri != null && (snapshotUri.scheme.equals("https", ignoreCase = true) || snapshotUri.scheme.equals("http", ignoreCase = true)) && !snapshotUri.host.isNullOrBlank()
     val downloader = remember { SnapshotDownloader(context) }
 
     // Check if snapshot already exists on phone
@@ -96,16 +108,40 @@ fun InternetDownloadScreen(
         }
     }
 
-    fun startFlow() {
+	fun StartFlow()
+	{
+		if (isRunning || !isSnapshotUrlValid)
+		{
+			return
+		}
+		val selectedUrl = downloadUrl
         // Lock orientation to prevent rotation from killing the download
         activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
         currentStep = DownloadStep.DOWNLOADING
-        statusMessage = "Connecting to utxo.download..."
+		statusMessage = "Connecting to ${snapshotUri?.host}..."
         isRunning = true
 
         CoroutineScope(Dispatchers.IO).launch {
+			// Only resume partial data when it belongs to the selected source.
+			val preferences = context.getSharedPreferences(SnapshotDownloadPreferences, android.content.Context.MODE_PRIVATE)
+			val previousUrl = preferences.getString(SnapshotSourceKey, DefaultSnapshotUrl)
+			val snapshotFile = downloader.getSnapshotFile()
+			if (previousUrl != selectedUrl && snapshotFile.exists() && !snapshotFile.delete())
+			{
+				currentStep = DownloadStep.ERROR
+				errorMessage = "Could not clear the previous snapshot download."
+				isRunning = false
+				return@launch
+			}
+			if (!preferences.edit().putString(SnapshotSourceKey, selectedUrl).commit())
+			{
+				currentStep = DownloadStep.ERROR
+				errorMessage = "Could not save the snapshot source. Please retry."
+				isRunning = false
+				return@launch
+			}
             // Step 1: Download
-            val file = downloader.download(snapshotUrl)
+			val file = downloader.download(selectedUrl)
             if (file == null) {
                 if (currentStep != DownloadStep.ERROR) {
                     currentStep = DownloadStep.ERROR
@@ -301,9 +337,18 @@ fun InternetDownloadScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Source: utxo.download", fontWeight = FontWeight.Bold)
+							OutlinedTextField(
+								value = snapshotUrl,
+								onValueChange = { snapshotUrl = it },
+								label = { Text("Snapshot URL") },
+								modifier = Modifier.fillMaxWidth(),
+								singleLine = true,
+								keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+								isError = !isSnapshotUrlValid,
+								supportingText = { Text(if (isSnapshotUrlValid) "Direct link to a snapshot at block height 910,000." else InvalidSnapshotUrlMessage) }
+							)
                             Text(
-                                "File: utxo-910000.dat (~9 GB)",
+								"Expected snapshot: block 910,000 (~9 GB)",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
@@ -376,7 +421,7 @@ fun InternetDownloadScreen(
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 Text(
-                                    "The source (utxo.download) is a well-known public snapshot " +
+                                    "The default source (utxo.download) is a well-known public snapshot " +
                                     "host used by the Bitcoin community. But even if you downloaded " +
                                     "from an untrusted source, the cryptographic verification means " +
                                     "you'd get the same result. Bad data is always rejected.",
@@ -483,7 +528,8 @@ fun InternetDownloadScreen(
             when (currentStep) {
                 DownloadStep.NOT_STARTED -> {
                     Button(
-                        onClick = { startFlow() },
+						onClick = { StartFlow() },
+						enabled = isSnapshotUrlValid && !isRunning,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
                     ) {
