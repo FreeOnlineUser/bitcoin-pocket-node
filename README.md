@@ -170,7 +170,7 @@ Total transfer ~13 GB over LAN (~5 min). Node operational in under an hour inclu
 The app tries saved `pocketnode` SFTP credentials first. If a snapshot already exists on the server, no admin credentials are needed.
 
 ### From Internet
-Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset` flow, just a different download source. The snapshot is cryptographically verified against the block hash compiled into Bitcoin Core before loading.
+Download from `https://utxo.download/mainnet-910000-utxos.dat` (9 GB) by default, or any URL you enter. Same `loadtxoutset` flow, just a different download source. The snapshot is cryptographically verified against the block hash compiled into Bitcoin Core before loading.
 
 **Note:** Lightning (LDK) works immediately on this path. Block filters (~13 GB) are optional and only needed for Neutrino wallet connections (Zeus).
 

@@ -32,10 +32,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URI
 
-private const val DefaultSnapshotUrl = "https://utxo.download/mainnet-910000-utxos.dat"
-private const val SnapshotDownloadPreferences = "snapshot_download"
-private const val SnapshotSourceKey = "source_url"
-private const val InvalidSnapshotUrlMessage = "Enter a valid HTTP or HTTPS snapshot URL."
+private const val DEFAULT_SNAPSHOT_URL = "https://utxo.download/mainnet-910000-utxos.dat"
+private const val SNAPSHOT_DOWNLOAD_PREFS = "snapshot_download"
+private const val SNAPSHOT_SOURCE_KEY = "source_url"
+private const val INVALID_SNAPSHOT_URL_MESSAGE = "Enter a valid HTTP or HTTPS snapshot URL."
 
 private enum class DownloadStep { NOT_STARTED, DOWNLOADING, VALIDATING, PREPARING, LOADING, COMPLETE, ERROR }
 
@@ -69,10 +69,12 @@ fun InternetDownloadScreen(
     var loadElapsedMin by remember { mutableStateOf(0L) }
     var isRunning by remember { mutableStateOf(false) }
 
-	var snapshotUrl by rememberSaveable { mutableStateOf(DefaultSnapshotUrl) }
-	val downloadUrl = snapshotUrl.trim()
-	val snapshotUri = remember(downloadUrl) { runCatching { URI(downloadUrl) }.getOrNull() }
-	val isSnapshotUrlValid = snapshotUri != null && (snapshotUri.scheme.equals("https", ignoreCase = true) || snapshotUri.scheme.equals("http", ignoreCase = true)) && !snapshotUri.host.isNullOrBlank()
+    var snapshotUrl by rememberSaveable { mutableStateOf(DEFAULT_SNAPSHOT_URL) }
+    val downloadUrl = snapshotUrl.trim()
+    val snapshotUri = remember(downloadUrl) { runCatching { URI(downloadUrl) }.getOrNull() }
+    val isSnapshotUrlValid = snapshotUri != null &&
+        (snapshotUri.scheme.equals("https", ignoreCase = true) || snapshotUri.scheme.equals("http", ignoreCase = true)) &&
+        !snapshotUri.host.isNullOrBlank()
     val downloader = remember { SnapshotDownloader(context) }
 
     // Check if snapshot already exists on phone
@@ -108,40 +110,34 @@ fun InternetDownloadScreen(
         }
     }
 
-	fun StartFlow()
-	{
-		if (isRunning || !isSnapshotUrlValid)
-		{
-			return
-		}
-		val selectedUrl = downloadUrl
+    fun startFlow() {
+        if (isRunning || !isSnapshotUrlValid) return
+        val selectedUrl = downloadUrl
         // Lock orientation to prevent rotation from killing the download
         activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
         currentStep = DownloadStep.DOWNLOADING
-		statusMessage = "Connecting to ${snapshotUri?.host}..."
+        statusMessage = "Connecting to ${snapshotUri?.host}..."
         isRunning = true
 
         CoroutineScope(Dispatchers.IO).launch {
-			// Only resume partial data when it belongs to the selected source.
-			val preferences = context.getSharedPreferences(SnapshotDownloadPreferences, android.content.Context.MODE_PRIVATE)
-			val previousUrl = preferences.getString(SnapshotSourceKey, DefaultSnapshotUrl)
-			val snapshotFile = downloader.getSnapshotFile()
-			if (previousUrl != selectedUrl && snapshotFile.exists() && !snapshotFile.delete())
-			{
-				currentStep = DownloadStep.ERROR
-				errorMessage = "Could not clear the previous snapshot download."
-				isRunning = false
-				return@launch
-			}
-			if (!preferences.edit().putString(SnapshotSourceKey, selectedUrl).commit())
-			{
-				currentStep = DownloadStep.ERROR
-				errorMessage = "Could not save the snapshot source. Please retry."
-				isRunning = false
-				return@launch
-			}
+            // Only resume partial data when it belongs to the selected source.
+            val preferences = context.getSharedPreferences(SNAPSHOT_DOWNLOAD_PREFS, android.content.Context.MODE_PRIVATE)
+            val previousUrl = preferences.getString(SNAPSHOT_SOURCE_KEY, DEFAULT_SNAPSHOT_URL)
+            val snapshotFile = downloader.getSnapshotFile()
+            if (previousUrl != selectedUrl && snapshotFile.exists() && !snapshotFile.delete()) {
+                currentStep = DownloadStep.ERROR
+                errorMessage = "Could not clear the previous snapshot download."
+                isRunning = false
+                return@launch
+            }
+            if (!preferences.edit().putString(SNAPSHOT_SOURCE_KEY, selectedUrl).commit()) {
+                currentStep = DownloadStep.ERROR
+                errorMessage = "Could not save the snapshot source. Please retry."
+                isRunning = false
+                return@launch
+            }
             // Step 1: Download
-			val file = downloader.download(selectedUrl)
+            val file = downloader.download(selectedUrl)
             if (file == null) {
                 if (currentStep != DownloadStep.ERROR) {
                     currentStep = DownloadStep.ERROR
@@ -337,18 +333,18 @@ fun InternetDownloadScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-							OutlinedTextField(
-								value = snapshotUrl,
-								onValueChange = { snapshotUrl = it },
-								label = { Text("Snapshot URL") },
-								modifier = Modifier.fillMaxWidth(),
-								singleLine = true,
-								keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-								isError = !isSnapshotUrlValid,
-								supportingText = { Text(if (isSnapshotUrlValid) "Direct link to a snapshot at block height 910,000." else InvalidSnapshotUrlMessage) }
-							)
+                            OutlinedTextField(
+                                value = snapshotUrl,
+                                onValueChange = { snapshotUrl = it },
+                                label = { Text("Snapshot URL") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                                isError = !isSnapshotUrlValid,
+                                supportingText = { Text(if (isSnapshotUrlValid) "Direct link to a snapshot at block height 910,000." else INVALID_SNAPSHOT_URL_MESSAGE) }
+                            )
                             Text(
-								"Expected snapshot: block 910,000 (~9 GB)",
+                                "Expected snapshot: block 910,000 (~9 GB)",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
@@ -528,8 +524,8 @@ fun InternetDownloadScreen(
             when (currentStep) {
                 DownloadStep.NOT_STARTED -> {
                     Button(
-						onClick = { StartFlow() },
-						enabled = isSnapshotUrlValid && !isRunning,
+                        onClick = { startFlow() },
+                        enabled = isSnapshotUrlValid && !isRunning,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
                     ) {

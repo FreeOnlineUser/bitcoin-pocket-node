@@ -176,7 +176,7 @@ class SnapshotManager(private val context: Context) {
      * Step 3 (alt): Download the snapshot from HTTP URL.
      *
      * @param downloadUrl The HTTP URL where the snapshot file is served
-     *   e.g., "https://utxo.download/utxo-910000.dat"
+     *   e.g., "https://utxo.download/mainnet-910000-utxos.dat"
      */
     suspend fun downloadSnapshot(downloadUrl: String): Boolean {
         _state.value = _state.value.copy(step = Step.DOWNLOADING, error = null)

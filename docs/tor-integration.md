@@ -116,7 +116,7 @@ Complete inventory of code that talks to the internet:
 
 ### utxo.download: Snapshot Download
 - **What:** Downloads UTXO snapshot for internet bootstrap path
-- **Where:** `InternetDownloadScreen.kt:63` — `"https://utxo.download/utxo-910000.dat"`
+- **Where:** `InternetDownloadScreen.kt` — default `"https://utxo.download/mainnet-910000-utxos.dat"`, user-editable
 - **Current:** Direct HTTPS (9 GB download)
 - **Tor .onion:** Unknown. Likely no .onion. Would use exit node.
 - **Tor change:** Route through SOCKS proxy. WARNING: 9 GB over Tor is very slow.
