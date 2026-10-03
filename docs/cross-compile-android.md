@@ -138,6 +138,14 @@ git clone --depth 1 --branch "29.3+UASF-BIP110" https://github.com/v72t/bitcoin.
 git clone --depth 1 --branch "29.3.knots20260210+UASF-BIP110" https://github.com/dathonohm/bitcoin.git bitcoin-knots-bip110
 ```
 
+**Core 31.1** (vanilla, the second option `libbitcoind_v31.so` since v0.38):
+```bash
+git clone --depth 1 --branch v31.1 https://github.com/bitcoin/bitcoin.git bitcoin-core-v31.1
+```
+Same flags as Core 30 below plus `-DENABLE_EXTERNAL_SIGNER=OFF`, fdsan patch only
+(31 already carries assumeutxo data for 910,000 and 935,000).
+`~/tools/bitcoind-build/build-v31.1.sh` on the build mini does the whole thing.
+
 **Core 30.0** (vanilla, no BIP-110):
 ```bash
 git clone --depth 1 --branch v30.0 https://github.com/bitcoin/bitcoin.git bitcoin-core-v30

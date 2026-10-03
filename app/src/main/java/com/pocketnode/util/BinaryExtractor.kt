@@ -39,10 +39,10 @@ object BinaryExtractor {
             "Reference implementation. Standard relay rules and OP_RETURN limits.",
             "Standard -- default relay policy"
         ),
-        CORE_30(
-            "libbitcoind_v30.so",
+        CORE_31(
+            "libbitcoind_v31.so",
             "Bitcoin Core",
-            "30.0",
+            "31.1",
             "Latest release. Relaxed OP_RETURN data size limits.",
             "Permissive -- larger OP_RETURN data allowed"
         );
@@ -56,6 +56,7 @@ object BinaryExtractor {
                     // naming both fall back to the current Core default.
                     when (name) {
                         "KNOTS", "KNOTS_BIP110", "CORE_28_1" -> CORE
+                        "CORE_30" -> CORE_31
                         else -> valueOf(name)
                     }
                 } catch (_: IllegalArgumentException) {
