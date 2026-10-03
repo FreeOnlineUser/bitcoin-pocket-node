@@ -18,6 +18,9 @@ class RecoveryManager(private val context: Context) {
     companion object {
         private const val TAG = "RecoveryManager"
         private const val STORAGE_DIR = "lightning"
+        private const val FEED_WINDOW = 144L
+        private const val REREQUEST_MS = 120_000L
+        private const val STALL_RESET_MS = 15 * 60_000L
     }
 
     /** State flow reference for scan progress updates, set by LightningService */
@@ -480,136 +483,144 @@ class RecoveryManager(private val context: Context) {
     // ── Prune Recovery ───────────────────────────────────────────────
 
     /**
-     * Recover from pruned blocks by triggering bitcoind to re-download them.
-     * Waits for WiFi if on cellular, shows progress, then restarts LDK.
+     * Feed LDK the blocks it missed while the phone was offline long enough
+     * for bitcoind to prune them.
+     *
+     * LDK syncs over RPC (getblock), so a gap below bitcoind's prune height
+     * stalls its initial sync. invalidateblock/reconsiderblock can't help
+     * here: it only rewinds and reconnects blocks we still have. Instead we
+     * fetch the missing blocks with getblockfrompeer, a window at a time just
+     * ahead of LDK, and let ldk-node's own sync retry pick them up. LDK runs
+     * normally throughout; nothing is invalidated, so the inherited-invalid
+     * healer in BitcoindService has nothing to fight.
+     *
+     * The window stays small (~250 MB) so bitcoind's pruning eats old
+     * main-chain files before our fetched ones. If something we fetched does
+     * get pruned before LDK reads it, the stall check forgets what it knew
+     * and fetches again.
      */
-    suspend fun recoverPrunedBlocks(
+    suspend fun feedPrunedBlocks(
         rpcUser: String, rpcPassword: String, rpcPort: Int,
-        isCancelled: () -> Boolean
+        ldkHeight: () -> Long?
     ) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val rpc = BitcoinRpcClient(rpcUser, rpcPassword, port = rpcPort)
-
-        val chainInfo = rpc.getBlockchainInfo() ?: run {
-            Log.e(TAG, "Prune recovery: can't reach bitcoind")
-            stateFlow.value = stateFlow.value.copy(
-                status = LightningService.LightningState.Status.ERROR,
-                error = "Cannot reach bitcoind for block recovery"
-            )
-            return@withContext
-        }
-
-        val pruneHeight = chainInfo.optLong("pruneheight", 0)
-        val currentHeight = chainInfo.optLong("blocks", 0)
-        if (pruneHeight <= 0 || currentHeight <= 0) {
-            Log.e(TAG, "Prune recovery: invalid chain info (prune=$pruneHeight, height=$currentHeight)")
-            stateFlow.value = stateFlow.value.copy(
-                status = LightningService.LightningState.Status.ERROR,
-                error = "Could not determine pruned block range"
-            )
-            return@withContext
-        }
-
-        val blocksNeeded = (currentHeight - pruneHeight).toInt().coerceAtLeast(1)
-        Log.i(TAG, "Prune recovery: need to re-download ~$blocksNeeded blocks (prune height: $pruneHeight, tip: $currentHeight)")
-
         val networkMonitor = com.pocketnode.network.NetworkMonitor.getInstance(context)
-        if (networkMonitor.networkState.value != com.pocketnode.network.NetworkState.WIFI) {
-            Log.i(TAG, "Prune recovery: waiting for WiFi...")
-            stateFlow.value = stateFlow.value.copy(
-                status = LightningService.LightningState.Status.RECOVERING,
-                recoveryBlocksNeeded = blocksNeeded,
-                recoveryBlocksDone = 0,
-                recoveryWaitingForWifi = true,
-                error = null
-            )
-            while (networkMonitor.networkState.value != com.pocketnode.network.NetworkState.WIFI) {
-                kotlinx.coroutines.delay(5000)
-                if (isCancelled()) {
-                    Log.i(TAG, "Prune recovery: cancelled while waiting for WiFi")
-                    return@withContext
-                }
-            }
-            Log.i(TAG, "Prune recovery: WiFi connected, starting recovery")
-        }
+        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
 
-        stateFlow.value = stateFlow.value.copy(
-            status = LightningService.LightningState.Status.RECOVERING,
-            recoveryBlocksNeeded = blocksNeeded,
-            recoveryBlocksDone = 0,
-            recoveryWaitingForWifi = false,
-            error = null
-        )
+        val present = HashSet<Long>()
+        val requestedAt = HashMap<Long, Long>()
+        var initialGap = 0
+        var holding = false
+        var lastLdk = -1L
+        var lastProgressAt = System.currentTimeMillis()
+
+        fun setProgress(needed: Int, waitingForWifi: Boolean) {
+            val done = (initialGap - needed).coerceIn(0, initialGap)
+            stateFlow.value = stateFlow.value.copy(
+                recoveryBlocksNeeded = initialGap,
+                recoveryBlocksDone = done,
+                recoveryWaitingForWifi = waitingForWifi
+            )
+        }
 
         try {
-            val hashResult = rpc.call("getblockhash", JSONArray().apply { put(pruneHeight) })
-            val pruneHash = hashResult?.optString("value") ?: run {
-                Log.e(TAG, "Prune recovery: can't get block hash at height $pruneHeight")
-                stateFlow.value = stateFlow.value.copy(
-                    status = LightningService.LightningState.Status.ERROR,
-                    error = "Could not get block hash for recovery"
-                )
-                return@withContext
-            }
-
-            Log.i(TAG, "Prune recovery: invalidating block $pruneHash at height $pruneHeight")
-            rpc.call("invalidateblock", JSONArray().apply { put(pruneHash) })
-
-            Log.i(TAG, "Prune recovery: reconsidering block to trigger re-download")
-            rpc.call("reconsiderblock", JSONArray().apply { put(pruneHash) })
-
-            var lastHeight = 0L
-            var stallCount = 0
             while (true) {
-                kotlinx.coroutines.delay(2000)
-                if (isCancelled()) {
-                    Log.i(TAG, "Prune recovery: cancelled during re-download")
+                val ldk = ldkHeight() ?: run {
+                    Log.i(TAG, "Prune feed: LDK stopped, ending")
                     return@withContext
                 }
-                val info = rpc.getBlockchainInfo() ?: continue
-                val height = info.optLong("blocks", 0)
-
-                if (height >= currentHeight) {
-                    val done = (height - pruneHeight).toInt().coerceAtLeast(0)
-                    stateFlow.value = stateFlow.value.copy(recoveryBlocksDone = done.coerceAtMost(blocksNeeded))
-                    Log.i(TAG, "Prune recovery: complete! Chain at $height")
-                    break
+                val info = rpc.getBlockchainInfo()
+                if (info == null || info.has("_rpc_error")) {
+                    kotlinx.coroutines.delay(10_000)
+                    continue
+                }
+                val pruneHeight = info.optLong("pruneheight", 0)
+                val missing = (pruneHeight - 1 - ldk).toInt()
+                if (missing <= 0) {
+                    Log.i(TAG, "Prune feed: LDK at $ldk is inside the prune window ($pruneHeight), done")
+                    return@withContext
+                }
+                if (initialGap == 0) {
+                    initialGap = missing
+                    Log.i(TAG, "Prune feed: LDK at $ldk, prune height $pruneHeight, $missing blocks to fetch")
                 }
 
-                val done = (height - pruneHeight).toInt().coerceAtLeast(0)
-                stateFlow.value = stateFlow.value.copy(recoveryBlocksDone = done.coerceAtMost(blocksNeeded))
+                val now = System.currentTimeMillis()
+                if (ldk != lastLdk) {
+                    lastLdk = ldk
+                    lastProgressAt = now
+                    present.removeAll { it <= ldk }
+                } else if (now - lastProgressAt > STALL_RESET_MS) {
+                    Log.w(TAG, "Prune feed: LDK stuck at $ldk for ${(now - lastProgressAt) / 60_000} min, rechecking window")
+                    present.clear()
+                    requestedAt.clear()
+                    lastProgressAt = now
+                }
 
-                if (height == lastHeight) {
-                    stallCount++
-                    if (stallCount > 30) {
-                        Log.w(TAG, "Prune recovery: stalled at $height for 60s")
-                        stateFlow.value = stateFlow.value.copy(
-                            status = LightningService.LightningState.Status.ERROR,
-                            error = "Block recovery stalled at $height. Try again on a faster connection."
-                        )
-                        return@withContext
+                if (networkMonitor.networkState.value != com.pocketnode.network.NetworkState.WIFI) {
+                    if (holding) { pmm.releaseNetworkHold(); holding = false }
+                    setProgress(missing, waitingForWifi = true)
+                    kotlinx.coroutines.delay(15_000)
+                    continue
+                }
+                if (!holding) {
+                    pmm.setRpc(rpc)
+                    pmm.holdNetwork()
+                    holding = true
+                }
+                setProgress(missing, waitingForWifi = false)
+
+                val peers = fullHistoryPeers(rpc)
+                if (peers.isEmpty()) {
+                    Log.d(TAG, "Prune feed: no full-history peers yet")
+                    kotlinx.coroutines.delay(15_000)
+                    continue
+                }
+
+                val windowEnd = minOf(ldk + FEED_WINDOW, pruneHeight - 1)
+                var peerIdx = 0
+                for (h in (ldk + 1)..windowEnd) {
+                    if (h in present) continue
+                    val sent = requestedAt[h]
+                    if (sent != null && now - sent < REREQUEST_MS) continue
+                    val hash = rpc.call("getblockhash", JSONArray().put(h))?.optString("value")
+                    if (hash.isNullOrEmpty()) continue
+                    for (attempt in 0 until minOf(3, peers.size)) {
+                        val peer = peers[peerIdx++ % peers.size]
+                        val res = rpc.call("getblockfrompeer", JSONArray().put(hash).put(peer))
+                        if (res == null) break
+                        if (!res.has("_rpc_error")) { requestedAt[h] = now; break }
+                        val msg = res.optString("message")
+                        if (msg.contains("already downloaded", ignoreCase = true)) { present.add(h); break }
+                        Log.d(TAG, "Prune feed: getblockfrompeer $h via peer $peer: $msg")
                     }
-                } else {
-                    stallCount = 0
                 }
-                lastHeight = height
+                kotlinx.coroutines.delay(10_000)
             }
-
-            Log.i(TAG, "Prune recovery: retrying Lightning start...")
-            stateFlow.value = stateFlow.value.copy(
-                status = LightningService.LightningState.Status.STARTING,
-                recoveryBlocksNeeded = 0,
-                recoveryBlocksDone = 0,
-                error = null
-            )
-            kotlinx.coroutines.delay(100)
-            startNode?.invoke(rpcUser, rpcPassword, rpcPort)
-
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Prune recovery failed", e)
+            Log.e(TAG, "Prune feed failed", e)
+        } finally {
+            if (holding) pmm.releaseNetworkHold()
             stateFlow.value = stateFlow.value.copy(
-                status = LightningService.LightningState.Status.ERROR,
-                error = "Block recovery failed: ${e.message}"
+                recoveryBlocksNeeded = 0, recoveryBlocksDone = 0, recoveryWaitingForWifi = false
             )
         }
+    }
+
+    /** Peers advertising NODE_NETWORK, i.e. able to serve blocks older than 288. */
+    private suspend fun fullHistoryPeers(rpc: BitcoinRpcClient): List<Int> {
+        val res = rpc.call("getpeerinfo") ?: return emptyList()
+        val arr = res.optJSONArray("value") ?: return emptyList()
+        val ids = ArrayList<Int>()
+        for (i in 0 until arr.length()) {
+            val p = arr.optJSONObject(i) ?: continue
+            val services = p.optJSONArray("servicesnames") ?: continue
+            if ((0 until services.length()).any { services.optString(it) == "NETWORK" }) {
+                ids.add(p.optInt("id"))
+            }
+        }
+        return ids
     }
 }

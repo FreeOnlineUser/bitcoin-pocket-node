@@ -117,9 +117,7 @@ fun LightningScreen(
                 effectiveState.status != LightningService.LightningState.Status.STOPPED) {
                 val isStarting = effectiveState.status == LightningService.LightningState.Status.STARTING
                 val isError = effectiveState.status == LightningService.LightningState.Status.ERROR
-                val isRecovering = effectiveState.status == LightningService.LightningState.Status.RECOVERING
                 val bannerColor = when {
-                    isRecovering -> Color(0xFFFF9800)
                     isStarting -> Color(0xFFFF9800)
                     isError -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -141,14 +139,6 @@ fun LightningScreen(
                     Column {
                         Text(
                             when {
-                                isRecovering && effectiveState.recoveryWaitingForWifi ->
-                                    "📶 Waiting for WiFi..."
-                                isRecovering -> {
-                                    val pct = if (effectiveState.recoveryBlocksNeeded > 0)
-                                        (effectiveState.recoveryBlocksDone * 100 / effectiveState.recoveryBlocksNeeded)
-                                    else 0
-                                    "⚡ Recovering ${effectiveState.recoveryBlocksNeeded} pruned blocks ($pct%)"
-                                }
                                 isStarting -> "⏳ Starting Lightning..."
                                 isError -> "⚠️ Node Error"
                                 else -> "⏳ Waiting for node..."
@@ -159,10 +149,6 @@ fun LightningScreen(
                         )
                         Text(
                             when {
-                                isRecovering && effectiveState.recoveryWaitingForWifi ->
-                                    "Blocks were pruned while offline. Connect to WiFi to re-download."
-                                isRecovering ->
-                                    "Re-downloading blocks pruned while offline (${effectiveState.recoveryBlocksDone}/${effectiveState.recoveryBlocksNeeded})"
                                 isStarting -> effectiveState.error ?: "Connecting to bitcoind and syncing"
                                 isError -> effectiveState.error ?: "Lightning node encountered an error"
                                 else -> "Lightning will start when bitcoind is synced"
@@ -171,15 +157,6 @@ fun LightningScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
-                }
-                // Progress bar for recovery
-                if (isRecovering && !effectiveState.recoveryWaitingForWifi && effectiveState.recoveryBlocksNeeded > 0) {
-                    LinearProgressIndicator(
-                        progress = effectiveState.recoveryBlocksDone.toFloat() / effectiveState.recoveryBlocksNeeded.toFloat(),
-                        modifier = Modifier.fillMaxWidth().height(4.dp),
-                        color = Color(0xFFFF9800),
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
                 }
             }
 
@@ -219,6 +196,28 @@ fun LightningScreen(
                                 ) {
                                     Icon(Icons.Default.ContentCopy, "Copy", modifier = Modifier.size(14.dp))
                                 }
+                            }
+                        }
+
+                        // Catching up on blocks pruned while the phone was offline
+                        if (effectiveState.recoveryBlocksNeeded > 0) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                if (effectiveState.recoveryWaitingForWifi)
+                                    "Blocks were pruned while offline. Connect to WiFi to fetch them."
+                                else
+                                    "Fetching blocks pruned while offline (${effectiveState.recoveryBlocksDone}/${effectiveState.recoveryBlocksNeeded})",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFF9800)
+                            )
+                            if (!effectiveState.recoveryWaitingForWifi) {
+                                Spacer(Modifier.height(4.dp))
+                                LinearProgressIndicator(
+                                    progress = effectiveState.recoveryBlocksDone.toFloat() / effectiveState.recoveryBlocksNeeded.toFloat(),
+                                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                                    color = Color(0xFFFF9800),
+                                    trackColor = MaterialTheme.colorScheme.surface
+                                )
                             }
                         }
 

@@ -99,7 +99,7 @@ class LightningService(private val context: Context) {
             val confirmations: Int = 0 // current confirmation count
         )
 
-        enum class Status { STOPPED, STARTING, RUNNING, ERROR, RECOVERING }
+        enum class Status { STOPPED, STARTING, RUNNING, ERROR }
     }
 
     private var node: Node? = null
@@ -126,6 +126,7 @@ class LightningService(private val context: Context) {
     private var watchtowerBridge: WatchtowerBridge? = null
     private var lndHubServer: LndHubServer? = null
     private var stateRefreshJob: kotlinx.coroutines.Job? = null
+    private var pruneFeedJob: kotlinx.coroutines.Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -213,11 +214,9 @@ class LightningService(private val context: Context) {
                 if (chainInfo != null && !chainInfo.has("_rpc_error")) {
                     val pruneHeight = chainInfo.optLong("pruneheight", 0)
                     if (pruneHeight > lastLdkHeight) {
+                        // Start anyway: the prune feed (launched after node.start) fetches
+                        // the missing blocks while ldk-node's sync retries.
                         Log.w(TAG, "Pruned blocks detected: LDK last synced at $lastLdkHeight but prune height is $pruneHeight")
-                        starting = false
-                        // recoverPrunedBlocks is suspend — hand off to coroutine scope
-                        scope.launch { recoverPrunedBlocks(rpcUser, rpcPassword, rpcPort) }
-                        return
                     }
                 }
             }
@@ -703,6 +702,14 @@ class LightningService(private val context: Context) {
             }
             stateRefreshJob = refreshLoop.start(ioScope)
 
+            // Fetch any blocks LDK needs that bitcoind pruned while we were away.
+            // Returns at once if LDK is already inside the prune window.
+            pruneFeedJob = ioScope.launch {
+                recovery.feedPrunedBlocks(rpcUser, rpcPassword, rpcPort) {
+                    node?.let { n -> runCatching { n.status().currentBestBlock.height.toLong() }.getOrNull() }
+                }
+            }
+
             // Sync watchdog
             val startHeight = try { ldkNode.status().currentBestBlock.height.toLong() } catch (_: Exception) { 0L }
             refreshLoop.startSyncWatchdog(
@@ -741,14 +748,6 @@ class LightningService(private val context: Context) {
      * Try to restore the most recent seed backup that differs from the current seed.
      * Returns true if a backup was restored.
      */
-    // === Prune Recovery ===
-
-    private suspend fun recoverPrunedBlocks(
-        rpcUser: String, rpcPassword: String, rpcPort: Int
-    ) {
-        recovery.recoverPrunedBlocks(rpcUser, rpcPassword, rpcPort) { !starting }
-    }
-
     /** Get connected Lightning peers. Returns list of PeerDetails from LDK. */
     fun networkGraph(): org.lightningdevkit.ldknode.NetworkGraph? = node?.networkGraph()
 
@@ -776,6 +775,8 @@ class LightningService(private val context: Context) {
         try {
             stateRefreshJob?.cancel()
             stateRefreshJob = null
+            pruneFeedJob?.cancel()
+            pruneFeedJob = null
             lndHubServer?.stop()
             lndHubServer = null
             node?.stop()
@@ -975,6 +976,9 @@ class LightningService(private val context: Context) {
                     (it.channelValueSats.toLong() - (it.outboundCapacityMsat.toLong() / 1000))
                 },
                 error = null,
+                recoveryBlocksNeeded = _state.value.recoveryBlocksNeeded,
+                recoveryBlocksDone = _state.value.recoveryBlocksDone,
+                recoveryWaitingForWifi = _state.value.recoveryWaitingForWifi,
                 scanningForFunds = _state.value.scanningForFunds,
                 scanProgress = _state.value.scanProgress,
                 lastChannelError = _state.value.lastChannelError,
