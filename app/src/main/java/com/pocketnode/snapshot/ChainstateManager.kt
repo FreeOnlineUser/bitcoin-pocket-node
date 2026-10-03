@@ -40,7 +40,8 @@ class ChainstateManager private constructor(private val context: Context) {
         private const val TAG = "ChainstateManager"
         private const val SFTP_USERNAME = "pocketnode"
         private const val ARCHIVE_NAME = "node-sync.tar"
-        // AssumeUTXO height must match chainparams — we patched 910000
+        // AssumeUTXO height must match chainparams. Stock 29.x stops at 880000;
+        // our 29.4 build backports the 910000 entry from Core 30.
         private const val SNAPSHOT_HEIGHT = 910000
         // Expected block hash at height 910000 (from Bitcoin Core 30 chainparams)
         const val EXPECTED_BLOCK_HASH = "0000000000000000000108970acb9522ffd516eae17acddcb1bd16469194a821"

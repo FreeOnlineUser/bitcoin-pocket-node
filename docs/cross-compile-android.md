@@ -118,7 +118,9 @@ cp -r ~/tools/android-cross-deps/android-deps /private/tmp/
 ```bash
 git clone --depth 1 --branch v29.4 https://github.com/bitcoin/bitcoin.git bitcoin-core-v29.4
 ```
-Same cmake flags as the Core 29.3 section below, fdsan patch only.
+Same cmake flags as the Core 29.3 section below, plus two patches: fdsan, and the
+mainnet assumeutxo entry for height 910,000 copied verbatim from Core v30.0
+(stock 29.x only knows 840,000 and 880,000, and the app's snapshot is 910,000).
 `~/tools/bitcoind-build/build-v29.4.sh` on the build mini does the whole thing.
 
 > **Do not ship the v72t `29.3+UASF-BIP110` build again.** It is not dormant:
