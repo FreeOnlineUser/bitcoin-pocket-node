@@ -114,7 +114,19 @@ cp -r ~/tools/android-cross-deps/android-deps /private/tmp/
 
 ### Clone
 
-**Core 29.3 + BIP-110** (v72t's port):
+**Core 29.4** (vanilla, the default `libbitcoind_core.so` since v0.37):
+```bash
+git clone --depth 1 --branch v29.4 https://github.com/bitcoin/bitcoin.git bitcoin-core-v29.4
+```
+Same cmake flags as the Core 29.3 section below, fdsan patch only.
+`~/tools/bitcoind-build/build-v29.4.sh` on the build mini does the whole thing.
+
+> **Do not ship the v72t `29.3+UASF-BIP110` build again.** It is not dormant:
+> it requires every block in [961,632, 963,648) to signal bit 4
+> (`bad-version-reduced_data`), so it rejected mainnet block 961,640 and
+> stopped following the chain. v0.35 and v0.36 shipped it as the default.
+
+**Core 29.3 + BIP-110** (v72t's port, historical, see warning above):
 ```bash
 git clone --depth 1 --branch "29.3+UASF-BIP110" https://github.com/v72t/bitcoin.git bitcoin-core-bip110
 ```

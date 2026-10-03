@@ -10,7 +10,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 
 - **Two proven bootstrap paths:** sync from home node (under 1 hour) or download from internet (3-6 hours, on-chain only)
 - **Phone-to-phone and relay sharing:** scan a QR code, get a full node. Resume on failure. Works over WiFi or LAN
-- **Two Bitcoin Core versions:** Core 29.3 (default) and Core 30. One-tap switching, same chainstate
+- **Two Bitcoin Core versions:** Core 29.4 (default) and Core 30. One-tap switching, same chainstate
 - **No thermal load:** phone shows no sign of load or overheat during normal operation
 - ~13 GB total disk (11 GB chainstate + 2 GB pruned blocks). Optional: +13 GB for block filter index (Neutrino wallets only, not needed for Lightning)
 - **Pure Kotlin Electrum server** with wallet tracking: balance, transactions, UTXOs all served from your own pruned node
@@ -111,7 +111,7 @@ Two Bitcoin Core versions with one-tap switching, differing only in relay / OP_R
 
 | Implementation | Size | Policy |
 |---|---|---|
-| **Bitcoin Core 29.3** (default) | 8 MB | Standard relay rules and OP_RETURN limits |
+| **Bitcoin Core 29.4** (default) | 8 MB | Standard relay rules and OP_RETURN limits |
 | **Bitcoin Core 30** | 8.6 MB | Permissive: larger OP_RETURN data allowed |
 
 Both share the same chainstate format. Switch without re-syncing. Tap "Change" on the dashboard, confirm, and the node restarts with the new binary.
@@ -120,7 +120,7 @@ See [Version Selection Design](docs/VERSION-SELECTION.md) for details.
 
 ## Features
 
-- **Two Bitcoin Core versions** with one-tap switching: Core 29.3 (default) and Core 30
+- **Two Bitcoin Core versions** with one-tap switching: Core 29.4 (default) and Core 30
 - **Two proven bootstrap paths:** home node or internet download (phone-to-phone built, untested)
 - **Pure Kotlin Electrum server** purpose-built for pruned nodes: the only Electrum server that works with `prune=2048`. Balances from the UTXO set, transaction history persisted forever (survives pruning), unsolicited notifications push new transactions to BlueWallet in real time
 - **Built-in Lightning node** powered by LDK (send, receive, channels, peer browser, seed backup/restore with automatic fund recovery)
@@ -187,7 +187,7 @@ Download from `https://utxo.download/utxo-910000.dat` (9 GB). Same `loadtxoutset
 │       │              │              │                 │
 │  ┌────┴──────────────┴──────────────┴──────────────┐  │
 │  │  bitcoind (ARM64), user selects:                │  │
-│  │  Core 29.3 (default)  |  Core 30               │  │
+│  │  Core 29.4 (default)  |  Core 30               │  │
 │  │  Foreground service, local RPC                  │  │
 │  │  Tor mode: -proxy=127.0.0.1:9050 -onlynet=onion│  │
 │  └────────────────┬────────────────────────────────┘  │
@@ -278,7 +278,7 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 
 - **OS:** Android 7+ (tested on GrapheneOS, EMUI, Samsung OneUI)
 - **Hardware:** Any ARM64 device (tested on Pixel, Samsung, Huawei)
-- **Default:** Bitcoin Core 29.3 (standard relay rules and OP_RETURN limits)
+- **Default:** Bitcoin Core 29.4 (standard relay rules and OP_RETURN limits)
 - **Also bundled:** Bitcoin Core 30 (user selects from dashboard; permissive OP_RETURN)
 - **AssumeUTXO heights:** 840k (upstream) + 880k, 910k (backported from Core 30)
 
@@ -288,7 +288,7 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 - macOS or Linux build machine
 - Android SDK + NDK r27
 - JDK 17
-- Bitcoin Core 29.3 source (with chainparams patches)
+- Bitcoin Core 29.4 source (stock tag, plus the Android fdsan patch)
 
 ### Build bitcoind for ARM64
 See [docs/cross-compile-android.md](docs/cross-compile-android.md)

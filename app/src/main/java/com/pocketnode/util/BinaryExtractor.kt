@@ -35,7 +35,7 @@ object BinaryExtractor {
         CORE(
             "libbitcoind_core.so",
             "Bitcoin Core",
-            "29.3",
+            "29.4",
             "Reference implementation. Standard relay rules and OP_RETURN limits.",
             "Standard -- default relay policy"
         ),
