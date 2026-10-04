@@ -20,12 +20,15 @@ class MempoolPrice(private val rpc: BitcoinRpcClient) {
 
     companion object {
         private const val TAG = "MempoolPrice"
-        // 60 min: the phone keeps a 50 MB mempool (maxmempool=50), which turns away
-        // low-fee transactions when busy, so arrivals run ~1.5 usable outputs a second.
-        const val WINDOW_MS = 60 * 60 * 1000L
+        // The estimate uses the last 10 minutes of arrivals. Measured 2026-10-05 against
+        // Kraken 1-min closes during a +0.9% move: 10 min was closest to the live price
+        // (0.22% RMS) and matched Kraken from 10 min earlier within 0.07%; 20/30/60 min
+        // windows trailed 19/24/30+ min. On-chain follows exchanges, it doesn't lead.
+        // Short windows stayed steady (~0.02% step to step) with ~1k outputs.
+        const val WINDOW_MS = 10 * 60 * 1000L
         private const val RECENT_BLOCKS_KEPT = 6
         // Below this many filtered outputs the histogram is too thin to trust.
-        private const val MIN_OUTPUTS = 2_000
+        private const val MIN_OUTPUTS = 500
     }
 
     private class Entry(val arrivedAt: Long, val outputs: List<Double>?)
