@@ -51,7 +51,8 @@ fun FairTradeCard(
     // until the last-hour estimate exists), for the label only.
     val selectedWindow by com.pocketnode.oracle.OracleUpdater.window.collectAsState()
     val oracleState by com.pocketnode.oracle.OracleUpdater.state.collectAsState()
-    val priceWindow = if (selectedWindow == com.pocketnode.oracle.OracleUpdater.PriceWindow.HOUR && oracleState.recent != null)
+    // Live never reaches the converter: OracleCard hands it the last-hour figure instead.
+    val priceWindow = if (selectedWindow != com.pocketnode.oracle.OracleUpdater.PriceWindow.DAY && oracleState.recent != null)
         com.pocketnode.oracle.OracleUpdater.PriceWindow.HOUR else com.pocketnode.oracle.OracleUpdater.PriceWindow.DAY
 
     // Track which field the user is editing

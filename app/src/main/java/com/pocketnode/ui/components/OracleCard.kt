@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pocketnode.oracle.MempoolPrice
 import com.pocketnode.oracle.OracleUpdater
 
 /**
@@ -49,13 +50,24 @@ fun OracleCard(
     val context = LocalContext.current
     LaunchedEffect(Unit) { OracleUpdater.loadWindow(context) }
     val window by OracleUpdater.window.collectAsState()
-    // The last-hour figure appears once the cache is loaded; until then show the 24h one.
-    val showHour = window == OracleUpdater.PriceWindow.HOUR && recent != null
-    val shown = if (showHour) recent else result
-    val other = if (showHour) result else recent
+    val live = state.live
+    // Fall back to the 24h figure until the selected one exists.
+    val effective = when {
+        window == OracleUpdater.PriceWindow.LIVE && live != null -> OracleUpdater.PriceWindow.LIVE
+        window == OracleUpdater.PriceWindow.HOUR && recent != null -> OracleUpdater.PriceWindow.HOUR
+        else -> OracleUpdater.PriceWindow.DAY
+    }
+    val shown = when (effective) {
+        OracleUpdater.PriceWindow.LIVE -> live
+        OracleUpdater.PriceWindow.HOUR -> recent
+        OracleUpdater.PriceWindow.DAY -> result
+    }
+    // The converter never uses the mempool figure (unconfirmed, cheap to skew):
+    // on Live it gets the last-hour block figure instead.
+    val converterPrice = if (effective == OracleUpdater.PriceWindow.LIVE) (recent ?: result) else shown
 
-    LaunchedEffect(shown?.price) {
-        shown?.let { onPriceUpdate?.invoke(it.price) }
+    LaunchedEffect(converterPrice?.price) {
+        converterPrice?.let { onPriceUpdate?.invoke(it.price) }
     }
 
     // Don't show card until node is synced or we have a result
@@ -154,13 +166,34 @@ fun OracleCard(
                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
-                    if (other != null) {
-                        val diffPct = (recent!!.price - result.price) * 100.0 / result.price
-                        val otherLabel = if (showHour) "24h average" else "Last hour"
+                    // The figures not shown, each against the 24h average.
+                    val others = listOfNotNull(
+                        result.takeIf { effective != OracleUpdater.PriceWindow.DAY }?.let { "24h $${"%,d".format(it.price)}" },
+                        recent?.takeIf { effective != OracleUpdater.PriceWindow.HOUR }?.let {
+                            "hour $${"%,d".format(it.price)} (${"%+.1f".format((it.price - result.price) * 100.0 / result.price)}%)"
+                        },
+                        live?.takeIf { effective != OracleUpdater.PriceWindow.LIVE }?.let {
+                            "live $${"%,d".format(it.price)} (${"%+.1f".format((it.price - result.price) * 100.0 / result.price)}%)"
+                        }
+                    )
+                    if (others.isNotEmpty()) {
                         Text(
-                            "$otherLabel: $${"%,d".format(other.price)} · last hour ${"%+.1f".format(diffPct)}% vs 24h",
+                            others.joinToString(" · "),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                    if (effective == OracleUpdater.PriceWindow.LIVE) {
+                        Text(
+                            "Unconfirmed transactions, last ${MempoolPrice.WINDOW_MS / 60_000} min",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFFB74D)
+                        )
+                    } else if (window == OracleUpdater.PriceWindow.LIVE && state.liveNote != null) {
+                        Text(
+                            state.liveNote!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFFB74D)
                         )
                     }
                 }
@@ -190,6 +223,9 @@ fun OracleCard(
                         DetailRow("Blocks", "${r.blockRange.first}–${r.blockRange.last} (${r.blockRange.last - r.blockRange.first + 1} blocks)")
                         DetailRow("Transactions", "${"%,d".format(r.outputCount)} filtered outputs")
                         DetailRow("Deviation", "${"%.1f".format(r.deviation * 100)}%")
+                        state.live?.let {
+                            DetailRow("Live estimate", "$${"%,d".format(it.price)} (${"%,d".format(state.liveOutputs)} outputs)")
+                        }
                         if (recent != null) {
                             DetailRow("Last hour estimate", "$${"%,d".format(recent.price)} " +
                                 "(${recent.blockRange.last - recent.blockRange.first + 1} blocks)")
@@ -199,8 +235,12 @@ fun OracleCard(
                             "The main price averages the last 144 blocks (about a day), so it " +
                             "trails moves. The last hour estimate runs the same method on the " +
                             "newest ${OracleUpdater.RECENT_BLOCKS} blocks, so it follows the market " +
-                            "closely but leans on fewer transactions. Neither is a live exchange " +
-                            "quote. Both update with each new block while your node runs.",
+                            "closely but leans on fewer transactions. Both come from mined " +
+                            "transactions and update with each block. Live uses unconfirmed " +
+                            "transactions from the last ${MempoolPrice.WINDOW_MS / 60_000} minutes " +
+                            "in your node's mempool (Max mode only): the freshest view, but those " +
+                            "can be replaced or never confirm, so the converter uses the last hour " +
+                            "figure even when Live is shown. None of these is an exchange quote.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )

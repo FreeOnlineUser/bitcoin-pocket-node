@@ -39,6 +39,10 @@ object OracleUpdater {
     data class OracleState(
         val result: OracleResult? = null,
         val recent: OracleResult? = null,
+        /** Mempool estimate (Max mode only), and why it's missing when it is. */
+        val live: OracleResult? = null,
+        val liveNote: String? = null,
+        val liveOutputs: Int = 0,
         val updatedAt: Long = 0,
         val running: Boolean = false,
         val progress: String = "",
@@ -46,7 +50,7 @@ object OracleUpdater {
     )
 
     /** Which figure the dashboard headline and the converter use. */
-    enum class PriceWindow(val label: String) { DAY("24h average"), HOUR("Last hour") }
+    enum class PriceWindow(val label: String) { DAY("24h average"), HOUR("Last hour"), LIVE("Live") }
 
     private const val KEY_WINDOW = "price_window"
     private val _window = MutableStateFlow(PriceWindow.DAY)
@@ -70,6 +74,9 @@ object OracleUpdater {
 
     private val lock = Mutex()
     private var job: Job? = null
+    private var liveJob: Job? = null
+    private var mempool: MempoolPrice? = null
+    private var liveOracle: UTXOracle? = null
     private var oracle: UTXOracle? = null
     private lateinit var appContext: Context
 
@@ -89,11 +96,51 @@ object OracleUpdater {
                 delay(POLL_MS)
             }
         }
+        // Separate loop: the first mempool load can take minutes and must not
+        // hold up the block-based figures.
+        liveJob = scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                try {
+                    liveTick()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Live price update failed", e)
+                }
+                delay(POLL_MS)
+            }
+        }
     }
 
     fun stop() {
         job?.cancel()
         job = null
+        liveJob?.cancel()
+        liveJob = null
+    }
+
+    private suspend fun liveTick() {
+        val maxMode = com.pocketnode.power.PowerModeManager.modeFlow.value == com.pocketnode.power.PowerModeManager.Mode.MAX
+        if (!maxMode) {
+            // Low/Away run blocks-only: no mempool, so no live figure. Start clean next time.
+            mempool?.reset()
+            _state.value = _state.value.copy(live = null, liveOutputs = 0, liveNote = "Live needs Max mode (Low and Away keep no mempool)")
+            return
+        }
+        val rpc = rpc() ?: return
+        val info = rpc.getBlockchainInfo() ?: return
+        if (info.has("_rpc_error") || info.optBoolean("initialblockdownload", true)) return
+        // Own oracle instance: keeps its progress messages off the block figures' card text.
+        val o = liveOracle ?: UTXOracle(rpc).also { liveOracle = it }
+        val mp = mempool ?: MempoolPrice(rpc).also { mempool = it }
+        if (_state.value.live == null) _state.value = _state.value.copy(liveNote = "Collecting mempool transactions…")
+        val r = mp.update(o, info.optLong("blocks", 0).toInt())
+        _state.value = _state.value.copy(
+            live = r ?: _state.value.live,
+            liveOutputs = mp.sampleOutputs,
+            liveNote = if (r == null && _state.value.live == null) "Collecting mempool transactions (${mp.sampleOutputs} outputs so far)…" else null
+        )
+        r?.let { Log.i(TAG, "Live estimate $${it.price} from ${mp.sampleOutputs} outputs (t=${System.currentTimeMillis() / 1000})") }
     }
 
     /** Full rescan of the newest 144 blocks, on request from the card. */

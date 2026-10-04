@@ -56,6 +56,63 @@ data class BlockOutputs(
 
 class UTXOracle(private val rpc: BitcoinRpcClient) {
 
+    companion object {
+        /**
+         * UTXOracle's per-transaction filter (unchanged from the Python): keep the
+         * outputs of plain payments, i.e. two outputs, at most five inputs, no
+         * coinbase, no OP_RETURN, no oversized witness, and not spending a
+         * transaction from the same window ([isRecent]). Returns null if filtered out.
+         * Takes a decoded tx as returned by getblock verbosity 2 or getrawtransaction.
+         */
+        fun filterTxOutputs(tx: JSONObject, isRecent: (String) -> Boolean): List<Double>? {
+            val vin = tx.getJSONArray("vin")
+            val vout = tx.getJSONArray("vout")
+            val inputCount = vin.length()
+            val outputCount = vout.length()
+
+            val isCoinbase = inputCount > 0 && vin.getJSONObject(0).has("coinbase")
+
+            val inputTxids = mutableListOf<String>()
+            for (i in 0 until inputCount) {
+                val input = vin.getJSONObject(i)
+                if (input.has("txid")) inputTxids.add(input.getString("txid"))
+            }
+
+            var hasOpReturn = false
+            val outputValues = mutableListOf<Double>()
+            for (i in 0 until outputCount) {
+                val output = vout.getJSONObject(i)
+                val valueBtc = output.getDouble("value")
+                val scriptPubKey = output.optJSONObject("scriptPubKey")
+                if (scriptPubKey?.optString("type", "") == "nulldata") hasOpReturn = true
+                if (valueBtc > 1e-5 && valueBtc < 1e5) outputValues.add(valueBtc)
+            }
+
+            var witnessExceeds = false
+            for (i in 0 until inputCount) {
+                val input = vin.getJSONObject(i)
+                val witnessArray = input.optJSONArray("txinwitness")
+                if (witnessArray != null) {
+                    var totalWitnessLen = 0
+                    for (w in 0 until witnessArray.length()) {
+                        val itemLen = witnessArray.getString(w).length / 2
+                        totalWitnessLen += itemLen
+                        if (itemLen > 500 || totalWitnessLen > 500) {
+                            witnessExceeds = true
+                            break
+                        }
+                    }
+                }
+                if (witnessExceeds) break
+            }
+
+            val isSameDayTx = inputTxids.any(isRecent)
+
+            return if (inputCount <= 5 && outputCount == 2 && !isCoinbase &&
+                !hasOpReturn && !witnessExceeds && !isSameDayTx) outputValues else null
+        }
+    }
+
     private val _progress = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 64)
     val progress: SharedFlow<String> = _progress
 
@@ -340,6 +397,16 @@ class UTXOracle(private val rpc: BitcoinRpcClient) {
         }
     }
 
+    /** Price from an arbitrary set of filtered outputs (e.g. mempool arrivals). */
+    fun priceFromOutputs(outputs: List<Double>, height: Int, time: Long): OracleResult? {
+        if (outputs.isEmpty()) return null
+        return try {
+            calculatePrice(outputs, List(outputs.size) { height }, List(outputs.size) { time }, height..height, "mempool")
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Process a single block and return its filtered outputs */
     private suspend fun processBlock(
         blockHash: String,
@@ -355,54 +422,8 @@ class UTXOracle(private val rpc: BitcoinRpcClient) {
         for (txIdx in 0 until txArray.length()) {
             val tx = txArray.getJSONObject(txIdx)
             val txid = tx.getString("txid")
-            val vin = tx.getJSONArray("vin")
-            val vout = tx.getJSONArray("vout")
-            val inputCount = vin.length()
-            val outputCount = vout.length()
-
-            val isCoinbase = inputCount > 0 && vin.getJSONObject(0).has("coinbase")
-
-            val inputTxids = mutableListOf<String>()
-            for (i in 0 until inputCount) {
-                val input = vin.getJSONObject(i)
-                if (input.has("txid")) inputTxids.add(input.getString("txid"))
-            }
-
-            var hasOpReturn = false
-            val outputValues = mutableListOf<Double>()
-            for (i in 0 until outputCount) {
-                val output = vout.getJSONObject(i)
-                val valueBtc = output.getDouble("value")
-                val scriptPubKey = output.optJSONObject("scriptPubKey")
-                if (scriptPubKey?.optString("type", "") == "nulldata") hasOpReturn = true
-                if (valueBtc > 1e-5 && valueBtc < 1e5) outputValues.add(valueBtc)
-            }
-
-            var witnessExceeds = false
-            for (i in 0 until inputCount) {
-                val input = vin.getJSONObject(i)
-                val witnessArray = input.optJSONArray("txinwitness")
-                if (witnessArray != null) {
-                    var totalWitnessLen = 0
-                    for (w in 0 until witnessArray.length()) {
-                        val itemLen = witnessArray.getString(w).length / 2
-                        totalWitnessLen += itemLen
-                        if (itemLen > 500 || totalWitnessLen > 500) {
-                            witnessExceeds = true
-                            break
-                        }
-                    }
-                }
-                if (witnessExceeds) break
-            }
-
             blockTxids.add(txid)
-            val isSameDayTx = inputTxids.any { it in existingTxids || it in blockTxids }
-
-            if (inputCount <= 5 && outputCount == 2 && !isCoinbase &&
-                !hasOpReturn && !witnessExceeds && !isSameDayTx) {
-                filteredOutputs.addAll(outputValues)
-            }
+            filterTxOutputs(tx) { it in existingTxids || it in blockTxids }?.let { filteredOutputs.addAll(it) }
         }
 
         return BlockOutputs(height, blockHash, time, blockTxids, filteredOutputs)
