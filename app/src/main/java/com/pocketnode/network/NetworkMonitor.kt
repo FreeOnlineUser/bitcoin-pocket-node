@@ -5,7 +5,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.net.TrafficStats
+import android.app.usage.NetworkStats
+import android.app.usage.NetworkStatsManager
 import android.content.SharedPreferences
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +44,7 @@ data class UsageState(
 class NetworkMonitor private constructor(private val context: Context) {
 
     companion object {
+        private const val KEY_RESET_AT = "usage_reset_at"
         @Volatile private var instance: NetworkMonitor? = null
 
         fun getInstance(context: Context): NetworkMonitor {
@@ -68,17 +70,21 @@ class NetworkMonitor private constructor(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val uid: Int = android.os.Process.myUid()
-    private var lastRxBytes: Long = TrafficStats.getUidRxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
-    private var lastTxBytes: Long = TrafficStats.getUidTxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
-    private var lastLoRx: Long = readLoopbackRx()
-    private var lastLoTx: Long = readLoopbackTx()
+    private val statsManager =
+        context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
+    // Apps can't query VPN traffic from NetworkStatsManager, so while a VPN is the active
+    // network we charge bitcoind's own P2P byte counters (getnettotals) instead. That is
+    // nearly all of our traffic and, unlike TrafficStats, excludes local RPC.
+    private var lastP2pRecv = -1L
+    private var lastP2pSent = -1L
+    // Finished days don't change; cache them so the 30s refresh only queries today.
+    private val pastDays = java.util.concurrent.ConcurrentHashMap<String, DataUsageEntry>()
     private var lastNetworkState: NetworkState = NetworkState.OFFLINE
 
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var started = false
 
     init {
-        android.util.Log.i("DataUsage", "NetworkMonitor init: uid=$uid baseline=↓${lastRxBytes}/↑${lastTxBytes} (trafficStats since boot)")
         refreshUsageState()
     }
 
@@ -157,81 +163,81 @@ class NetworkMonitor private constructor(private val context: Context) {
         }
     }
 
-    /** Read loopback RX bytes from /proc/net/dev */
-    private fun readLoopbackRx(): Long {
+    /**
+     * Bytes this app sent and received on one network type between [startMs] and [endMs],
+     * from Android's per-interface accounting. Loopback never appears here, which matters:
+     * bitcoind runs under our uid, so TrafficStats counts every local RPC call twice.
+     * Apps may always query their own uid; returns null if the type can't be queried.
+     */
+    private fun uidBytes(networkType: Int, startMs: Long, endMs: Long): Pair<Long, Long>? {
         return try {
-            java.io.File("/proc/net/dev").readLines()
-                .find { it.trimStart().startsWith("lo:") }
-                ?.trim()?.split("\\s+".toRegex())
-                ?.getOrNull(1)?.toLongOrNull() ?: 0L
-        } catch (_: Exception) { 0L }
-    }
-
-    /** Read loopback TX bytes from /proc/net/dev */
-    private fun readLoopbackTx(): Long {
-        return try {
-            java.io.File("/proc/net/dev").readLines()
-                .find { it.trimStart().startsWith("lo:") }
-                ?.trim()?.split("\\s+".toRegex())
-                ?.getOrNull(9)?.toLongOrNull() ?: 0L
-        } catch (_: Exception) { 0L }
+            val stats = statsManager.querySummary(networkType, null, startMs, endMs) ?: return null
+            try {
+                var rx = 0L
+                var tx = 0L
+                val bucket = NetworkStats.Bucket()
+                while (stats.hasNextBucket()) {
+                    stats.getNextBucket(bucket)
+                    if (bucket.uid == uid) {
+                        rx += bucket.rxBytes
+                        tx += bucket.txBytes
+                    }
+                }
+                rx to tx
+            } finally {
+                stats.close()
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("DataUsage", "netstats query failed for type $networkType: ${e.message}")
+            null
+        }
     }
 
     private fun sampleDataUsage() {
-        val currentRx = TrafficStats.getUidRxBytes(uid)
-        val currentTx = TrafficStats.getUidTxBytes(uid)
-
-        if (currentRx == TrafficStats.UNSUPPORTED.toLong()) return
-
-        // Subtract loopback traffic (RPC to bitcoind on localhost)
-        val currentLoRx = readLoopbackRx()
-        val currentLoTx = readLoopbackTx()
-        val loopbackDeltaRx = (currentLoRx - lastLoRx).coerceAtLeast(0)
-        val loopbackDeltaTx = (currentLoTx - lastLoTx).coerceAtLeast(0)
-        lastLoRx = currentLoRx
-        lastLoTx = currentLoTx
-
-        val rawDeltaRx = (currentRx - lastRxBytes).coerceAtLeast(0)
-        val rawDeltaTx = (currentTx - lastTxBytes).coerceAtLeast(0)
-        // Remove loopback from the count (loopback counts in both directions)
-        val deltaRx = (rawDeltaRx - loopbackDeltaRx).coerceAtLeast(0)
-        val deltaTx = (rawDeltaTx - loopbackDeltaTx).coerceAtLeast(0)
-
-        lastRxBytes = currentRx
-        lastTxBytes = currentTx
-
-        if (deltaRx == 0L && deltaTx == 0L) return
-
         val today = todayKey()
         val state = lastNetworkState
+        val onVpn = connectivityManager.activeNetwork
+            ?.let { connectivityManager.getNetworkCapabilities(it) }
+            ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
 
-        prefs.edit().apply {
-            when (state) {
-                NetworkState.WIFI -> {
-                    putLong("${today}_wifi_rx", prefs.getLong("${today}_wifi_rx", 0) + deltaRx)
-                    putLong("${today}_wifi_tx", prefs.getLong("${today}_wifi_tx", 0) + deltaTx)
-                }
-                NetworkState.CELLULAR -> {
-                    putLong("${today}_cell_rx", prefs.getLong("${today}_cell_rx", 0) + deltaRx)
-                    putLong("${today}_cell_tx", prefs.getLong("${today}_cell_tx", 0) + deltaTx)
-                }
-                NetworkState.OFFLINE -> { /* no-op */ }
+        p2pTotals()?.let { (recv, sent) ->
+            val restarted = recv < lastP2pRecv || sent < lastP2pSent  // bitcoind restarted
+            if (onVpn && lastP2pRecv >= 0 && !restarted && state != NetworkState.OFFLINE) {
+                val key = if (state == NetworkState.CELLULAR) "vpncell" else "vpnwifi"
+                prefs.edit()
+                    .putLong("${today}_${key}_rx", prefs.getLong("${today}_${key}_rx", 0) + (recv - lastP2pRecv))
+                    .putLong("${today}_${key}_tx", prefs.getLong("${today}_${key}_tx", 0) + (sent - lastP2pSent))
+                    .apply()
             }
-            apply()
+            lastP2pRecv = recv
+            lastP2pSent = sent
         }
 
-        // Update reactive state
         refreshUsageState()
 
-        // Log every sample with context for debugging data usage
-        val todayUsage = getUsageForDate(today)
+        val todayUsage = _usageState.value.today
         val totalToday = todayUsage.wifiRx + todayUsage.wifiTx + todayUsage.cellularRx + todayUsage.cellularTx
         val powerMode = try { com.pocketnode.power.PowerModeManager.modeFlow.value } catch (_: Exception) { "unknown" }
         android.util.Log.d("DataUsage",
-            "delta=↓${formatDelta(deltaRx)}/↑${formatDelta(deltaTx)} " +
             "today=${formatDelta(totalToday)} " +
-            "net=$state power=$powerMode " +
-            "trafficStats=↓${formatDelta(currentRx)}/↑${formatDelta(currentTx)}")
+            "wifi=↓${formatDelta(todayUsage.wifiRx)}/↑${formatDelta(todayUsage.wifiTx)} " +
+            "cell=↓${formatDelta(todayUsage.cellularRx)}/↑${formatDelta(todayUsage.cellularTx)} " +
+            "net=$state${if (onVpn) "+vpn" else ""} power=$powerMode")
+    }
+
+    /** bitcoind's cumulative P2P bytes (received, sent) since it started, or null. */
+    private fun p2pTotals(): Pair<Long, Long>? {
+        val creds = com.pocketnode.util.ConfigGenerator.readCredentials(context) ?: return null
+        val res = com.pocketnode.rpc.BitcoinRpcClient(creds.first, creds.second)
+            .callSync("getnettotals", connectTimeoutMs = 2_000, readTimeoutMs = 5_000) ?: return null
+        if (res.has("_rpc_error")) return null
+        return res.optLong("totalbytesrecv", -1).takeIf { it >= 0 }?.let { it to res.optLong("totalbytessent", 0) }
+    }
+
+    /** Local-midnight bounds of a yyyy-MM-dd day. */
+    private fun dayRange(date: String): Pair<Long, Long> {
+        val start = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date)!!.time
+        return start to start + 24 * 60 * 60 * 1000L
     }
 
     private fun formatDelta(bytes: Long): String = when {
@@ -252,12 +258,26 @@ class NetworkMonitor private constructor(private val context: Context) {
 
     /** Get usage for a specific date (yyyy-MM-dd) */
     fun getUsageForDate(date: String): DataUsageEntry {
+        if (date != todayKey()) {
+            return pastDays.getOrPut(date) { queryUsageForDate(date) }
+        }
+        return queryUsageForDate(date)
+    }
+
+    private fun queryUsageForDate(date: String): DataUsageEntry {
+        val (dayStart, end) = dayRange(date)
+        // Android's history can't be erased, so "clear" is a point we count from.
+        val start = maxOf(dayStart, prefs.getLong(KEY_RESET_AT, 0))
+        if (start >= end) return DataUsageEntry(date = date)
+        val wifi = uidBytes(ConnectivityManager.TYPE_WIFI, start, end) ?: (0L to 0L)
+        val eth = uidBytes(ConnectivityManager.TYPE_ETHERNET, start, end) ?: (0L to 0L)
+        val mobile = uidBytes(ConnectivityManager.TYPE_MOBILE, start, end) ?: (0L to 0L)
         return DataUsageEntry(
             date = date,
-            wifiRx = prefs.getLong("${date}_wifi_rx", 0),
-            wifiTx = prefs.getLong("${date}_wifi_tx", 0),
-            cellularRx = prefs.getLong("${date}_cell_rx", 0),
-            cellularTx = prefs.getLong("${date}_cell_tx", 0)
+            wifiRx = wifi.first + eth.first + prefs.getLong("${date}_vpnwifi_rx", 0),
+            wifiTx = wifi.second + eth.second + prefs.getLong("${date}_vpnwifi_tx", 0),
+            cellularRx = mobile.first + prefs.getLong("${date}_vpncell_rx", 0),
+            cellularTx = mobile.second + prefs.getLong("${date}_vpncell_tx", 0)
         )
     }
 
@@ -275,9 +295,8 @@ class NetworkMonitor private constructor(private val context: Context) {
     /** Get total cellular usage for current month */
     /** Clear all stored data usage history and reset baseline */
     fun clearAllUsage() {
-        prefs.edit().clear().apply()
-        lastRxBytes = TrafficStats.getUidRxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
-        lastTxBytes = TrafficStats.getUidTxBytes(uid).let { if (it == TrafficStats.UNSUPPORTED.toLong()) 0L else it }
+        prefs.edit().clear().putLong(KEY_RESET_AT, System.currentTimeMillis()).apply()
+        pastDays.clear()
         refreshUsageState()
         android.util.Log.i("NetworkMonitor", "All data usage history cleared, baseline reset")
     }
@@ -289,15 +308,12 @@ class NetworkMonitor private constructor(private val context: Context) {
 
     private fun getMonthUsage(type: String): Long {
         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val monthPrefix = SimpleDateFormat("yyyy-MM", Locale.US).format(Date())
         val cal = java.util.Calendar.getInstance()
-        var total = 0L
         val dayOfMonth = cal.get(java.util.Calendar.DAY_OF_MONTH)
+        var total = 0L
         for (i in 0 until dayOfMonth) {
-            val date = fmt.format(cal.time)
-            if (date.startsWith(monthPrefix)) {
-                total += prefs.getLong("${date}_${type}_rx", 0) + prefs.getLong("${date}_${type}_tx", 0)
-            }
+            val u = getUsageForDate(fmt.format(cal.time))
+            total += if (type == "cell") u.cellularRx + u.cellularTx else u.wifiRx + u.wifiTx
             cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
         }
         return total

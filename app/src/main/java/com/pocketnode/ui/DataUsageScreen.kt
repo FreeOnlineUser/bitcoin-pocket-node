@@ -28,10 +28,10 @@ fun DataUsageScreen(
     onBack: () -> Unit
 ) {
     val recentUsage = remember(networkMonitor) {
-        networkMonitor?.getRecentUsage(7) ?: emptyList()
+        networkMonitor?.usageState?.value?.recentDays ?: emptyList()
     }
     val monthCellular = remember(networkMonitor) {
-        networkMonitor?.getMonthCellularUsage() ?: 0L
+        networkMonitor?.usageState?.value?.monthCellular ?: 0L
     }
 
     Scaffold(
