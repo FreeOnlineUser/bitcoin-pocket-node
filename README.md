@@ -10,7 +10,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 
 - **Two proven bootstrap paths:** sync from home node (under 1 hour) or download from internet (3-6 hours, on-chain only)
 - **Phone-to-phone and relay sharing:** scan a QR code, get a full node. Resume on failure. Works over WiFi or LAN
-- **Two Bitcoin Core versions:** Core 29.4 (default) and Core 31. One-tap switching, same chainstate
+- **Every maintained Bitcoin Core version:** Core 29.4 (default), 30.3 and 31.1. One-tap switching, same chainstate
 - **No thermal load:** phone shows no sign of load or overheat during normal operation
 - ~13 GB total disk (11 GB chainstate + 2 GB pruned blocks). Optional: +13 GB for block filter index (Neutrino wallets only, not needed for Lightning)
 - **Pure Kotlin Electrum server** with wallet tracking: balance, transactions, UTXOs all served from your own pruned node
@@ -107,20 +107,21 @@ See [Direct Chainstate Copy](docs/direct-chainstate-copy.md) for a detailed comp
 
 ## Version Selection
 
-Two Bitcoin Core versions with one-tap switching, differing only in relay / OP_RETURN policy.
+One build of each Bitcoin Core major version still maintained upstream, with one-tap switching. They differ only in relay / OP_RETURN policy. Your choice is never changed for you; a version only leaves the app when Bitcoin Core stops maintaining it, and the release notes say so first.
 
 | Implementation | Size | Policy |
 |---|---|---|
 | **Bitcoin Core 29.4** (default) | 8 MB | Standard relay rules and OP_RETURN limits |
-| **Bitcoin Core 31** | 10 MB | Permissive: larger OP_RETURN data allowed |
+| **Bitcoin Core 30.3** | 8.5 MB | Permissive: larger OP_RETURN data allowed |
+| **Bitcoin Core 31.1** | 10 MB | Permissive: larger OP_RETURN data allowed |
 
-Both share the same chainstate format. Switch without re-syncing. Tap "Change" on the dashboard, confirm, and the node restarts with the new binary.
+All share the same chainstate format. Switch without re-syncing. Tap "Change" on the dashboard, confirm, and the node restarts with the new binary.
 
 See [Version Selection Design](docs/VERSION-SELECTION.md) for details.
 
 ## Features
 
-- **Two Bitcoin Core versions** with one-tap switching: Core 29.4 (default) and Core 31
+- **Three Bitcoin Core versions** with one-tap switching: Core 29.4 (default), 30.3 and 31.1
 - **Two proven bootstrap paths:** home node or internet download (phone-to-phone built, untested)
 - **Pure Kotlin Electrum server** purpose-built for pruned nodes: the only Electrum server that works with `prune=2048`. Balances from the UTXO set, transaction history persisted forever (survives pruning), unsolicited notifications push new transactions to BlueWallet in real time
 - **Built-in Lightning node** powered by LDK (send, receive, channels, peer browser, seed backup/restore with automatic fund recovery)
@@ -187,7 +188,7 @@ Download from `https://utxo.download/mainnet-910000-utxos.dat` (9 GB) by default
 │       │              │              │                 │
 │  ┌────┴──────────────┴──────────────┴──────────────┐  │
 │  │  bitcoind (ARM64), user selects:                │  │
-│  │  Core 29.4 (default)  |  Core 31               │  │
+│  │  Core 29.4 (default) | Core 30.3 | Core 31.1   │  │
 │  │  Foreground service, local RPC                  │  │
 │  │  Tor mode: -proxy=127.0.0.1:9050 -onlynet=onion│  │
 │  └────────────────┬────────────────────────────────┘  │
@@ -279,8 +280,8 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 - **OS:** Android 7+ (tested on GrapheneOS, EMUI, Samsung OneUI)
 - **Hardware:** Any ARM64 device (tested on Pixel, Samsung, Huawei)
 - **Default:** Bitcoin Core 29.4 (standard relay rules and OP_RETURN limits)
-- **Also bundled:** Bitcoin Core 31 (user selects from dashboard; permissive OP_RETURN)
-- **AssumeUTXO heights:** 840k (upstream) + 880k, 910k (910k backported from Core 30; Core 31 also has 935k)
+- **Also bundled:** Bitcoin Core 30.3 and 31.1 (user selects from dashboard; permissive OP_RETURN)
+- **AssumeUTXO heights:** 840k (upstream) + 880k, 910k (910k backported from Core 30; Core 30 and 31 carry it natively, 31 also has 935k)
 
 ## Building
 

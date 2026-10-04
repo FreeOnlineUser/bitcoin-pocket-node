@@ -138,7 +138,10 @@ git clone --depth 1 --branch "29.3+UASF-BIP110" https://github.com/v72t/bitcoin.
 git clone --depth 1 --branch "29.3.knots20260210+UASF-BIP110" https://github.com/dathonohm/bitcoin.git bitcoin-knots-bip110
 ```
 
-**Core 31.1** (vanilla, the second option `libbitcoind_v31.so` since v0.38):
+**Core 30.3** (vanilla, `libbitcoind_v30.so` since v0.38): `~/tools/bitcoind-build/build-v30.3.sh`,
+Core 30 flags below, fdsan patch only.
+
+**Core 31.1** (vanilla, `libbitcoind_v31.so` since v0.38):
 ```bash
 git clone --depth 1 --branch v31.1 https://github.com/bitcoin/bitcoin.git bitcoin-core-v31.1
 ```

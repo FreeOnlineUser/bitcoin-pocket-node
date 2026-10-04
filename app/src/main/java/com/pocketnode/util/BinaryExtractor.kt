@@ -22,8 +22,10 @@ object BinaryExtractor {
     private const val KEY_BITCOIN_VERSION = "bitcoin_version"
 
     /**
-     * Available Bitcoin implementations. Both are Bitcoin Core releases that
-     * follow mainnet consensus; they differ only in relay / OP_RETURN policy.
+     * Available Bitcoin implementations: one per Bitcoin Core major version
+     * still maintained upstream. All follow mainnet consensus; they differ
+     * only in relay / OP_RETURN policy. A saved choice is never moved to a
+     * different major version unless that version is dropped from the app.
      */
     enum class BitcoinVersion(
         val libraryName: String,
@@ -38,6 +40,13 @@ object BinaryExtractor {
             "29.4",
             "Reference implementation. Standard relay rules and OP_RETURN limits.",
             "Standard -- default relay policy"
+        ),
+        CORE_30(
+            "libbitcoind_v30.so",
+            "Bitcoin Core",
+            "30.3",
+            "Relaxed OP_RETURN data size limits.",
+            "Permissive -- larger OP_RETURN data allowed"
         ),
         CORE_31(
             "libbitcoind_v31.so",
@@ -56,7 +65,6 @@ object BinaryExtractor {
                     // naming both fall back to the current Core default.
                     when (name) {
                         "KNOTS", "KNOTS_BIP110", "CORE_28_1" -> CORE
-                        "CORE_30" -> CORE_31
                         else -> valueOf(name)
                     }
                 } catch (_: IllegalArgumentException) {
