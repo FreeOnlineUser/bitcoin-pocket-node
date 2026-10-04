@@ -53,8 +53,9 @@ object ConfigGenerator {
             # Storage — pruned to ~2GB
             prune=2048
             
-            # Mempool — partial mempool for fee estimation + privacy cover traffic
-            # Small enough to be bandwidth-friendly, large enough for cover
+            # Mempool — partial mempool for fee estimation + privacy cover traffic.
+            # Max mode raises this to 150-300 by phone RAM; set your own value here
+            # to keep it fixed.
             maxmempool=50
             persistmempool=1
             blockreconstructionextratxn=10

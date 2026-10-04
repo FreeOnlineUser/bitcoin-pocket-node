@@ -37,6 +37,8 @@ import kotlinx.coroutines.flow.StateFlow
 class BitcoindService : Service() {
 
     companion object {
+        /** maxmempool written by ConfigGenerator; any other value is the user's own. */
+        private const val GENERATED_MAXMEMPOOL = 50
         private val startLock = kotlinx.coroutines.sync.Mutex()
         private const val STOP_TIMEOUT_MS = 60_000L
         private const val TAG = "BitcoindService"
@@ -468,6 +470,10 @@ class BitcoindService : Service() {
             Log.i(TAG, "Burst mode: -blocksonly=1 -maxconnections=3 -maxuploadtarget=50")
         } else {
             args.add("-maxconnections=8")
+            maxMempoolForDevice(dataDir)?.let { mb ->
+                args.add("-maxmempool=$mb")
+                Log.i(TAG, "Max mode: -maxmempool=$mb")
+            }
         }
 
         val pb = ProcessBuilder(args)
@@ -478,6 +484,32 @@ class BitcoindService : Service() {
         val process = pb.start()
         Log.i(TAG, "bitcoind started (burstMode=$burstMode)")
         return process
+    }
+
+    /**
+     * Mempool size (MB) for Max mode, from the phone's RAM: 300 (Core's default) at
+     * 8 GB and up, 150 at 6 GB, otherwise the 50 in our generated bitcoin.conf.
+     * A bigger mempool means better fee estimates and fewer missing transactions
+     * when compact blocks arrive. Returns null to leave bitcoin.conf in charge,
+     * including when the user has set their own maxmempool there.
+     */
+    private fun maxMempoolForDevice(dataDir: File): Int? {
+        val confValue = try {
+            dataDir.resolve("bitcoin.conf").readLines()
+                .firstOrNull { it.trim().startsWith("maxmempool=") }
+                ?.substringAfter("=")?.trim()?.toIntOrNull()
+        } catch (_: Exception) { null }
+        if (confValue != null && confValue != GENERATED_MAXMEMPOOL) return null
+
+        val mem = android.app.ActivityManager.MemoryInfo()
+        (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(mem)
+        // totalMem reads a little under the marketed size (12 GB shows as ~11.2 GiB).
+        val gib = mem.totalMem / (1024.0 * 1024 * 1024)
+        return when {
+            gib >= 7.0 -> 300
+            gib >= 5.0 -> 150
+            else -> null
+        }
     }
 
     /**
