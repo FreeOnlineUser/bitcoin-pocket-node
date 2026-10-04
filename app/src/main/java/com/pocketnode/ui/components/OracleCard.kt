@@ -46,8 +46,16 @@ fun OracleCard(
     val progressText = state.progress
     val error = state.error
 
-    LaunchedEffect(result?.price) {
-        result?.let { onPriceUpdate?.invoke(it.price) }
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { OracleUpdater.loadWindow(context) }
+    val window by OracleUpdater.window.collectAsState()
+    // The last-hour figure appears once the cache is loaded; until then show the 24h one.
+    val showHour = window == OracleUpdater.PriceWindow.HOUR && recent != null
+    val shown = if (showHour) recent else result
+    val other = if (showHour) result else recent
+
+    LaunchedEffect(shown?.price) {
+        shown?.let { onPriceUpdate?.invoke(it.price) }
     }
 
     // Don't show card until node is synced or we have a result
@@ -74,7 +82,7 @@ fun OracleCard(
                     Text("🔮", fontSize = 18.sp)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "On-chain price · 24h average",
+                        "On-chain price",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -90,6 +98,16 @@ fun OracleCard(
                 }
             }
             Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OracleUpdater.PriceWindow.entries.forEach { w ->
+                    FilterChip(
+                        selected = window == w,
+                        onClick = { OracleUpdater.setWindow(context, w) },
+                        label = { Text(w.label, style = MaterialTheme.typography.labelSmall) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
             // Price row
             when {
                 isRunning -> {
@@ -106,14 +124,14 @@ fun OracleCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                result != null -> {
+                shown != null && result != null -> {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Bottom
                     ) {
                         Text(
-                            "$${"%,d".format(result.price)}",
+                            "$${"%,d".format(shown.price)}",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
@@ -136,10 +154,11 @@ fun OracleCard(
                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
-                    if (recent != null) {
-                        val diffPct = (recent.price - result.price) * 100.0 / result.price
+                    if (other != null) {
+                        val diffPct = (recent!!.price - result.price) * 100.0 / result.price
+                        val otherLabel = if (showHour) "24h average" else "Last hour"
                         Text(
-                            "Last hour: $${"%,d".format(recent.price)} (${"%+.1f".format(diffPct)}% vs 24h)",
+                            "$otherLabel: $${"%,d".format(other.price)} · last hour ${"%+.1f".format(diffPct)}% vs 24h",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )

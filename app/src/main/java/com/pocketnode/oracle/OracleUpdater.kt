@@ -45,6 +45,26 @@ object OracleUpdater {
         val error: String? = null
     )
 
+    /** Which figure the dashboard headline and the converter use. */
+    enum class PriceWindow(val label: String) { DAY("24h average"), HOUR("Last hour") }
+
+    private const val KEY_WINDOW = "price_window"
+    private val _window = MutableStateFlow(PriceWindow.DAY)
+    val window: StateFlow<PriceWindow> = _window.asStateFlow()
+    private var windowLoaded = false
+
+    fun loadWindow(context: Context) {
+        if (windowLoaded) return
+        windowLoaded = true
+        val saved = context.getSharedPreferences("oracle_cache", Context.MODE_PRIVATE).getString(KEY_WINDOW, null)
+        _window.value = PriceWindow.entries.firstOrNull { it.name == saved } ?: PriceWindow.DAY
+    }
+
+    fun setWindow(context: Context, w: PriceWindow) {
+        context.getSharedPreferences("oracle_cache", Context.MODE_PRIVATE).edit().putString(KEY_WINDOW, w.name).apply()
+        _window.value = w
+    }
+
     private val _state = MutableStateFlow(OracleState())
     val state: StateFlow<OracleState> = _state.asStateFlow()
 

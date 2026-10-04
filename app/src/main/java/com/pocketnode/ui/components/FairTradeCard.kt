@@ -47,6 +47,12 @@ fun FairTradeCard(
 
     var expanded by remember { mutableStateOf(false) }
     var copiedField by remember { mutableStateOf<String?>(null) }
+    // Which UTXOracle figure the dashboard passed in (OracleCard falls back to 24h
+    // until the last-hour estimate exists), for the label only.
+    val selectedWindow by com.pocketnode.oracle.OracleUpdater.window.collectAsState()
+    val oracleState by com.pocketnode.oracle.OracleUpdater.state.collectAsState()
+    val priceWindow = if (selectedWindow == com.pocketnode.oracle.OracleUpdater.PriceWindow.HOUR && oracleState.recent != null)
+        com.pocketnode.oracle.OracleUpdater.PriceWindow.HOUR else com.pocketnode.oracle.OracleUpdater.PriceWindow.DAY
 
     // Track which field the user is editing
     var editingField by remember { mutableStateOf<String?>(null) }
@@ -212,7 +218,7 @@ fun FairTradeCard(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        if (oraclePrice != null) "UTXOracle: $${"%,d".format(oraclePrice)} USD/BTC"
+                        if (oraclePrice != null) "UTXOracle ${priceWindow.label.lowercase()}: $${"%,d".format(oraclePrice)} USD/BTC"
                         else "Price not yet available",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
