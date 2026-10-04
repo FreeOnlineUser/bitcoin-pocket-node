@@ -314,6 +314,32 @@ class UTXOracle(private val rpc: BitcoinRpcClient) {
         result
     }
 
+    /**
+     * Run the price calculation over only the newest [lastN] cached blocks. Same
+     * algorithm, smaller sample: tracks recent moves faster, at the cost of noise.
+     * Returns null if the cache holds fewer blocks or the sample is too thin.
+     */
+    fun priceFromCache(lastN: Int, endIndex: Int = cachedBlocks.size): OracleResult? {
+        if (lastN <= 0 || endIndex > cachedBlocks.size || endIndex - lastN < 0) return null
+        val window = cachedBlocks.subList(endIndex - lastN, endIndex)
+        val outputs = mutableListOf<Double>()
+        val heights = mutableListOf<Int>()
+        val times = mutableListOf<Long>()
+        for (block in window) {
+            for (amt in block.outputs) {
+                outputs.add(amt)
+                heights.add(block.height)
+                times.add(block.time)
+            }
+        }
+        if (outputs.isEmpty()) return null
+        return try {
+            calculatePrice(outputs, heights, times, window.first().height..window.last().height, "recent-blocks")
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Process a single block and return its filtered outputs */
     private suspend fun processBlock(
         blockHash: String,

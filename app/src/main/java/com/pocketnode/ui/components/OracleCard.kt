@@ -17,12 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pocketnode.oracle.BlockOutputs
-import com.pocketnode.oracle.OracleResult
-import com.pocketnode.oracle.UTXOracle
-import com.pocketnode.rpc.BitcoinRpcClient
-import com.pocketnode.util.ConfigGenerator
-import kotlinx.coroutines.launch
+import com.pocketnode.oracle.OracleUpdater
 
 /**
  * Collapsible UTXOracle price card for the dashboard.
@@ -36,232 +31,23 @@ fun OracleCard(
     onPriceUpdate: ((Int) -> Unit)? = null,
     onExpanded: ((Boolean) -> Unit)? = null
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
 
     var expanded by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var isRunning by remember { mutableStateOf(false) }
-    var progressText by remember { mutableStateOf("") }
-
-    // Cache oracle results in SharedPreferences (small data only — result, not block data)
-    val prefs = remember {
-        val p = context.getSharedPreferences("oracle_cache", android.content.Context.MODE_PRIVATE)
-        // Migrate: remove blockData from SharedPreferences (moved to file)
-        if (p.contains("blockData")) {
-            p.edit().remove("blockData").apply()
-        }
-        p
-    }
-
-    fun saveResult(r: OracleResult) {
-        val now = System.currentTimeMillis()
-        val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-            .format(java.util.Date(now))
-        prefs.edit()
-            .putInt("price", r.price)
-            .putString("date", r.date)
-            .putString("updatedAt", timeStr)
-            .putInt("blockStart", r.blockRange.first)
-            .putInt("blockEnd", r.blockRange.last)
-            .putInt("outputCount", r.outputCount)
-            .putFloat("deviation", r.deviation.toFloat())
-            .putLong("cachedAt", now)
-            .apply()
-    }
-
-    fun loadCachedResult(): OracleResult? {
-        val price = prefs.getInt("price", -1)
-        if (price < 0) return null
-        return OracleResult(
-            price = price,
-            date = prefs.getString("date", "") ?: "",
-            blockRange = prefs.getInt("blockStart", 0)..prefs.getInt("blockEnd", 0),
-            outputCount = prefs.getInt("outputCount", 0),
-            deviation = prefs.getFloat("deviation", 0f).toDouble()
-        )
-    }
-
-    var result by remember { mutableStateOf(loadCachedResult()) }
-
-    // Report initial cached price
-    LaunchedEffect(Unit) {
-        result?.let { onPriceUpdate?.invoke(it.price) }
-    }
     var showRefreshConfirm by remember { mutableStateOf(false) }
-    var lastUpdatedHeight by remember { mutableStateOf(prefs.getInt("blockEnd", 0).toLong()) }
 
-    // Persistent oracle instance — survives recomposition, holds cached block data
-    val oracle = remember { mutableStateOf<UTXOracle?>(null) }
+    // OracleUpdater does the work in the background (started by BitcoindService);
+    // this card only shows its state.
+    val state by OracleUpdater.state.collectAsState()
+    val result = state.result
+    val recent = state.recent
+    val isRunning = state.running
+    val progressText = state.progress
+    val error = state.error
 
-    // Block data cached to file (not SharedPreferences — too large, causes lag)
-    val blockDataFile = remember { java.io.File(context.filesDir, "oracle_blocks.json") }
-
-    fun saveCachedBlocks(blocks: List<BlockOutputs>) {
-        kotlinx.coroutines.MainScope().launch(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val json = org.json.JSONArray()
-                for (b in blocks) {
-                    val obj = org.json.JSONObject()
-                    obj.put("h", b.height)
-                    obj.put("hash", b.hash)
-                    obj.put("t", b.time)
-                    val outs = org.json.JSONArray()
-                    for (o in b.outputs) outs.put(o)
-                    obj.put("o", outs)
-                    json.put(obj)
-                }
-                blockDataFile.writeText(json.toString())
-            } catch (e: Exception) {
-                android.util.Log.e("OracleCard", "Failed to save block data", e)
-            }
-        }
-    }
-
-    suspend fun loadCachedBlocks(): List<BlockOutputs> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        try {
-            if (!blockDataFile.exists()) return@withContext emptyList()
-            val str = blockDataFile.readText()
-            val json = org.json.JSONArray(str)
-            val blocks = mutableListOf<BlockOutputs>()
-            for (i in 0 until json.length()) {
-                val obj = json.getJSONObject(i)
-                val outs = obj.getJSONArray("o")
-                val outputList = mutableListOf<Double>()
-                for (j in 0 until outs.length()) outputList.add(outs.getDouble(j))
-                blocks.add(BlockOutputs(
-                    height = obj.getInt("h"),
-                    hash = obj.getString("hash"),
-                    time = obj.getLong("t"),
-                    txids = emptySet(),
-                    outputs = outputList
-                ))
-            }
-            blocks
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    // Initial run when node is synced — restore from cache if available, else full scan
-    // Use hasInitialized flag to only run once (avoids blank/reload on recomposition)
-    var hasInitialized by remember { mutableStateOf(false) }
-    LaunchedEffect(isNodeSynced) {
-        if (!isNodeSynced || isRunning || hasInitialized) return@LaunchedEffect
-        hasInitialized = true
-
-        val creds = ConfigGenerator.readCredentials(context) ?: return@LaunchedEffect
-        val rpc = BitcoinRpcClient(creds.first, creds.second)
-
-        // Try to restore from cached block data first
-        val cached = loadCachedBlocks()
-        if (cached.isNotEmpty()) {
-            // Restore oracle with cached blocks — incremental updates will catch up
-            val oracleInstance = UTXOracle(rpc)
-            oracleInstance.setCachedBlocks(cached)
-            oracle.value = oracleInstance
-
-            // If we have a cached result, show it immediately
-            if (result == null) {
-                loadCachedResult()?.let {
-                    result = it
-                    onPriceUpdate?.invoke(it.price)
-                }
-            }
-            android.util.Log.i("OracleCard", "Restored ${cached.size} cached blocks, incremental update will catch up")
-            return@LaunchedEffect
-        }
-
-        // No cached blocks — full scan needed
-        if (result != null) return@LaunchedEffect // have a result but no blocks is odd, skip
-        isRunning = true
-        error = null
-        try {
-            val oracleInstance = UTXOracle(rpc)
-            oracle.value = oracleInstance
-
-            val progressJob = launch {
-                oracleInstance.progress.collect { progressText = it }
-            }
-
-            val r = oracleInstance.getPriceRecentBlocks()
-            result = r
-            onPriceUpdate?.invoke(r.price)
-            saveResult(r)
-            saveCachedBlocks(oracleInstance.cachedBlocks)
-            lastUpdatedHeight = r.blockRange.last.toLong()
-            progressJob.cancel()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            android.util.Log.d("OracleCard", "Oracle calculation cancelled (recomposition)")
-            isRunning = false
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.e("OracleCard", "UTXOracle failed", e)
-            error = if (e.message?.contains("getblock", ignoreCase = true) == true) {
-                "Waiting for more blocks. Price data needs recent block history."
-            } else {
-                e.message ?: "Unknown error"
-            }
-        } finally {
-            isRunning = false
-            progressText = ""
-        }
-    }
-
-    // Incremental update when a new block lands, or when the restored oracle
-    // instance becomes available (keying on oracle.value closes the gap where
-    // the height was already current before the cache finished loading).
-    LaunchedEffect(blockHeight, oracle.value) {
-        if (blockHeight <= 0 || !isNodeSynced || isRunning) return@LaunchedEffect
-        if (blockHeight <= lastUpdatedHeight) return@LaunchedEffect
-
-        val oracleInstance = oracle.value ?: return@LaunchedEffect
-        if (oracleInstance.cachedBlocks.isEmpty()) return@LaunchedEffect
-
-        isRunning = true
-        error = null
-        try {
-            val progressJob = launch {
-                oracleInstance.progress.collect { progressText = it }
-            }
-
-            val r = oracleInstance.incrementalUpdate(blockHeight.toInt())
-            if (r != null) {
-                result = r
-                onPriceUpdate?.invoke(r.price)
-                saveResult(r)
-                saveCachedBlocks(oracleInstance.cachedBlocks)
-                lastUpdatedHeight = blockHeight
-                android.util.Log.i("OracleCard",
-                    "Oracle updated: $${r.price} through block ${r.blockRange.last}")
-            }
-            progressJob.cancel()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            isRunning = false
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.e("OracleCard", "Incremental update failed", e)
-            // A getblock failure means the cached window fell below the prune
-            // height. Rebuild from recent blocks rather than staying wedged
-            // on a stale price forever.
-            if (e.message?.contains("getblock", ignoreCase = true) == true) {
-                try {
-                    val r = oracleInstance.getPriceRecentBlocks()
-                    result = r
-                    onPriceUpdate?.invoke(r.price)
-                    saveResult(r)
-                    saveCachedBlocks(oracleInstance.cachedBlocks)
-                    lastUpdatedHeight = r.blockRange.last.toLong()
-                    android.util.Log.i("OracleCard", "Rebuilt oracle window after pruned-cache wedge")
-                } catch (e2: Exception) {
-                    android.util.Log.e("OracleCard", "Full rescan fallback failed", e2)
-                }
-            }
-        } finally {
-            isRunning = false
-            progressText = ""
-        }
+    LaunchedEffect(result?.price) {
+        result?.let { onPriceUpdate?.invoke(it.price) }
     }
 
     // Don't show card until node is synced or we have a result
@@ -288,7 +74,7 @@ fun OracleCard(
                     Text("🔮", fontSize = 18.sp)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "UTXOracle Block Window Price",
+                        "On-chain price · 24h average",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -315,7 +101,7 @@ fun OracleCard(
                 }
                 error != null -> {
                     Text(
-                        error!!,
+                        error,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -327,7 +113,7 @@ fun OracleCard(
                         verticalAlignment = Alignment.Bottom
                     ) {
                         Text(
-                            "$${"%,d".format(result!!.price)}",
+                            "$${"%,d".format(result.price)}",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
@@ -336,18 +122,26 @@ fun OracleCard(
                         // Flag a price whose window trails the chain by more
                         // than a day: better an honest "stale" than a wrong
                         // number that looks current.
-                        val resultEnd = result!!.blockRange.last
+                        val resultEnd = result.blockRange.last
                         val stale = blockHeight > 0 && blockHeight - resultEnd > 144
-                        val displayText = if (result!!.date == "recent-blocks") {
-                            "Block ${"%,d".format(resultEnd)}" + if (stale) " (stale, updating…)" else ""
+                        val displayText = if (result.date == "recent-blocks") {
+                            "to block ${"%,d".format(resultEnd)}" + if (stale) " (stale, updating…)" else ""
                         } else {
-                            result!!.date
+                            result.date
                         }
                         Text(
                             displayText,
                             style = MaterialTheme.typography.bodySmall,
                             color = if (stale) Color(0xFFFFB74D)
                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                    if (recent != null) {
+                        val diffPct = (recent.price - result.price) * 100.0 / result.price
+                        Text(
+                            "Last hour: $${"%,d".format(recent.price)} (${"%+.1f".format(diffPct)}% vs 24h)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -366,17 +160,31 @@ fun OracleCard(
                     Spacer(Modifier.height(12.dp))
 
                     if (result != null) {
-                        val r = result!!
+                        val r = result
                         DetailRow("Price", "$${"%,d".format(r.price)} USD")
-                        val updatedAt = prefs.getString("updatedAt", null)
-                        if (r.date == "recent-blocks" && updatedAt != null) {
-                            DetailRow("Updated", updatedAt)
+                        if (r.date == "recent-blocks" && state.updatedAt > 0) {
+                            DetailRow("Updated", java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                                .format(java.util.Date(state.updatedAt)))
                         } else {
                             DetailRow("Date", r.date)
                         }
                         DetailRow("Blocks", "${r.blockRange.first}–${r.blockRange.last} (${r.blockRange.last - r.blockRange.first + 1} blocks)")
                         DetailRow("Transactions", "${"%,d".format(r.outputCount)} filtered outputs")
                         DetailRow("Deviation", "${"%.1f".format(r.deviation * 100)}%")
+                        if (recent != null) {
+                            DetailRow("Last hour estimate", "$${"%,d".format(recent.price)} " +
+                                "(${recent.blockRange.last - recent.blockRange.first + 1} blocks)")
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "The main price averages the last 144 blocks (about a day), so it " +
+                            "trails moves. The last hour estimate runs the same method on the " +
+                            "newest ${OracleUpdater.RECENT_BLOCKS} blocks, so it follows the market " +
+                            "closely but leans on fewer transactions. Neither is a live exchange " +
+                            "quote. Both update with each new block while your node runs.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
 
                         Spacer(Modifier.height(12.dp))
 
@@ -392,7 +200,7 @@ fun OracleCard(
 
                     if (error != null) {
                         Text(
-                            error!!,
+                            error,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -453,29 +261,7 @@ fun OracleCard(
             confirmButton = {
                 TextButton(onClick = {
                     showRefreshConfirm = false
-                    scope.launch {
-                        val creds = ConfigGenerator.readCredentials(context) ?: return@launch
-                        isRunning = true
-                        error = null
-                        try {
-                            val rpc = BitcoinRpcClient(creds.first, creds.second)
-                            val oracle = UTXOracle(rpc)
-                            val progressJob = launch {
-                                oracle.progress.collect { progressText = it }
-                            }
-                            val r = oracle.getPriceRecentBlocks()
-                            result = r
-                onPriceUpdate?.invoke(r.price)
-                            saveResult(r)
-                            progressJob.cancel()
-                        } catch (e: Exception) {
-                            android.util.Log.e("OracleCard", "UTXOracle refresh failed", e)
-                            error = e.message
-                        } finally {
-                            isRunning = false
-                            progressText = ""
-                        }
-                    }
+                    OracleUpdater.refresh(scope)
                 }) {
                     Text("Refresh")
                 }

@@ -130,6 +130,8 @@ class BitcoindService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, buildNotification(status = "Starting..."))
+        // Keeps the on-chain price current in the background; waits for sync itself.
+        com.pocketnode.oracle.OracleUpdater.start(this, serviceScope)
         serviceScope.launch {
             // Many screens start this service, and they can fire together (a version
             // switch plus the dashboard's auto-start, for one). startBitcoind runs for
@@ -152,6 +154,7 @@ class BitcoindService : Service() {
 
     override fun onDestroy() {
         _isRunning.value = false
+        com.pocketnode.oracle.OracleUpdater.stop()
         notificationJob?.cancel()
         powerModeManager?.stop()
         _activePowerModeManager.value = null
