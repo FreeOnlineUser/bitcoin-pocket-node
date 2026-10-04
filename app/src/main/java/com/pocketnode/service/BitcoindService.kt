@@ -37,6 +37,8 @@ import kotlinx.coroutines.flow.StateFlow
 class BitcoindService : Service() {
 
     companion object {
+        private val startLock = kotlinx.coroutines.sync.Mutex()
+        private const val STOP_TIMEOUT_MS = 60_000L
         private const val TAG = "BitcoindService"
         private const val CHANNEL_ID = "bitcoind_channel"
         private const val NOTIFICATION_ID = 1
@@ -128,7 +130,23 @@ class BitcoindService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, buildNotification(status = "Starting..."))
-        serviceScope.launch { startBitcoind() }
+        serviceScope.launch {
+            // Many screens start this service, and they can fire together (a version
+            // switch plus the dashboard's auto-start, for one). startBitcoind runs for
+            // the node's whole life, so hold the lock for that long: a repeat start on
+            // this instance is a no-op, and a new instance waits until the previous
+            // one's coroutine is gone (its scope is cancelled after stopBitcoind).
+            val owner = this@BitcoindService
+            if (!startLock.tryLock(owner)) {
+                if (startLock.holdsLock(owner)) {
+                    Log.i(TAG, "Start requested while already starting/running, ignoring")
+                    return@launch
+                }
+                Log.i(TAG, "Waiting for the previous service instance to stop bitcoind")
+                startLock.lock(owner)
+            }
+            try { startBitcoind() } finally { startLock.unlock(owner) }
+        }
         return START_STICKY
     }
 
@@ -194,6 +212,21 @@ class BitcoindService : Service() {
             // Android may kill our service without killing the child process, leaving
             // bitcoind running with a held lock file but no managing service.
             val lockFile = dataDir.resolve(".lock")
+            // A previous instance may still be shutting down (RPC already closed, chainstate
+            // flushing). Starting now would fail on the datadir lock, so let it finish.
+            if (findBitcoindPids().isNotEmpty()) {
+                val creds = ConfigGenerator.readCredentials(this@BitcoindService)
+                val answering = creds != null && try {
+                    BitcoinRpcClient(creds.first, creds.second).getBlockchainInfo() != null
+                } catch (_: Exception) { false }
+                if (!answering) {
+                    Log.i(TAG, "Previous bitcoind still shutting down, waiting for it to exit")
+                    updateNotification("Waiting for previous node to stop...")
+                    if (!waitForBitcoindExit(STOP_TIMEOUT_MS)) {
+                        Log.w(TAG, "Previous bitcoind did not exit in ${STOP_TIMEOUT_MS / 1000}s")
+                    }
+                }
+            }
             if (lockFile.exists()) {
                 // RPC check distinguishes a live orphan from a stale lock file left after a crash
                 val creds = ConfigGenerator.readCredentials(this@BitcoindService)
@@ -594,6 +627,9 @@ class BitcoindService : Service() {
     }
 
     private suspend fun stopBitcoind() {
+        // Only ever wait on (or kill) the processes that exist now. A new service
+        // instance may start a fresh bitcoind while this one is still waiting.
+        val targets = findBitcoindPids().toSet()
         try {
             // Try graceful RPC shutdown first
             val creds = ConfigGenerator.readCredentials(this)
@@ -601,26 +637,46 @@ class BitcoindService : Service() {
                 val rpc = BitcoinRpcClient(creds.first, creds.second)
                 rpc.stop()
                 Log.i(TAG, "Sent RPC stop command")
-
-                // Wait up to 15s for graceful shutdown
-                withTimeoutOrNull(15_000) {
-                    while (bitcoindProcess?.isAlive == true) {
-                        delay(500)
-                    }
-                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "RPC stop failed, force killing", e)
         }
 
-        // Force kill if still running
-        bitcoindProcess?.let { process ->
-            if (process.isAlive) {
-                process.destroyForcibly()
-                Log.i(TAG, "Force killed bitcoind")
-            }
+        // Wait for the process itself, not our handle to it: after an app restart
+        // we attach to a running bitcoind and bitcoindProcess is null. Flushing the
+        // chainstate on a phone can take well over 15s.
+        if (!waitForBitcoindExit(STOP_TIMEOUT_MS, targets)) {
+            bitcoindProcess?.destroyForcibly()
+            findBitcoindPids().filter { it in targets }.forEach { android.os.Process.sendSignal(it, 9) }
+            Log.w(TAG, "Force killed bitcoind after ${STOP_TIMEOUT_MS / 1000}s")
+            waitForBitcoindExit(5_000, targets)
         }
         bitcoindProcess = null
+    }
+
+    /** PIDs of bitcoind processes running on our datadir (they run as our uid). */
+    private fun findBitcoindPids(): List<Int> {
+        val dataDir = File(filesDir, "bitcoin").absolutePath
+        return File("/proc").listFiles()?.mapNotNull { dir ->
+            val pid = dir.name.toIntOrNull() ?: return@mapNotNull null
+            val cmd = try { File(dir, "cmdline").readText().replace('\u0000', ' ') } catch (_: Exception) { return@mapNotNull null }
+            if (cmd.contains("libbitcoind") && cmd.contains("-datadir=$dataDir")) pid else null
+        } ?: emptyList()
+    }
+
+    /**
+     * True once bitcoind has exited, false if still running after [timeoutMs].
+     * With [only], waits just for those PIDs; otherwise for any bitcoind on our datadir.
+     */
+    private suspend fun waitForBitcoindExit(timeoutMs: Long, only: Set<Int>? = null): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (true) {
+            val pids = findBitcoindPids().let { all -> if (only == null) all else all.filter { it in only } }
+            val alive = (only == null && bitcoindProcess?.isAlive == true) || pids.isNotEmpty()
+            if (!alive) return true
+            if (System.currentTimeMillis() > deadline) return false
+            delay(500)
+        }
     }
 
     private fun createNotificationChannel() {

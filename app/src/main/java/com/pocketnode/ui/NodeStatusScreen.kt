@@ -1555,7 +1555,7 @@ private fun ActionButtons(
         pendingVersion?.let { newVersion ->
             AlertDialog(
                 onDismissRequest = { pendingVersion = null },
-                title = { Text("Switch to ${newVersion.displayName}?") },
+                title = { Text("Switch to ${newVersion.displayName} ${newVersion.versionString}?") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
