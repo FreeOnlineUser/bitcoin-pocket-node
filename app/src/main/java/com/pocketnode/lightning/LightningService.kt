@@ -127,6 +127,7 @@ class LightningService(private val context: Context) {
     private var lndHubServer: LndHubServer? = null
     private var stateRefreshJob: kotlinx.coroutines.Job? = null
     private var pruneFeedJob: kotlinx.coroutines.Job? = null
+    private var rpcRelay: RpcRelay? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -280,9 +281,19 @@ class LightningService(private val context: Context) {
             // Prevents force-closes over minor fee disagreements.
             builder.setClosingFeeFloorSatPerKw(253u)
 
+            // LDK talks to bitcoind through RpcRelay, which reports blocks bitcoind
+            // has pruned so the prune feed can fetch them (see feedPrunedBlocks).
+            // If the relay can't start, connect directly as before.
+            rpcRelay?.stop()
+            rpcRelay = try {
+                RpcRelay(rpcPort) { hash -> recovery.reportPrunedBlock(hash) }.start()
+            } catch (e: Exception) {
+                Log.e(TAG, "RPC relay failed to start, LDK connects to bitcoind directly", e)
+                null
+            }
             builder.setChainSourceBitcoindRpc(
                 "127.0.0.1",
-                rpcPort.toUShort(),
+                (rpcRelay?.port ?: rpcPort).toUShort(),
                 rpcUser,
                 rpcPassword
             )
@@ -702,12 +713,10 @@ class LightningService(private val context: Context) {
             }
             stateRefreshJob = refreshLoop.start(ioScope)
 
-            // Fetch any blocks LDK needs that bitcoind pruned while we were away.
-            // Returns at once if LDK is already inside the prune window.
+            // Fetch blocks LDK needs that bitcoind has pruned, as RpcRelay reports
+            // them. Idles until a report arrives.
             pruneFeedJob = ioScope.launch {
-                recovery.feedPrunedBlocks(rpcUser, rpcPassword, rpcPort) {
-                    node?.let { n -> runCatching { n.status().currentBestBlock.height.toLong() }.getOrNull() }
-                }
+                recovery.feedPrunedBlocks(rpcUser, rpcPassword, rpcPort) { node != null }
             }
 
             // Sync watchdog
@@ -789,6 +798,8 @@ class LightningService(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping Lightning node", e)
         } finally {
+            rpcRelay?.stop()
+            rpcRelay = null
             node = null
             payments.node = null
             channels.node = null
