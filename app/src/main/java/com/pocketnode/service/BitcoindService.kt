@@ -764,6 +764,16 @@ class BitcoindService : Service() {
                             // Auto-start Lightning when synced (if enabled and was previously running)
                             val ldkEnabled = prefs.getBoolean("ldk_lightning_enabled", true)
                             if (ldkEnabled && prefs.getBoolean("lightning_was_running", false)) {
+                                // Installing an update kills the app without a clean Lightning stop,
+                                // which the counter can't tell from a crash. A new version starts
+                                // the count again, so updating never trips the breaker by itself.
+                                val versionCode = try {
+                                    packageManager.getPackageInfo(packageName, 0).longVersionCode
+                                } catch (_: Exception) { -1L }
+                                if (prefs.getLong("lightning_crash_count_version", -1L) != versionCode) {
+                                    prefs.edit().putInt("lightning_crash_count", 0)
+                                        .putLong("lightning_crash_count_version", versionCode).apply()
+                                }
                                 val crashCount = prefs.getInt("lightning_crash_count", 0)
                                 if (crashCount >= 3) {
                                     Log.e(TAG, "Lightning crash circuit breaker: $crashCount consecutive crashes. Not auto-restarting. User must start manually.")

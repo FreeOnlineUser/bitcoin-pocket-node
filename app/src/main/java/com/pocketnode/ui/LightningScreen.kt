@@ -199,6 +199,10 @@ fun LightningScreen(
                             }
                         }
 
+                        effectiveState.recoveryProblem?.let { problem ->
+                            Spacer(Modifier.height(8.dp))
+                            Text(problem, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
                         // Catching up on blocks pruned while the phone was offline
                         if (effectiveState.recoveryBlocksNeeded > 0) {
                             Spacer(Modifier.height(8.dp))

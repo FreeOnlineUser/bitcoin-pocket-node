@@ -57,6 +57,8 @@ class LightningService(private val context: Context) {
         val recoveryBlocksNeeded: Int = 0,
         val recoveryBlocksDone: Int = 0,
         val recoveryWaitingForWifi: Boolean = false,
+        /** Why the prune feed can't repair LDK's sync, when it can't. */
+        val recoveryProblem: String? = null,
         // Background UTXO scan
         val scanningForFunds: Boolean = false,
         val scanProgress: Int = 0,  // 0-100%
@@ -990,6 +992,7 @@ class LightningService(private val context: Context) {
                 recoveryBlocksNeeded = _state.value.recoveryBlocksNeeded,
                 recoveryBlocksDone = _state.value.recoveryBlocksDone,
                 recoveryWaitingForWifi = _state.value.recoveryWaitingForWifi,
+                recoveryProblem = _state.value.recoveryProblem,
                 scanningForFunds = _state.value.scanningForFunds,
                 scanProgress = _state.value.scanProgress,
                 lastChannelError = _state.value.lastChannelError,

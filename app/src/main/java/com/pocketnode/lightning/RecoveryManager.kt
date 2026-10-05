@@ -24,6 +24,8 @@ class RecoveryManager(private val context: Context) {
         private const val FEED_WINDOW = 288L
         private const val REREQUEST_MS = 120_000L
         private const val IDLE_AFTER_MS = 15 * 60_000L
+        // ~2 years of blocks, ~85 GB at today's sizes: the most worth fetching to repair.
+        private const val MAX_FEED_BLOCKS = 100_000L
     }
 
     /** State flow reference for scan progress updates, set by LightningService */
@@ -524,7 +526,8 @@ class RecoveryManager(private val context: Context) {
 
         fun clearProgress() {
             stateFlow.value = stateFlow.value.copy(
-                recoveryBlocksNeeded = 0, recoveryBlocksDone = 0, recoveryWaitingForWifi = false
+                recoveryBlocksNeeded = 0, recoveryBlocksDone = 0, recoveryWaitingForWifi = false,
+                recoveryProblem = null
             )
         }
 
@@ -562,6 +565,18 @@ class RecoveryManager(private val context: Context) {
 
                 val info = rpc.getBlockchainInfo()
                 val pruneHeight = info?.optLong("pruneheight", 0) ?: 0
+                if (pruneHeight > 0 && pruneHeight - need > MAX_FEED_BLOCKS) {
+                    // Something in LDK's store sits implausibly far back (a listener with no
+                    // real position starts at genesis). Fetching that much of the chain block
+                    // by block isn't a repair; say so instead of trying.
+                    Log.e(TAG, "Prune feed: LDK needs block $need, ${pruneHeight - need} below the prune height. Not fetching.")
+                    stateFlow.value = stateFlow.value.copy(
+                        recoveryBlocksNeeded = 0, recoveryBlocksDone = 0, recoveryWaitingForWifi = false,
+                        recoveryProblem = "Lightning needs blocks from height $need, too far back to fetch. Its chain data needs repair."
+                    )
+                    kotlinx.coroutines.delay(60_000)
+                    continue
+                }
                 val total = (pruneHeight - firstNeed).coerceAtLeast(1)
                 val done = (need - firstNeed).coerceIn(0, total)
 
