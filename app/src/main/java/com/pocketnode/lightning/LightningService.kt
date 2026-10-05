@@ -742,6 +742,20 @@ class LightningService(private val context: Context) {
                 }
             )
 
+        } catch (e: org.lightningdevkit.ldknode.BuildException.ChainTipFetchFailed) {
+            // A fresh wallet needs the chain tip as its starting point, and bitcoind didn't
+            // answer. ldk-node refuses rather than start the wallet at genesis; try again
+            // once bitcoind is up.
+            Log.w(TAG, "Chain tip unavailable for a fresh wallet; retrying Lightning start in 30s")
+            starting = false
+            _state.value = _state.value.copy(
+                status = LightningState.Status.STARTING,
+                error = "Waiting for bitcoind before creating the wallet…"
+            )
+            Thread({
+                Thread.sleep(30_000)
+                if (node == null && !starting) start(rpcUser, rpcPassword, rpcPort)
+            }, "ldk-start-retry").start()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start Lightning node", e)
             starting = false

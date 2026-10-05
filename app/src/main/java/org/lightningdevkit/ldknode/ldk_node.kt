@@ -15217,6 +15217,20 @@ sealed class BuildException: kotlin.Exception() {
             get() = ""
     }
     
+    /**
+     * We failed to determine the current chain tip on first startup.
+     *
+     * Returned when a fresh node is built against a Bitcoin Core RPC or REST chain source that
+     * is unreachable or misconfigured, so we cannot learn the tip height/hash to use as the
+     * wallet birthday. Falling back to genesis would silently force a full-history rescan on
+     * the next successful startup, so we abort instead.
+     */
+    class ChainTipFetchFailed(
+        ) : BuildException() {
+        override val message
+            get() = ""
+    }
+    
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<BuildException> {
         override fun lift(error_buf: RustBuffer.ByValue): BuildException = FfiConverterTypeBuildError.lift(error_buf)
@@ -15248,6 +15262,7 @@ public object FfiConverterTypeBuildError : FfiConverterRustBuffer<BuildException
             13 -> BuildException.LoggerSetupFailed()
             14 -> BuildException.NetworkMismatch()
             15 -> BuildException.AsyncPaymentsConfigMismatch()
+            16 -> BuildException.ChainTipFetchFailed()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -15314,6 +15329,10 @@ public object FfiConverterTypeBuildError : FfiConverterRustBuffer<BuildException
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is BuildException.ChainTipFetchFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -15377,6 +15396,10 @@ public object FfiConverterTypeBuildError : FfiConverterRustBuffer<BuildException
             }
             is BuildException.AsyncPaymentsConfigMismatch -> {
                 buf.putInt(15)
+                Unit
+            }
+            is BuildException.ChainTipFetchFailed -> {
+                buf.putInt(16)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
