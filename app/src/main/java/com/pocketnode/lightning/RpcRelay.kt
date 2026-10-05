@@ -17,9 +17,9 @@ import java.net.Socket
  * one's height from the bindings. When the oldest sits below the prune
  * height, LDK asks for a block bitcoind no longer has, and the sync retries
  * forever. This relay reports exactly which block that was, so the prune feed
- * can fetch it from peers.
+ * can fetch it from peers, and answers getblock for blocks the feed holds.
  *
- * Every byte is forwarded unchanged in both directions (claims and justice
+ * Everything else is forwarded unchanged in both directions (claims and justice
  * transactions are broadcast over this path); the relay only reads a copy of
  * getblock requests and their error replies. Plain threads, no coroutines:
  * it starts before node.start(), see LightningService.start.
@@ -27,6 +27,8 @@ import java.net.Socket
 class RpcRelay(
     private val upstreamPort: Int,
     private val upstreamHost: String = "127.0.0.1",
+    /** Raw bytes of a block bitcoind has pruned, if the prune feed holds a copy. */
+    private val cachedBlock: (blockHash: String) -> ByteArray? = { null },
     private val onPrunedBlock: (blockHash: String) -> Unit
 ) {
     private val server = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
@@ -68,6 +70,15 @@ class RpcRelay(
             while (running) {
                 val request = readMessage(cin, isResponse = false) ?: return
                 val blockHash = getblockHash(request.body)
+
+                // A block the prune feed copied out before bitcoind pruned it again.
+                val cached = blockHash?.let { cachedBlock(it) }
+                if (cached != null) {
+                    cout.write(blockResponse(request.body, cached))
+                    cout.flush()
+                    if (request.closeAfter) return
+                    continue
+                }
 
                 val response = Socket(upstreamHost, upstreamPort).use { up ->
                     up.soTimeout = 300_000
@@ -188,6 +199,33 @@ class RpcRelay(
             if (json.optString("method") != "getblock") null
             else json.optJSONArray("params")?.optString(0)?.takeIf { it.length == 64 }
         } catch (_: Exception) { null }
+    }
+
+    /** The reply bitcoind would give to getblock <hash> 0, built from the raw block. */
+    private fun blockResponse(requestBody: ByteArray, block: ByteArray): ByteArray {
+        val id = try { org.json.JSONObject(String(requestBody, Charsets.UTF_8)).opt("id") } catch (_: Exception) { null }
+        val idJson = when (id) {
+            null, org.json.JSONObject.NULL -> "null"
+            is String -> org.json.JSONObject.quote(id)
+            else -> id.toString()
+        }
+        val body = ByteArrayOutputStream(block.size * 2 + 64)
+        body.write("{\"result\":\"".toByteArray())
+        body.write(toHex(block))
+        body.write("\",\"error\":null,\"id\":$idJson}".toByteArray())
+        val head = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${body.size()}\r\n\r\n"
+        return head.toByteArray() + body.toByteArray()
+    }
+
+    private fun toHex(bytes: ByteArray): ByteArray {
+        val digits = "0123456789abcdef".toByteArray()
+        val out = ByteArray(bytes.size * 2)
+        for (i in bytes.indices) {
+            val v = bytes[i].toInt() and 0xff
+            out[2 * i] = digits[v ushr 4]
+            out[2 * i + 1] = digits[v and 0x0f]
+        }
+        return out
     }
 
     private fun isPrunedError(body: ByteArray): Boolean {

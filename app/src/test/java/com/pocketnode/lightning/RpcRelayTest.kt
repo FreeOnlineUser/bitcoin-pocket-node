@@ -103,6 +103,30 @@ class RpcRelayTest {
     }
 
     @Test
+    fun answersGetblockFromCacheWithoutBitcoind() {
+        val cachedHash = "00000000000000000000cccc" + "0".repeat(40)
+        val block = byteArrayOf(0x01, 0x00, 0xab.toByte(), 0xff.toByte())
+        val cachingRelay = RpcRelay(upstream.localPort, cachedBlock = { if (it == cachedHash) block else null }) {
+            reported.add(it)
+        }.start()
+        try {
+            Socket("127.0.0.1", cachingRelay.port).use { s ->
+                val out = s.getOutputStream()
+                val input = BufferedInputStream(s.getInputStream())
+                out.write(request("""{"method":"getblock","params":["$cachedHash",0],"id":"7"}""").toByteArray()); out.flush()
+                assertEquals("""{"result":"0100abff","error":null,"id":"7"}""", String(readHttp(input)!!.second))
+                // Uncached blocks still go to bitcoind on the same connection.
+                out.write(request("""{"method":"getblock","params":["$prunedHash",0],"id":8}""").toByteArray()); out.flush()
+                assertTrue(String(readHttp(input)!!.second).contains("pruned data"))
+            }
+            Thread.sleep(100)
+            assertEquals(listOf(prunedHash), reported.toList())
+        } finally {
+            cachingRelay.stop()
+        }
+    }
+
+    @Test
     fun survivesClientReset() {
         val escaped = CopyOnWriteArrayList<Throwable>()
         val previous = Thread.getDefaultUncaughtExceptionHandler()

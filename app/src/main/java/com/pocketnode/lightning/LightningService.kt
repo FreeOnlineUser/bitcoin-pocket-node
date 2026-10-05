@@ -291,7 +291,9 @@ class LightningService(private val context: Context) {
             // If the relay can't start, connect directly as before.
             rpcRelay?.stop()
             rpcRelay = try {
-                RpcRelay(rpcPort) { hash -> recovery.reportPrunedBlock(hash) }.start()
+                RpcRelay(rpcPort, cachedBlock = { hash -> recovery.cachedBlock(hash) }) { hash ->
+                    recovery.reportPrunedBlock(hash)
+                }.start()
             } catch (e: Exception) {
                 Log.e(TAG, "RPC relay failed to start, LDK connects to bitcoind directly", e)
                 null
