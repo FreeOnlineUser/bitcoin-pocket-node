@@ -345,3 +345,29 @@ Knots is larger due to additional policy code.
 - Deps build time: ~5 minutes (libevent + Boost headers).
 - Always apply fdsan fix to ALL binaries (GrapheneOS crashes without it).
 - Gradle clean required when swapping .so files: `./gradlew clean assembleRelease`
+
+## Rebuilding libldk_node.so (reproducibly)
+
+`app/src/main/jniLibs/arm64-v8a/libldk_node.so` is built from the ldk-node fork,
+branch `watchtower-bridge-v2` (FreeOnlineUser/ldk-node). Since `9d2598b` the branch
+commits a `Cargo.lock` pinned to the dependency versions of the March 2026 build, so
+a rebuild changes only what the source changes. (Commit `9e329df` in this repo says
+the library came from `4ba0bab`; it was built from `9d2598b`, the genesis-wallet
+guard backported from upstream `d0ed6a3`.)
+
+```bash
+rustup target add aarch64-linux-android
+~/tools/build-ldk-android.sh   # cargo build --profile release-smaller --features uniffi --target aarch64-linux-android
+cp ~/ldk-node/target/aarch64-linux-android/release-smaller/libldk_node.so app/src/main/jniLibs/arm64-v8a/
+# Kotlin bindings, from the same library:
+cd ~/ldk-node && cargo run --manifest-path bindings/uniffi-bindgen/Cargo.toml generate \
+  bindings/ldk_node.udl --language kotlin --out-dir /tmp/ldk-bindgen \
+  --lib-file target/aarch64-linux-android/release-smaller/libldk_node.so
+cp /tmp/ldk-bindgen/org/lightningdevkit/ldknode/ldk_node.kt \
+  app/src/main/java/org/lightningdevkit/ldknode/ldk_node.kt
+```
+
+Check before shipping: the exported `uniffi_*` symbol set should match the old
+library (`llvm-readelf --dyn-syms`), and the `ldk_node.kt` diff should contain only
+the intended API change. The APK loads `libldk_node.so` from `jniLibs`; the copies
+inside `app/libs/*.aar` are not used.
