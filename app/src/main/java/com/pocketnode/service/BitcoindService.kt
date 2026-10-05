@@ -123,6 +123,8 @@ class BitcoindService : Service() {
     var screenMonitor: ScreenMonitor? = null
         private set
 
+    private val startClaimed = java.util.concurrent.atomic.AtomicBoolean(false)
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -140,12 +142,14 @@ class BitcoindService : Service() {
             // the node's whole life, so hold the lock for that long: a repeat start on
             // this instance is a no-op, and a new instance waits until the previous
             // one's coroutine is gone (its scope is cancelled after stopBitcoind).
+            // Only the first request on this instance goes for the lock: tryLock throws,
+            // rather than returning false, when the same owner already holds it.
+            if (!startClaimed.compareAndSet(false, true)) {
+                Log.i(TAG, "Start requested while already starting/running, ignoring")
+                return@launch
+            }
             val owner = this@BitcoindService
             if (!startLock.tryLock(owner)) {
-                if (startLock.holdsLock(owner)) {
-                    Log.i(TAG, "Start requested while already starting/running, ignoring")
-                    return@launch
-                }
                 Log.i(TAG, "Waiting for the previous service instance to stop bitcoind")
                 startLock.lock(owner)
             }
