@@ -102,6 +102,29 @@ class RpcRelayTest {
         }
     }
 
+    @Test
+    fun survivesClientReset() {
+        val escaped = CopyOnWriteArrayList<Throwable>()
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { _, e -> escaped.add(e) }
+        try {
+            Socket("127.0.0.1", relay.port).apply {
+                setSoLinger(true, 0)  // close() sends RST
+                getOutputStream().write("POST / HTTP/1.1\r\nContent-Length: 100\r\n\r\n{".toByteArray())
+                close()
+            }
+            Thread.sleep(200)
+            assertTrue("relay thread threw: $escaped", escaped.isEmpty())
+            // And keeps serving.
+            Socket("127.0.0.1", relay.port).use { s ->
+                s.getOutputStream().write(request("""{"method":"getblockcount","params":[],"id":1}""").toByteArray())
+                assertEquals("""{"result":42,"error":null,"id":1}""", String(readHttp(BufferedInputStream(s.getInputStream()))!!.second))
+            }
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+        }
+    }
+
     // Minimal HTTP reader for the test side (content-length and chunked).
     private fun readHttp(input: InputStream): Pair<Map<String, String>, ByteArray>? {
         val head = ByteArrayOutputStream()

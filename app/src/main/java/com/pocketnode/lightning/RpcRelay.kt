@@ -51,7 +51,17 @@ class RpcRelay(
         try { server.close() } catch (_: Exception) {}
     }
 
-    private fun serve(client: Socket) {
+    // An exception escaping a plain thread kills the whole app, bitcoind included.
+    // A peer resetting the socket is routine (LDK drops its connections when the
+    // node stops), so any I/O failure just ends this connection.
+    private fun serve(client: Socket) = try {
+        relay(client)
+    } catch (_: java.io.IOException) {
+    } catch (e: Exception) {
+        android.util.Log.w("RpcRelay", "Connection ended: $e")
+    }
+
+    private fun relay(client: Socket) {
         client.use { c ->
             val cin = BufferedInputStream(c.getInputStream())
             val cout = c.getOutputStream()
