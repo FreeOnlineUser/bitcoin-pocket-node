@@ -26,6 +26,9 @@ class RecoveryManager(private val context: Context) {
         private const val IDLE_AFTER_MS = 15 * 60_000L
         // ~2 years of blocks, ~85 GB at today's sizes: the most worth fetching to repair.
         private const val MAX_FEED_BLOCKS = 100_000L
+        // Size of a persisted BDK local_chain holding only the genesis block (measured
+        // on the phone; one more checkpoint makes it larger).
+        private const val GENESIS_ONLY_CHAIN_BYTES = 42L
     }
 
     /** State flow reference for scan progress updates, set by LightningService */
@@ -499,7 +502,10 @@ class RecoveryManager(private val context: Context) {
      * which works on a pruned node and doesn't depend on LDK's sync. The result goes
      * to [LightningService.LightningState.walletScan] for the screen, not the log.
      */
-    fun walletHealthCheck(rpc: BitcoinRpcClient, storageDir: File) {
+    fun walletHealthCheck(
+        rpc: BitcoinRpcClient, storageDir: File, rpcUser: String, rpcPassword: String, rpcPort: Int
+    ) {
+        var localChainBytes = -1L
         try {
             val db = File(storageDir, "ldk_node_data.sqlite")
             if (db.exists()) {
@@ -508,12 +514,32 @@ class RecoveryManager(private val context: Context) {
                     d.rawQuery("SELECT primary_namespace, secondary_namespace, key, length(value) FROM ldk_node_data ORDER BY 1, 2, 3", null).use { c ->
                         while (c.moveToNext()) {
                             Log.i(TAG, "Store: ${c.getString(0)}/${c.getString(1)}/${c.getString(2)} ${c.getLong(3)} bytes")
+                            if (c.getString(0) == "bdk_wallet" && c.getString(2) == "local_chain") localChainBytes = c.getLong(3)
                         }
                     }
                 }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Store listing failed: ${e.message}")
+        }
+
+        // ldk-node applies the birthday checkpoint to a new wallet in memory and saves
+        // it with the first connected block. If the app dies before then (it did,
+        // 2026-10-05, ten seconds after a rebuild), the store keeps a genesis-only
+        // wallet and the next start loads it as-is: the birthday is only read for new
+        // wallets. A birthday on file with a genesis-only chain means exactly that, so
+        // rebuild again now rather than after LDK walks every header back to genesis.
+        val birthday = File(storageDir, "wallet_birthday").takeIf { it.exists() }
+            ?.readText()?.trim()?.toLongOrNull()
+        if (birthday != null && localChainBytes in 1..GENESIS_ONLY_CHAIN_BYTES &&
+            !repairStarted && countStoredMonitors(storageDir) == 0) {
+            Log.w(TAG, "Wallet chain is genesis-only but birthday $birthday is on file; rebuilding from it")
+            repairStarted = true
+            stateFlow.value = stateFlow.value.copy(
+                recoveryProblem = "Lightning's wallet lost its birthday checkpoint. Rebuilding it from block ${"%,d".format(birthday)}…"
+            )
+            rebuildWalletFromBirthday(rpc, storageDir, rpcUser, rpcPassword, rpcPort, knownBirthday = birthday)
+            return
         }
 
         val mnemonicFile = File(storageDir, "mnemonic")
@@ -717,13 +743,16 @@ class RecoveryManager(private val context: Context) {
      * exist), and restarts LDK. The prune feed then brings the wallet up from there.
      */
     private fun rebuildWalletFromBirthday(
-        rpc: BitcoinRpcClient, storageDir: File, rpcUser: String, rpcPassword: String, rpcPort: Int
+        rpc: BitcoinRpcClient, storageDir: File, rpcUser: String, rpcPassword: String, rpcPort: Int,
+        knownBirthday: Long? = null
     ) {
         try {
             val mnemonic = File(storageDir, "mnemonic").takeIf { it.exists() }?.readText()?.trim()
             val tip = rpc.getBlockchainInfoSync()?.optLong("blocks", 0) ?: 0
             var birthday = tip
-            if (mnemonic != null) {
+            if (knownBirthday != null) {
+                birthday = knownBirthday
+            } else if (mnemonic != null) {
                 val scanObjects = JSONArray()
                 for (d in WalletRecoveryService(context).descriptorsFromMnemonic(mnemonic)) {
                     scanObjects.put(JSONObject().put("desc", d).put("range", 200))
@@ -746,8 +775,10 @@ class RecoveryManager(private val context: Context) {
                 repairStarted = false
                 return
             }
-            if (birthday < tip) birthday = (birthday - 10).coerceAtLeast(1)
-            File(storageDir, "wallet_birthday").writeText(birthday.toString())
+            if (knownBirthday == null) {
+                if (birthday < tip) birthday = (birthday - 10).coerceAtLeast(1)
+                File(storageDir, "wallet_birthday").writeText(birthday.toString())
+            }
             Log.i(TAG, "Wallet rebuild: birthday $birthday, resetting store and restarting LDK")
 
             stopNode?.invoke()

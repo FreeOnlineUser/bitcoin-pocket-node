@@ -685,7 +685,7 @@ class LightningService(private val context: Context) {
             // on screen. Once per app run.
             if (!walletHealthChecked) {
                 walletHealthChecked = true
-                Thread({ recovery.walletHealthCheck(rpc, storageDir) }, "wallet-check").start()
+                Thread({ recovery.walletHealthCheck(rpc, storageDir, rpcUser, rpcPassword, rpcPort) }, "wallet-check").start()
             }
 
             // --- Background recovery scan fallback ---
