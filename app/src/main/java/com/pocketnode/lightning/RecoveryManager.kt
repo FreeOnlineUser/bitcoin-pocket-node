@@ -18,21 +18,21 @@ class RecoveryManager(private val context: Context) {
     companion object {
         private const val TAG = "RecoveryManager"
         private const val STORAGE_DIR = "lightning"
-        // How far past LDK's position to fetch. LDK retries a failed sync at most every
-        // 5 minutes and connects everything on disk in one pass, so the window has to
-        // outlast a retry or the download sits idle waiting for LDK. 576 blocks (~900 MB)
-        // takes ~15 min at the ~1 MB/s peers gave on 2026-10-05, so the link stays busy,
-        // and still fits beside the 2 GB prune target: fetched blocks land in the newest
-        // block files, which bitcoind prunes last.
+        // How far past LDK's position to keep on disk. LDK retries a failed sync at most
+        // every 5 minutes and connects everything on disk in one pass, so the window has
+        // to outlast a retry or the download sits idle waiting for LDK. 576 blocks
+        // (~900 MB) is ~15 min at the ~1 MB/s peers gave on 2026-10-05, and still fits
+        // beside the 2 GB prune target: fetched blocks land in the newest block files,
+        // which bitcoind prunes last.
         private const val FEED_WINDOW = 576L
-        // getblockfrompeer drops any earlier request for the block and asks again, so
-        // re-requesting a block still queued at a peer downloads it twice. Queued blocks
-        // can wait many minutes behind the rest of the window; only re-ask after this.
-        private const val REREQUEST_MS = 15 * 60_000L
-        // The block LDK just failed on is certainly missing and holds up everything after
-        // it, so it and a few successors go to another peer after this long.
-        private const val GATE_REREQUEST_MS = 60_000L
-        private const val GATE_BLOCKS = 8L
+        // Blocks queued at each peer at once (Core's own limit for block download).
+        // A peer serves requests in order, so a deep queue strands the block LDK needs
+        // behind everything requested before it. Measured 2026-10-05: with the whole
+        // window queued, LDK gained 17 blocks in 13 minutes at full download speed.
+        private const val PER_PEER_IN_FLIGHT = 16
+        // A block LDK is waiting on that a peer hasn't delivered in this long goes to
+        // another peer.
+        private const val GATE_STALL_MS = 90_000L
         private const val IDLE_AFTER_MS = 15 * 60_000L
         // ~2 years of blocks, ~85 GB at today's sizes: the most worth fetching to repair.
         private const val MAX_FEED_BLOCKS = 100_000L
@@ -612,12 +612,14 @@ class RecoveryManager(private val context: Context) {
         val networkMonitor = com.pocketnode.network.NetworkMonitor.getInstance(context)
         val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
 
-        val requestedAt = HashMap<Long, Long>()
-        // Times each height has been requested, so a repeat goes to a different peer.
-        val tries = HashMap<Long, Int>()
+        // Height -> (peer, when) for blocks we asked for and bitcoind still lists in flight.
+        val requested = HashMap<Long, Pair<Int, Long>>()
+        // Heights at or past `need` that arrived (or were already on disk).
+        val have = HashSet<Long>()
         var need = -1L          // lowest height LDK is currently missing
         var firstNeed = -1L     // where this catch-up started, for progress
         var lastReportAt = 0L
+        var lastSummaryAt = 0L
         var holding = false
 
         fun clearProgress() {
@@ -643,11 +645,8 @@ class RecoveryManager(private val context: Context) {
                         if (firstNeed < 0 || need < firstNeed) firstNeed = need
                         lastReportAt = now
                         Log.i(TAG, "Prune feed: LDK needs block $need")
-                        // Stuck behind a slow peer: let these go to another one.
-                        for (h in need until need + GATE_BLOCKS) {
-                            val sent = requestedAt[h] ?: continue
-                            if (now - sent > GATE_REREQUEST_MS) requestedAt.remove(h)
-                        }
+                        // LDK says it's missing, whatever we thought (it may have been pruned).
+                        have.remove(need)
                     }
                 }
 
@@ -657,8 +656,8 @@ class RecoveryManager(private val context: Context) {
                     if (need >= 0) Log.i(TAG, "Prune feed: no missing blocks reported for ${IDLE_AFTER_MS / 60_000} min, idle")
                     need = -1
                     firstNeed = -1
-                    requestedAt.clear()
-                    tries.clear()
+                    requested.clear()
+                    have.clear()
                     if (holding) { pmm.releaseNetworkHold(); holding = false }
                     clearProgress()
                     kotlinx.coroutines.delay(10_000)
@@ -719,28 +718,69 @@ class RecoveryManager(private val context: Context) {
                     continue
                 }
 
-                for (h in need until need + FEED_WINDOW) {
-                    if (pruneHeight > 0 && h >= pruneHeight) break  // bitcoind still has these
-                    val sent = requestedAt[h]
-                    if (sent != null && now - sent < REREQUEST_MS) continue
-                    val hash = rpc.call("getblockhash", JSONArray().put(h))?.optString("value")
-                    if (hash.isNullOrEmpty()) continue
-                    val t = tries[h] ?: 0
-                    for (attempt in 0 until minOf(3, peers.size)) {
-                        val peer = peers[((h + t + attempt) % peers.size).toInt()]
-                        val res = rpc.call("getblockfrompeer", JSONArray().put(hash).put(peer)) ?: break
-                        val msg = res.optString("message")
-                        if (!res.has("_rpc_error") || msg.contains("already downloaded", ignoreCase = true)) {
-                            requestedAt[h] = now
-                            tries[h] = t + attempt + 1
-                            break
+                // What bitcoind still has in flight, by peer. Anything we asked for that
+                // left the list has arrived, or its peer went away; LDK's next report
+                // catches the second case.
+                val inFlight = HashMap<Int, Int>()
+                val inFlightHeights = HashSet<Long>()
+                for (p in peers) {
+                    inFlight[p.id] = p.inFlight.size
+                    inFlightHeights.addAll(p.inFlight)
+                }
+                val arrived = requested.keys.filter { it !in inFlightHeights }
+                for (h in arrived) requested.remove(h)
+                have.addAll(arrived.filter { it >= need })
+
+                // The block LDK is waiting on, stalled at a slow peer: ask another one.
+                // getblockfrompeer drops the old request, so this doesn't double up.
+                requested[need]?.let { (peer, at) ->
+                    if (now - at > GATE_STALL_MS) {
+                        val other = peers.filter { it.id != peer }.minByOrNull { inFlight[it.id] ?: 0 }
+                        val hash = rpc.call("getblockhash", JSONArray().put(need))?.optString("value")
+                        if (other != null && !hash.isNullOrEmpty()) {
+                            Log.i(TAG, "Prune feed: block $need stalled at peer $peer, asking peer ${other.id}")
+                            val res = rpc.call("getblockfrompeer", JSONArray().put(hash).put(other.id))
+                            if (res != null && !res.has("_rpc_error")) {
+                                requested[need] = other.id to now
+                                inFlight[other.id] = (inFlight[other.id] ?: 0) + 1
+                            }
                         }
-                        Log.d(TAG, "Prune feed: getblockfrompeer $h via peer $peer: $msg")
                     }
                 }
-                requestedAt.keys.removeAll { it < need }
-                tries.keys.removeAll { it < need }
-                kotlinx.coroutines.delay(10_000)
+
+                // Fill each peer up to PER_PEER_IN_FLIGHT, lowest heights first, so blocks
+                // arrive in about the order LDK connects them.
+                for (h in need until need + FEED_WINDOW) {
+                    if (pruneHeight > 0 && h >= pruneHeight) break  // bitcoind still has these
+                    if (h in have || h in requested) continue
+                    val peer = peers.filter { (inFlight[it.id] ?: 0) < PER_PEER_IN_FLIGHT }
+                        .minByOrNull { inFlight[it.id] ?: 0 } ?: break
+                    val hash = rpc.call("getblockhash", JSONArray().put(h))?.optString("value")
+                    if (hash.isNullOrEmpty()) continue
+                    val res = rpc.call("getblockfrompeer", JSONArray().put(hash).put(peer.id)) ?: break
+                    val msg = res.optString("message")
+                    when {
+                        !res.has("_rpc_error") -> {
+                            requested[h] = peer.id to now
+                            inFlight[peer.id] = (inFlight[peer.id] ?: 0) + 1
+                        }
+                        msg.contains("already downloaded", ignoreCase = true) -> have.add(h)
+                        else -> {
+                            // Peer gone or unusable; it drops out of next round's list.
+                            Log.d(TAG, "Prune feed: getblockfrompeer $h via peer ${peer.id}: $msg")
+                            inFlight[peer.id] = PER_PEER_IN_FLIGHT
+                        }
+                    }
+                }
+                requested.keys.removeAll { it < need }
+                have.removeAll { it < need }
+                if (now - lastSummaryAt > 60_000) {
+                    lastSummaryAt = now
+                    Log.i(TAG, "Prune feed: need $need, ${have.size} ahead on disk, ${requested.size} requested, " +
+                        "peers ${peers.joinToString(" ") { "${it.id}:${inFlight[it.id] ?: 0}" }}" +
+                        (requested[need]?.let { ", need asked of peer ${it.first} ${(now - it.second) / 1000}s ago" } ?: ""))
+                }
+                kotlinx.coroutines.delay(5_000)
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -818,18 +858,24 @@ class RecoveryManager(private val context: Context) {
         }
     }
 
-    /** Peers advertising NODE_NETWORK, i.e. able to serve blocks older than 288. */
-    private suspend fun fullHistoryPeers(rpc: BitcoinRpcClient): List<Int> {
+    private class FeedPeer(val id: Int, val inFlight: List<Long>)
+
+    /**
+     * Peers advertising NODE_NETWORK, i.e. able to serve blocks older than 288, with
+     * the heights bitcoind has in flight from each.
+     */
+    private suspend fun fullHistoryPeers(rpc: BitcoinRpcClient): List<FeedPeer> {
         val res = rpc.call("getpeerinfo") ?: return emptyList()
         val arr = res.optJSONArray("value") ?: return emptyList()
-        val ids = ArrayList<Int>()
+        val peers = ArrayList<FeedPeer>()
         for (i in 0 until arr.length()) {
             val p = arr.optJSONObject(i) ?: continue
             val services = p.optJSONArray("servicesnames") ?: continue
-            if ((0 until services.length()).any { services.optString(it) == "NETWORK" }) {
-                ids.add(p.optInt("id"))
-            }
+            if ((0 until services.length()).none { services.optString(it) == "NETWORK" }) continue
+            val inflight = p.optJSONArray("inflight")
+            val heights = (0 until (inflight?.length() ?: 0)).map { inflight!!.optLong(it) }
+            peers.add(FeedPeer(p.optInt("id"), heights))
         }
-        return ids
+        return peers
     }
 }
