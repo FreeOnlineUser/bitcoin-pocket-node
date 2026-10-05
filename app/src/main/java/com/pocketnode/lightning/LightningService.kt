@@ -59,6 +59,8 @@ class LightningService(private val context: Context) {
         val recoveryWaitingForWifi: Boolean = false,
         /** Why the prune feed can't repair LDK's sync, when it can't. */
         val recoveryProblem: String? = null,
+        /** Result of the read-only UTXO-set check of this wallet's coins. */
+        val walletScan: String? = null,
         // Background UTXO scan
         val scanningForFunds: Boolean = false,
         val scanProgress: Int = 0,  // 0-100%
@@ -130,6 +132,7 @@ class LightningService(private val context: Context) {
     private var stateRefreshJob: kotlinx.coroutines.Job? = null
     private var pruneFeedJob: kotlinx.coroutines.Job? = null
     private var rpcRelay: RpcRelay? = null
+    private var walletHealthChecked = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -678,6 +681,13 @@ class LightningService(private val context: Context) {
                 Log.w(TAG, "broadcastHolderCommitmentTxns: ${e.message}")
             }
 
+            // Read-only diagnosis: store key sizes in the log, the seed's on-chain coins
+            // on screen. Once per app run.
+            if (!walletHealthChecked) {
+                walletHealthChecked = true
+                Thread({ recovery.walletHealthCheck(rpc, storageDir) }, "wallet-check").start()
+            }
+
             // --- Background recovery scan fallback ---
             if (needsRecoveryScan && scanDescriptors.isNotEmpty()) {
                 Thread({
@@ -993,6 +1003,7 @@ class LightningService(private val context: Context) {
                 recoveryBlocksDone = _state.value.recoveryBlocksDone,
                 recoveryWaitingForWifi = _state.value.recoveryWaitingForWifi,
                 recoveryProblem = _state.value.recoveryProblem,
+                walletScan = _state.value.walletScan,
                 scanningForFunds = _state.value.scanningForFunds,
                 scanProgress = _state.value.scanProgress,
                 lastChannelError = _state.value.lastChannelError,

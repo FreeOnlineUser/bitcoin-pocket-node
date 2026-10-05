@@ -352,11 +352,16 @@ class RecoveryManager(private val context: Context) {
                     else "Monitor check failed; assuming monitors present.")
             return
         }
-        val preserveNames = setOf("keys_seed", "keys_seed.bak", "mnemonic", "channel_manager", "monitors", "wallet_birthday", "channel_backups.json")
+        val preserveNames = setOf("keys_seed", "keys_seed.bak", "mnemonic", "channel_manager", "monitors",
+            "archived_monitors", "wallet_birthday", "channel_backups.json")
+        // Move, don't delete: everything cleared goes to a dated folder beside the
+        // store, so a reset is always reversible by hand.
+        val moveTo = File(storageDir.parentFile, "lightning_reset_${System.currentTimeMillis()}")
         storageDir.listFiles()?.forEach { file ->
             if (file.name !in preserveNames) {
-                val deleted = file.deleteRecursively()
-                Log.d(TAG, "resetChainState: ${if (deleted) "deleted" else "FAILED to delete"} ${file.name}")
+                moveTo.mkdirs()
+                val moved = file.renameTo(File(moveTo, file.name))
+                Log.i(TAG, "resetChainState: ${if (moved) "moved ${file.name} to ${moveTo.name}" else "FAILED to move ${file.name}"}")
             } else {
                 Log.d(TAG, "resetChainState: preserved ${file.name}")
             }
@@ -485,6 +490,59 @@ class RecoveryManager(private val context: Context) {
         return result.toByteArray()
     }
 
+    // ── Wallet health check (read-only) ──────────────────────────────
+
+    /**
+     * Read-only look at the LDK store and the seed's on-chain coins, to diagnose a
+     * wallet stuck at an old (or genesis) sync position. Logs each stored key's size
+     * (no contents), and scans bitcoind's UTXO set with the seed's BIP84 descriptors,
+     * which works on a pruned node and doesn't depend on LDK's sync. The result goes
+     * to [LightningService.LightningState.walletScan] for the screen, not the log.
+     */
+    fun walletHealthCheck(rpc: BitcoinRpcClient, storageDir: File) {
+        try {
+            val db = File(storageDir, "ldk_node_data.sqlite")
+            if (db.exists()) {
+                android.database.sqlite.SQLiteDatabase.openDatabase(db.absolutePath, null,
+                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY).use { d ->
+                    d.rawQuery("SELECT primary_namespace, secondary_namespace, key, length(value) FROM ldk_node_data ORDER BY 1, 2, 3", null).use { c ->
+                        while (c.moveToNext()) {
+                            Log.i(TAG, "Store: ${c.getString(0)}/${c.getString(1)}/${c.getString(2)} ${c.getLong(3)} bytes")
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Store listing failed: ${e.message}")
+        }
+
+        val mnemonicFile = File(storageDir, "mnemonic")
+        if (!mnemonicFile.exists()) return
+        try {
+            stateFlow.value = stateFlow.value.copy(walletScan = "Checking the UTXO set for this wallet's coins…")
+            val descs = WalletRecoveryService(context).descriptorsFromMnemonic(mnemonicFile.readText().trim())
+            val scanObjects = JSONArray()
+            for (d in descs) scanObjects.put(JSONObject().put("desc", d).put("range", 200))
+            try { rpc.callSync("scantxoutset", JSONArray().put("abort"), readTimeoutMs = 10_000) } catch (_: Exception) {}
+            val result = rpc.callSync("scantxoutset", JSONArray().put("start").put(scanObjects), readTimeoutMs = 600_000)
+            if (result == null || result.has("_rpc_error")) {
+                stateFlow.value = stateFlow.value.copy(walletScan = "UTXO check failed: ${result?.optString("message") ?: "no response"}")
+                return
+            }
+            val unspents = result.optJSONArray("unspents") ?: JSONArray()
+            val sats = Math.round(result.optDouble("total_amount", 0.0) * 100_000_000)
+            var minHeight = Int.MAX_VALUE
+            for (i in 0 until unspents.length()) minHeight = minOf(minHeight, unspents.getJSONObject(i).optInt("height", Int.MAX_VALUE))
+            val summary = if (unspents.length() == 0) "UTXO check: no on-chain coins for this wallet's addresses"
+                else "UTXO check: ${unspents.length()} coin(s), ${"%,d".format(sats)} sats, oldest from block ${"%,d".format(minHeight)}"
+            stateFlow.value = stateFlow.value.copy(walletScan = summary)
+            Log.i(TAG, "Wallet UTXO check done: ${unspents.length()} coin(s), oldest height ${if (unspents.length() > 0) minHeight else "-"}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Wallet UTXO check failed", e)
+            stateFlow.value = stateFlow.value.copy(walletScan = "UTXO check failed: ${e.message}")
+        }
+    }
+
     // ── Prune Recovery ───────────────────────────────────────────────
 
     /** Blocks LDK asked for that bitcoind had pruned, reported by [RpcRelay]. */
@@ -566,10 +624,23 @@ class RecoveryManager(private val context: Context) {
                 val info = rpc.getBlockchainInfo()
                 val pruneHeight = info?.optLong("pruneheight", 0) ?: 0
                 if (pruneHeight > 0 && pruneHeight - need > MAX_FEED_BLOCKS) {
-                    // Something in LDK's store sits implausibly far back (a listener with no
-                    // real position starts at genesis). Fetching that much of the chain block
-                    // by block isn't a repair; say so instead of trying.
+                    // Something in LDK's store sits implausibly far back. The known cause is an
+                    // on-chain wallet created at genesis (ldk-node before d0ed6a3 did that when
+                    // it couldn't read the tip on first start). Fetching most of the chain block
+                    // by block isn't a repair. With no channel monitors in the store there is no
+                    // channel state at risk, so rebuild the wallet from its birthday instead.
                     Log.e(TAG, "Prune feed: LDK needs block $need, ${pruneHeight - need} below the prune height. Not fetching.")
+                    val storageDir = File(context.filesDir, STORAGE_DIR)
+                    if (!repairStarted && countStoredMonitors(storageDir) == 0) {
+                        repairStarted = true
+                        stateFlow.value = stateFlow.value.copy(
+                            recoveryBlocksNeeded = 0, recoveryBlocksDone = 0, recoveryWaitingForWifi = false,
+                            recoveryProblem = "Lightning's wallet was created at the start of the chain. Rebuilding it from its birthday…"
+                        )
+                        // Its own thread: stopping the node cancels this coroutine.
+                        Thread({ rebuildWalletFromBirthday(rpc, storageDir, rpcUser, rpcPassword, rpcPort) }, "wallet-rebuild").start()
+                        return@withContext
+                    }
                     stateFlow.value = stateFlow.value.copy(
                         recoveryBlocksNeeded = 0, recoveryBlocksDone = 0, recoveryWaitingForWifi = false,
                         recoveryProblem = "Lightning needs blocks from height $need, too far back to fetch. Its chain data needs repair."
@@ -632,6 +703,67 @@ class RecoveryManager(private val context: Context) {
         } finally {
             if (holding) pmm.releaseNetworkHold()
             clearProgress()
+        }
+    }
+
+    @Volatile private var repairStarted = false
+
+    /**
+     * Rebuild an LDK store whose wallet is pinned at genesis. Only called when the
+     * store holds no channel monitors, so the only thing reset is wallet sync state,
+     * which the seed rebuilds. Finds the oldest coin with a UTXO-set scan and uses it
+     * as the wallet birthday (or the tip if there are none), resets the store
+     * (resetChainState keeps the mnemonic, seed and birthday, and refuses if monitors
+     * exist), and restarts LDK. The prune feed then brings the wallet up from there.
+     */
+    private fun rebuildWalletFromBirthday(
+        rpc: BitcoinRpcClient, storageDir: File, rpcUser: String, rpcPassword: String, rpcPort: Int
+    ) {
+        try {
+            val mnemonic = File(storageDir, "mnemonic").takeIf { it.exists() }?.readText()?.trim()
+            val tip = rpc.getBlockchainInfoSync()?.optLong("blocks", 0) ?: 0
+            var birthday = tip
+            if (mnemonic != null) {
+                val scanObjects = JSONArray()
+                for (d in WalletRecoveryService(context).descriptorsFromMnemonic(mnemonic)) {
+                    scanObjects.put(JSONObject().put("desc", d).put("range", 200))
+                }
+                try { rpc.callSync("scantxoutset", JSONArray().put("abort"), readTimeoutMs = 10_000) } catch (_: Exception) {}
+                val result = rpc.callSync("scantxoutset", JSONArray().put("start").put(scanObjects), readTimeoutMs = 600_000)
+                if (result == null || result.has("_rpc_error")) {
+                    Log.e(TAG, "Wallet rebuild: UTXO scan failed, not resetting")
+                    stateFlow.value = stateFlow.value.copy(recoveryProblem = "Wallet rebuild couldn't scan for coins; nothing was changed.")
+                    repairStarted = false
+                    return
+                }
+                val unspents = result.optJSONArray("unspents") ?: JSONArray()
+                for (i in 0 until unspents.length()) {
+                    birthday = minOf(birthday, unspents.getJSONObject(i).optLong("height", tip))
+                }
+            }
+            if (birthday <= 0) {
+                stateFlow.value = stateFlow.value.copy(recoveryProblem = "Wallet rebuild couldn't read the chain tip; nothing was changed.")
+                repairStarted = false
+                return
+            }
+            if (birthday < tip) birthday = (birthday - 10).coerceAtLeast(1)
+            File(storageDir, "wallet_birthday").writeText(birthday.toString())
+            Log.i(TAG, "Wallet rebuild: birthday $birthday, resetting store and restarting LDK")
+
+            stopNode?.invoke()
+            Thread.sleep(500)
+            resetChainState(storageDir)
+            if (File(storageDir, "ldk_node_data.sqlite").exists()) {
+                // resetChainState refused (it found monitors after all). Leave it alone.
+                Log.e(TAG, "Wallet rebuild: store not reset, restarting LDK unchanged")
+            }
+            stateFlow.value = stateFlow.value.copy(recoveryProblem = null)
+            clearStartingFlag?.invoke()
+            startNode?.invoke(rpcUser, rpcPassword, rpcPort)
+        } catch (e: Exception) {
+            Log.e(TAG, "Wallet rebuild failed", e)
+            stateFlow.value = stateFlow.value.copy(recoveryProblem = "Wallet rebuild failed: ${e.message}")
+            repairStarted = false
         }
     }
 
