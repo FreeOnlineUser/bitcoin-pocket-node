@@ -79,7 +79,7 @@ fun OracleCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (isRunning) Modifier.defaultMinSize(minHeight = 120.dp) else Modifier)
+            .then(if (isRunning && result == null) Modifier.defaultMinSize(minHeight = 120.dp) else Modifier)
             .clickable { expanded = !expanded; onExpanded?.invoke(expanded) },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -125,14 +125,16 @@ fun OracleCard(
             Spacer(Modifier.height(4.dp))
             // Price row
             when {
-                isRunning -> {
+                // A per-block update keeps the price (and chart) on screen; the spinner
+                // in the header shows it's running. Only the very first run has no price.
+                isRunning && (shown == null || result == null) -> {
                     Text(
                         progressText.ifEmpty { "Calculating…" },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                error != null -> {
+                error != null && (shown == null || result == null) -> {
                     Text(
                         error,
                         style = MaterialTheme.typography.bodySmall,
@@ -223,7 +225,9 @@ fun OracleCard(
                             Text(
                                 it,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
                     }

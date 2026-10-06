@@ -9,11 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -24,8 +23,8 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * The week of on-chain prices: one last-hour figure per block, with day marks
- * at local midnight and the week's high and low. [live], the mempool estimate,
+ * The week of on-chain prices: one dot per block (its last-hour figure), with
+ * day marks at local midnight and the week's high and low. [live], the mempool estimate,
  * shows as a hollow marker at now, apart from the mined-price line.
  */
 @Composable
@@ -59,15 +58,6 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
     val dayName = SimpleDateFormat("EEE", Locale.getDefault())
 
     Column(modifier) {
-        Row(Modifier.fillMaxWidth()) {
-            Text(
-                "high $${"%,d".format(hi)}  low $${"%,d".format(lo)}" +
-                    (live?.let { "  live $${"%,d".format(it)}" } ?: ""),
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                color = label
-            )
-        }
         Box(Modifier.fillMaxWidth().height(120.dp)) {
             Canvas(Modifier.fillMaxWidth().height(120.dp)) {
                 fun x(t: Long) = ((t - t0).toFloat() / (t1 - t0).coerceAtLeast(1)) * size.width
@@ -75,12 +65,9 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
                 for (d in days) {
                     drawLine(grid, Offset(x(d), 0f), Offset(x(d), size.height), strokeWidth = 1.dp.toPx())
                 }
-                val path = Path()
-                points.forEachIndexed { i, p ->
-                    if (i == 0) path.moveTo(x(p.time), y(p.price.toDouble()))
-                    else path.lineTo(x(p.time), y(p.price.toDouble()))
-                }
-                drawPath(path, line, style = Stroke(width = 1.5.dp.toPx(), join = StrokeJoin.Round))
+                // One dot per block.
+                val r = 1.5.dp.toPx()
+                for (p in points) drawCircle(line, radius = r, center = Offset(x(p.time), y(p.price.toDouble())))
                 if (live != null) {
                     drawCircle(
                         Color(0xFFFFB74D),
@@ -89,6 +76,16 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
                         style = Stroke(width = 1.5.dp.toPx())
                     )
                 }
+            }
+            // Fixed corner labels, one line each, so nothing reflows as prices change.
+            val small = MaterialTheme.typography.labelSmall
+            Text("$${"%,d".format(hi)}", style = small, fontFamily = FontFamily.Monospace, color = label,
+                maxLines = 1, modifier = Modifier.align(Alignment.TopStart))
+            Text("$${"%,d".format(lo)}", style = small, fontFamily = FontFamily.Monospace, color = label,
+                maxLines = 1, modifier = Modifier.align(Alignment.BottomStart))
+            live?.let {
+                Text("live $${"%,d".format(it)}", style = small, fontFamily = FontFamily.Monospace,
+                    color = Color(0xFFFFB74D), maxLines = 1, modifier = Modifier.align(Alignment.TopEnd))
             }
         }
         // Day labels under each day's span.
@@ -99,9 +96,11 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
                     val span = (bounds[i + 1] - bounds[i]).toFloat() / (t1 - t0).coerceAtLeast(1)
                     if (span <= 0f) continue
                     Text(
-                        if (span > 0.06f) dayName.format(Date(bounds[i] * 1000)) else "",
+                        if (span > 0.08f) dayName.format(Date(bounds[i] * 1000)) else "",
                         style = MaterialTheme.typography.labelSmall,
                         color = label,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.weight(span)
                     )
                 }
