@@ -25,22 +25,25 @@ import java.util.Locale
 
 /**
  * The week of on-chain prices: one last-hour figure per block, with day marks
- * at local midnight and the week's high and low.
+ * at local midnight and the week's high and low. [live], the mempool estimate,
+ * shows as a hollow marker at now, apart from the mined-price line.
  */
 @Composable
-fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier) {
+fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: Int? = null) {
     if (points.size < 2) return
     val line = Color(0xFFFF9800)
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
     val label = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
 
     val t0 = points.first().time
-    val t1 = points.last().time
+    val t1 = if (live != null) maxOf(points.last().time, System.currentTimeMillis() / 1000) else points.last().time
     val lo = points.minOf { it.price }
     val hi = points.maxOf { it.price }
-    val pad = ((hi - lo) * 0.08).coerceAtLeast(1.0)
-    val yMin = lo - pad
-    val yMax = hi + pad
+    val yLo = minOf(lo, live ?: lo)
+    val yHi = maxOf(hi, live ?: hi)
+    val pad = ((yHi - yLo) * 0.08).coerceAtLeast(1.0)
+    val yMin = yLo - pad
+    val yMax = yHi + pad
 
     // Local midnights inside the range, for day marks.
     val days = mutableListOf<Long>()
@@ -58,7 +61,8 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier) {
     Column(modifier) {
         Row(Modifier.fillMaxWidth()) {
             Text(
-                "high $${"%,d".format(hi)}  low $${"%,d".format(lo)}",
+                "high $${"%,d".format(hi)}  low $${"%,d".format(lo)}" +
+                    (live?.let { "  live $${"%,d".format(it)}" } ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
                 color = label
@@ -77,6 +81,14 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier) {
                     else path.lineTo(x(p.time), y(p.price.toDouble()))
                 }
                 drawPath(path, line, style = Stroke(width = 1.5.dp.toPx(), join = StrokeJoin.Round))
+                if (live != null) {
+                    drawCircle(
+                        Color(0xFFFFB74D),
+                        radius = 3.5.dp.toPx(),
+                        center = Offset(x(t1) - 5.dp.toPx(), y(live.toDouble())),
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                }
             }
         }
         // Day labels under each day's span.

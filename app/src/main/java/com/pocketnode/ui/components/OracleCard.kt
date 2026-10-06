@@ -186,28 +186,6 @@ fun OracleCard(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     }
-                    // Optional week chart, off unless turned on here.
-                    Text(
-                        if (chartShown) "Hide 7-day chart" else "Show 7-day chart",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .padding(top = 4.dp)
-                            .clickable { OracleUpdater.setChartShown(context, !chartShown) }
-                    )
-                    if (chartShown) {
-                        if (history.size >= 2) {
-                            PriceChart(history, Modifier.padding(top = 6.dp))
-                        }
-                        val note = historyStatus ?: if (history.size < 2) "The week fills in from your node's blocks shortly." else null
-                        note?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                        }
-                    }
                     if (effective == OracleUpdater.PriceWindow.LIVE) {
                         Text(
                             "Unconfirmed transactions, last ${MempoolPrice.WINDOW_MS / 60_000} min",
@@ -220,6 +198,34 @@ fun OracleCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFFFFB74D)
                         )
+                    }
+                    // Optional week chart, off unless turned on here.
+                    Text(
+                        if (chartShown) "Hide 7-day chart" else "Show 7-day chart",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .clickable { OracleUpdater.setChartShown(context, !chartShown) }
+                    )
+                    if (chartShown) {
+                        if (history.size >= 2) {
+                            // On Live, the mempool estimate shows as a separate end marker:
+                            // it isn't a mined price, so it never joins the line.
+                            PriceChart(
+                                history,
+                                Modifier.padding(top = 6.dp),
+                                live = live?.price?.takeIf { effective == OracleUpdater.PriceWindow.LIVE }
+                            )
+                        }
+                        val note = historyStatus ?: if (history.size < 2) "The week fills in from your node's blocks shortly." else null
+                        note?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                 }
             }
