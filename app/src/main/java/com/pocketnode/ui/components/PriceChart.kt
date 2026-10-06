@@ -64,7 +64,7 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
             Canvas(Modifier.fillMaxWidth().height(140.dp)) {
                 // With a live estimate, a narrow strip on the right holds it: it's a guess
                 // about the next blocks, not a mined price, so it stands just apart.
-                val plotW = if (live != null) size.width - 14.dp.toPx() else size.width
+                val plotW = if (live != null) size.width - 10.dp.toPx() else size.width
                 fun x(t: Long) = ((t - t0).toFloat() / (t1 - t0).coerceAtLeast(1)) * plotW
                 // Top and bottom bands stay clear of dots for the high and low labels.
                 val band = 16.dp.toPx()
@@ -78,14 +78,14 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
                 if (live != null) {
                     // Where mined prices end.
                     drawLine(
-                        grid, Offset(plotW + 4.dp.toPx(), 0f), Offset(plotW + 4.dp.toPx(), size.height),
+                        grid, Offset(plotW + 2.5.dp.toPx(), 0f), Offset(plotW + 2.5.dp.toPx(), size.height),
                         strokeWidth = 1.dp.toPx(),
                         pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
                     )
                     drawCircle(
                         liveColor,
                         radius = 3.5.dp.toPx(),
-                        center = Offset(plotW + 9.dp.toPx(), y(live.toDouble())),
+                        center = Offset(plotW + 6.dp.toPx(), y(live.toDouble())),
                         style = Stroke(width = 1.5.dp.toPx())
                     )
                 }
