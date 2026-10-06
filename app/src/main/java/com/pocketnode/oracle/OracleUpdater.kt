@@ -176,12 +176,12 @@ object OracleUpdater {
         // Own oracle instance: keeps its progress messages off the block figures' card text.
         val o = liveOracle ?: UTXOracle(rpc).also { liveOracle = it }
         val mp = mempool ?: MempoolPrice(rpc).also { mempool = it }
-        if (_state.value.live == null) _state.value = _state.value.copy(liveNote = "Collecting mempool transactions…")
+        if (_state.value.live == null) _state.value = _state.value.copy(liveNote = "Collecting mempool data…")
         val r = mp.update(o, info.optLong("blocks", 0).toInt())
         _state.value = _state.value.copy(
             live = r ?: _state.value.live,
             liveOutputs = mp.sampleOutputs,
-            liveNote = if (r == null && _state.value.live == null) "Collecting mempool transactions (${mp.sampleOutputs} outputs so far)…" else null
+            liveNote = if (r == null && _state.value.live == null) "Collecting mempool data (${mp.sampleOutputs} outputs)…" else null
         )
         r?.let { Log.i(TAG, "Live estimate $${it.price} from ${mp.sampleOutputs} outputs (t=${System.currentTimeMillis() / 1000})") }
     }

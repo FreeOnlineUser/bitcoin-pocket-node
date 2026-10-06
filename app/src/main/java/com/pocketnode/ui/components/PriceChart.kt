@@ -25,7 +25,7 @@ import java.util.Locale
 /**
  * The week of on-chain prices: one dot per block (its last-hour figure), with
  * day marks at local midnight and the week's high and low. [live], the mempool estimate,
- * shows as a hollow marker at now, apart from the mined-price line.
+ * shows as a grey hollow marker just past the last block, apart from the mined prices.
  */
 @Composable
 fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: Int? = null) {
@@ -33,14 +33,18 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
     val line = Color(0xFFFF9800)
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
     val label = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+    val liveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
 
     val t0 = points.first().time
-    val t1 = if (live != null) maxOf(points.last().time, System.currentTimeMillis() / 1000) else points.last().time
+    val tLast = points.last().time
+    // With a live estimate, leave a strip on the right for it: it's a guess about
+    // the next blocks, not a mined price, so it stands apart from the dots.
+    val t1 = if (live != null) tLast + ((tLast - t0) * 0.05).toLong().coerceAtLeast(600) else tLast
     val lo = points.minOf { it.price }
     val hi = points.maxOf { it.price }
     val yLo = minOf(lo, live ?: lo)
     val yHi = maxOf(hi, live ?: hi)
-    val pad = ((yHi - yLo) * 0.08).coerceAtLeast(1.0)
+    val pad = ((yHi - yLo) * 0.03).coerceAtLeast(1.0)
     val yMin = yLo - pad
     val yMax = yHi + pad
 
@@ -58,10 +62,12 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
     val dayName = SimpleDateFormat("EEE", Locale.getDefault())
 
     Column(modifier) {
-        Box(Modifier.fillMaxWidth().height(120.dp)) {
-            Canvas(Modifier.fillMaxWidth().height(120.dp)) {
+        Box(Modifier.fillMaxWidth().height(140.dp)) {
+            Canvas(Modifier.fillMaxWidth().height(140.dp)) {
                 fun x(t: Long) = ((t - t0).toFloat() / (t1 - t0).coerceAtLeast(1)) * size.width
-                fun y(p: Double) = size.height - ((p - yMin) / (yMax - yMin)).toFloat() * size.height
+                // Top and bottom bands stay clear of dots for the high and low labels.
+                val band = 16.dp.toPx()
+                fun y(p: Double) = size.height - band - ((p - yMin) / (yMax - yMin)).toFloat() * (size.height - 2 * band)
                 for (d in days) {
                     drawLine(grid, Offset(x(d), 0f), Offset(x(d), size.height), strokeWidth = 1.dp.toPx())
                 }
@@ -69,8 +75,14 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
                 val r = 1.5.dp.toPx()
                 for (p in points) drawCircle(line, radius = r, center = Offset(x(p.time), y(p.price.toDouble())))
                 if (live != null) {
+                    // Where mined prices end.
+                    drawLine(
+                        grid, Offset(x(tLast) + 3.dp.toPx(), 0f), Offset(x(tLast) + 3.dp.toPx(), size.height),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
+                    )
                     drawCircle(
-                        Color(0xFFFFB74D),
+                        liveColor,
                         radius = 3.5.dp.toPx(),
                         center = Offset(x(t1) - 5.dp.toPx(), y(live.toDouble())),
                         style = Stroke(width = 1.5.dp.toPx())
@@ -85,7 +97,7 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
                 maxLines = 1, modifier = Modifier.align(Alignment.BottomStart))
             live?.let {
                 Text("live $${"%,d".format(it)}", style = small, fontFamily = FontFamily.Monospace,
-                    color = Color(0xFFFFB74D), maxLines = 1, modifier = Modifier.align(Alignment.TopEnd))
+                    color = liveColor, maxLines = 1, modifier = Modifier.align(Alignment.TopEnd))
             }
         }
         // Day labels under each day's span.
