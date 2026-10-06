@@ -60,9 +60,34 @@ object OracleUpdater {
     fun loadWindow(context: Context) {
         if (windowLoaded) return
         windowLoaded = true
-        val saved = context.getSharedPreferences("oracle_cache", Context.MODE_PRIVATE).getString(KEY_WINDOW, null)
+        val prefs = context.getSharedPreferences("oracle_cache", Context.MODE_PRIVATE)
+        val saved = prefs.getString(KEY_WINDOW, null)
         _window.value = PriceWindow.entries.firstOrNull { it.name == saved } ?: PriceWindow.DAY
+        _chartShown.value = prefs.getBoolean(KEY_CHART, false)
     }
+
+    // ── Week of prices ──
+
+    private const val KEY_CHART = "price_chart"
+    private val _chartShown = MutableStateFlow(false)
+    /** Whether the dashboard shows the 7-day chart (off unless the user turns it on). */
+    val chartShown: StateFlow<Boolean> = _chartShown.asStateFlow()
+
+    fun setChartShown(context: Context, shown: Boolean) {
+        context.getSharedPreferences("oracle_cache", Context.MODE_PRIVATE).edit().putBoolean(KEY_CHART, shown).apply()
+        _chartShown.value = shown
+    }
+
+    private val _history = MutableStateFlow<List<PricePoint>>(emptyList())
+    /** One last-hour price per block, for the past week. */
+    val history: StateFlow<List<PricePoint>> = _history.asStateFlow()
+    private val _historyStatus = MutableStateFlow<String?>(null)
+    /** Progress while missing days are rebuilt from blocks, null otherwise. */
+    val historyStatus: StateFlow<String?> = _historyStatus.asStateFlow()
+
+    private val priceHistory by lazy { PriceHistory(File(appContext.filesDir, "oracle_history.json")).apply { load() } }
+    private var backfillJob: Job? = null
+    private const val BACKFILL_RECHECK_MS = 30 * 60_000L
 
     fun setWindow(context: Context, w: PriceWindow) {
         context.getSharedPreferences("oracle_cache", Context.MODE_PRIVATE).edit().putString(KEY_WINDOW, w.name).apply()
@@ -84,6 +109,22 @@ object OracleUpdater {
         appContext = context.applicationContext
         if (_state.value.result == null) _state.value = _state.value.copy(result = loadResult(), updatedAt = loadUpdatedAt())
         if (job?.isActive == true) return
+        backfillJob = scope.launch(Dispatchers.IO) {
+            _history.value = priceHistory.all()
+            delay(60_000)  // let the block figures go first
+            while (isActive) {
+                try {
+                    backfill()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Price history backfill failed", e)
+                } finally {
+                    _historyStatus.value = null
+                }
+                delay(BACKFILL_RECHECK_MS)
+            }
+        }
         job = scope.launch(Dispatchers.IO) {
             while (isActive) {
                 try {
@@ -117,6 +158,8 @@ object OracleUpdater {
         job = null
         liveJob?.cancel()
         liveJob = null
+        backfillJob?.cancel()
+        backfillJob = null
     }
 
     private suspend fun liveTick() {
@@ -179,6 +222,7 @@ object OracleUpdater {
         if (blocks <= o.cachedBlocks.last().height) {
             // Nothing new; make sure the recent estimate exists after a restore.
             if (_state.value.recent == null) publishRecent(o)
+            recordHistory(o)
             return@withLock
         }
         try {
@@ -206,6 +250,7 @@ object OracleUpdater {
                 _state.value = _state.value.copy(result = r, updatedAt = now)
                 Log.i(TAG, "Price $${r.price} through block ${r.blockRange.last}")
                 publishRecent(o)
+                recordHistory(o)
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -226,6 +271,102 @@ object OracleUpdater {
         val recent = o.priceFromCache(RECENT_BLOCKS)
         _state.value = _state.value.copy(recent = recent)
         recent?.let { Log.i(TAG, "Recent ${RECENT_BLOCKS}-block estimate $${it.price}") }
+    }
+
+    /** Adds a history point for every cached block that has a full last-hour window. */
+    private fun recordHistory(o: UTXOracle) {
+        val blocks = o.cachedBlocks
+        var added = 0
+        for (end in RECENT_BLOCKS..blocks.size) {
+            val b = blocks[end - 1]
+            if (priceHistory.has(b.height)) continue
+            o.priceFromCache(RECENT_BLOCKS, end)?.let {
+                priceHistory.add(PricePoint(b.height, b.time, it.price))
+                added++
+            }
+        }
+        if (added > 0) publishHistory()
+    }
+
+    private fun publishHistory() {
+        priceHistory.trim()
+        priceHistory.save()
+        _history.value = priceHistory.all()
+    }
+
+    /**
+     * Prices the week's blocks that fall before the cached 144, or that are missing
+     * after a gap, from blocks still on disk. Runs at start and every 30 minutes; does
+     * nothing once the week is complete.
+     */
+    private suspend fun backfill() {
+        val rpc = rpc() ?: return
+        val info = rpc.getBlockchainInfo() ?: return
+        if (info.has("_rpc_error") || info.optBoolean("initialblockdownload", true)) return
+        val tip = info.optLong("blocks", 0).toInt()
+        val pruneHeight = info.optLong("pruneheight", 0).toInt()
+        // Blocks from the cached window get their points in recordHistory.
+        val cacheFirst = lock.withLock { oracle?.cachedBlocks?.firstOrNull()?.height } ?: return
+        val coveredFrom = cacheFirst + RECENT_BLOCKS - 1
+
+        val tipTime = blockTime(rpc, tip) ?: return
+        val weekStart = firstBlockAfter(rpc, tipTime - PriceHistory.KEEP_SECONDS, tip - 1300, tip) ?: return
+        // A point needs RECENT_BLOCKS blocks ending at it, all still on disk.
+        val from = maxOf(weekStart, pruneHeight + RECENT_BLOCKS - 1)
+        val missing = (from until coveredFrom).filter { !priceHistory.has(it) }
+        if (missing.isEmpty()) return
+        Log.i(TAG, "Price history: pricing ${missing.size} blocks from $from")
+
+        val o = UTXOracle(rpc)
+        val window = ArrayDeque<BlockOutputs>()
+        suspend fun take(h: Int) {
+            // Same-window filter against the blocks just before it.
+            val recent = window.flatMapTo(HashSet()) { it.txids }
+            window.addLast(o.blockOutputsAt(h, recent))
+            while (window.size > RECENT_BLOCKS) window.removeFirst()
+        }
+        var done = 0
+        for (h in missing) {
+            _historyStatus.value = "Filling in the week: ${"%,d".format(done)} of ${"%,d".format(missing.size)} blocks"
+            try {
+                if (window.lastOrNull()?.height != h - 1) {
+                    window.clear()
+                    for (k in h - RECENT_BLOCKS + 1 until h) take(k)
+                }
+                take(h)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Pruned since we looked, or a busy node: skip it, the next run retries.
+                window.clear()
+                continue
+            }
+            if (window.size == RECENT_BLOCKS) {
+                o.priceFromBlocks(window.toList())?.let {
+                    priceHistory.add(PricePoint(h, window.last().time, it.price))
+                }
+            }
+            if (++done % 24 == 0) publishHistory()
+        }
+        publishHistory()
+        Log.i(TAG, "Price history: done, ${priceHistory.all().size} points")
+    }
+
+    private suspend fun blockTime(rpc: BitcoinRpcClient, height: Int): Long? {
+        val hash = rpc.call("getblockhash", org.json.JSONArray().put(height))?.optString("value") ?: return null
+        return rpc.call("getblockheader", org.json.JSONArray().put(hash))?.optLong("time")
+    }
+
+    /** Lowest height in [lo, hi] whose block time is at least [time] (block times are close to ordered). */
+    private suspend fun firstBlockAfter(rpc: BitcoinRpcClient, time: Long, lo: Int, hi: Int): Int? {
+        var a = lo.coerceAtLeast(0)
+        var b = hi
+        while (a < b) {
+            val mid = (a + b) / 2
+            val t = blockTime(rpc, mid) ?: return null
+            if (t >= time) b = mid else a = mid + 1
+        }
+        return a
     }
 
     private fun rpc(): BitcoinRpcClient? =

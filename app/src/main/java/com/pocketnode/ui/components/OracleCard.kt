@@ -50,6 +50,9 @@ fun OracleCard(
     val context = LocalContext.current
     LaunchedEffect(Unit) { OracleUpdater.loadWindow(context) }
     val window by OracleUpdater.window.collectAsState()
+    val chartShown by OracleUpdater.chartShown.collectAsState()
+    val history by OracleUpdater.history.collectAsState()
+    val historyStatus by OracleUpdater.historyStatus.collectAsState()
     val live = state.live
     // Fall back to the 24h figure until the selected one exists.
     val effective = when {
@@ -182,6 +185,28 @@ fun OracleCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
+                    }
+                    // Optional week chart, off unless turned on here.
+                    Text(
+                        if (chartShown) "Hide 7-day chart" else "Show 7-day chart",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .clickable { OracleUpdater.setChartShown(context, !chartShown) }
+                    )
+                    if (chartShown) {
+                        if (history.size >= 2) {
+                            PriceChart(history, Modifier.padding(top = 6.dp))
+                        }
+                        val note = historyStatus ?: if (history.size < 2) "The week fills in from your node's blocks shortly." else null
+                        note?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                     if (effective == OracleUpdater.PriceWindow.LIVE) {
                         Text(

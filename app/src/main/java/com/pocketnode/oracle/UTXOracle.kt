@@ -378,7 +378,12 @@ class UTXOracle(private val rpc: BitcoinRpcClient) {
      */
     fun priceFromCache(lastN: Int, endIndex: Int = cachedBlocks.size): OracleResult? {
         if (lastN <= 0 || endIndex > cachedBlocks.size || endIndex - lastN < 0) return null
-        val window = cachedBlocks.subList(endIndex - lastN, endIndex)
+        return priceFromBlocks(cachedBlocks.subList(endIndex - lastN, endIndex))
+    }
+
+    /** The price calculation over any run of blocks' filtered outputs. */
+    fun priceFromBlocks(window: List<BlockOutputs>): OracleResult? {
+        if (window.isEmpty()) return null
         val outputs = mutableListOf<Double>()
         val heights = mutableListOf<Int>()
         val times = mutableListOf<Long>()
@@ -405,6 +410,16 @@ class UTXOracle(private val rpc: BitcoinRpcClient) {
         } catch (e: Exception) {
             null
         }
+    }
+
+    /**
+     * Filtered outputs of the block at [height]. [recentTxids] are the transactions of
+     * the blocks just before it, for the same-window filter.
+     */
+    suspend fun blockOutputsAt(height: Int, recentTxids: Set<String>): BlockOutputs = withContext(Dispatchers.IO) {
+        val hash = getBlockHash(height)
+        val time = getBlockHeader(hash).getLong("time")
+        processBlock(hash, height, time, recentTxids)
     }
 
     /** Process a single block and return its filtered outputs */
