@@ -285,6 +285,9 @@ fun LightningScreen(
 
                 Button(
                     onClick = {
+                        // A manual start clears the crash breaker's count.
+                        context.getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
+                            .edit().putInt("lightning_crash_count", 0).apply()
                         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                             lightning.start(rpcUser, rpcPassword)
                         }

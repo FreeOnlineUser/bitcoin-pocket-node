@@ -127,6 +127,24 @@ class BitcoindService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Three Lightning starts in a row without a clean stop look like a crash loop, so
+     * auto-start holds off. Installing an update also kills the app without a clean
+     * stop, which the counter can't tell from a crash, so a new version starts the
+     * count again. A manual start ignores the breaker.
+     */
+    private fun lightningBreakerTripped(): Boolean {
+        val prefs = getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
+        val versionCode = try {
+            packageManager.getPackageInfo(packageName, 0).longVersionCode
+        } catch (_: Exception) { -1L }
+        if (prefs.getLong("lightning_crash_count_version", -1L) != versionCode) {
+            prefs.edit().putInt("lightning_crash_count", 0)
+                .putLong("lightning_crash_count_version", versionCode).apply()
+        }
+        return prefs.getInt("lightning_crash_count", 0) >= 3
+    }
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -303,7 +321,7 @@ class BitcoindService : Service() {
                                             .getBoolean("lightning_was_running", false)
                                         val running = LightningService.stateFlow.value.status ==
                                             LightningService.LightningState.Status.RUNNING
-                                        if (shouldRun && !running) {
+                                        if (shouldRun && !running && !lightningBreakerTripped()) {
                                             val rpcPrefs = getSharedPreferences("pocketnode_prefs", android.content.Context.MODE_PRIVATE)
                                             val rpcUser2 = rpcPrefs.getString("rpc_user", "pocketnode") ?: "pocketnode"
                                             val rpcPass2 = rpcPrefs.getString("rpc_password", "") ?: ""
@@ -768,20 +786,11 @@ class BitcoindService : Service() {
                             // Auto-start Lightning when synced (if enabled and was previously running)
                             val ldkEnabled = prefs.getBoolean("ldk_lightning_enabled", true)
                             if (ldkEnabled && prefs.getBoolean("lightning_was_running", false)) {
-                                // Installing an update kills the app without a clean Lightning stop,
-                                // which the counter can't tell from a crash. A new version starts
-                                // the count again, so updating never trips the breaker by itself.
-                                val versionCode = try {
-                                    packageManager.getPackageInfo(packageName, 0).longVersionCode
-                                } catch (_: Exception) { -1L }
-                                if (prefs.getLong("lightning_crash_count_version", -1L) != versionCode) {
-                                    prefs.edit().putInt("lightning_crash_count", 0)
-                                        .putLong("lightning_crash_count_version", versionCode).apply()
-                                }
                                 val crashCount = prefs.getInt("lightning_crash_count", 0)
-                                if (crashCount >= 3) {
-                                    Log.e(TAG, "Lightning crash circuit breaker: $crashCount consecutive crashes. Not auto-restarting. User must start manually.")
-                                    prefs.edit().putBoolean("lightning_was_running", false).apply()
+                                if (lightningBreakerTripped()) {
+                                    // lightning_was_running stays set, so a new version (which
+                                    // resets the count) or a manual start brings Lightning back.
+                                    Log.e(TAG, "Lightning crash circuit breaker: $crashCount consecutive crashes. Not auto-restarting until a manual start or an update.")
                                 } else {
                                     val rpcUser = prefs.getString("rpc_user", "pocketnode") ?: "pocketnode"
                                     val rpcPass = prefs.getString("rpc_password", "") ?: ""
