@@ -35,6 +35,9 @@ object OracleUpdater {
     // 6-block windows tracked within 0.04% (worst 0.14%), while the 144-block
     // average trailed the hour-by-hour price by up to 0.5% on a 0.8% up-day.
     const val RECENT_BLOCKS = 6
+    // A live figure more than this far from the last-hour mined price is a
+    // mismatch, not a market move: 15% in ten minutes would be extraordinary.
+    private const val LIVE_MAX_DEVIATION = 0.15
 
     data class OracleState(
         val result: OracleResult? = null,
@@ -177,7 +180,16 @@ object OracleUpdater {
         val o = liveOracle ?: UTXOracle(rpc).also { liveOracle = it }
         val mp = mempool ?: MempoolPrice(rpc).also { mempool = it }
         if (_state.value.live == null) _state.value = _state.value.copy(liveNote = "Collecting mempool data…")
-        val r = mp.update(o, info.optLong("blocks", 0).toInt())
+        var r = mp.update(o, info.optLong("blocks", 0).toInt())
+        // With ~700 outputs the histogram match sometimes locks onto double or half
+        // the price (seen 2026-10-07: $168k and $42k between $84k readings). Mined
+        // prices are the reference: a live figure far off them is dropped, keeping
+        // the last good one.
+        val ref = _state.value.recent ?: _state.value.result
+        if (r != null && ref != null && kotlin.math.abs(r.price.toDouble() / ref.price - 1) > LIVE_MAX_DEVIATION) {
+            Log.w(TAG, "Live estimate $${r.price} rejected, last hour is $${ref.price}")
+            r = null
+        }
         _state.value = _state.value.copy(
             live = r ?: _state.value.live,
             liveOutputs = mp.sampleOutputs,

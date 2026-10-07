@@ -40,8 +40,11 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
     val t1 = tLast
     val lo = points.minOf { it.price }
     val hi = points.maxOf { it.price }
-    val yLo = minOf(lo, live ?: lo)
-    val yHi = maxOf(hi, live ?: hi)
+    // The live figure may stretch the scale a little, never enough to squash the week.
+    val slack = (hi - lo).coerceAtLeast(1) * 0.5
+    val liveShown = live?.toDouble()?.coerceIn(lo - slack, hi + slack)
+    val yLo = minOf(lo.toDouble(), liveShown ?: lo.toDouble())
+    val yHi = maxOf(hi.toDouble(), liveShown ?: hi.toDouble())
     val pad = ((yHi - yLo) * 0.03).coerceAtLeast(1.0)
     val yMin = yLo - pad
     val yMax = yHi + pad
@@ -85,7 +88,7 @@ fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier, live: In
                     drawCircle(
                         liveColor,
                         radius = 3.5.dp.toPx(),
-                        center = Offset(plotW + 6.dp.toPx(), y(live.toDouble())),
+                        center = Offset(plotW + 6.dp.toPx(), y(liveShown ?: live.toDouble())),
                         style = Stroke(width = 1.5.dp.toPx())
                     )
                 }
