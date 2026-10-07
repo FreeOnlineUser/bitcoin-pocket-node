@@ -183,6 +183,9 @@ class MempoolService : Service() {
 
             if (currentMempool.isNotEmpty()) {
                 runGbtAlgorithm(addedTxIds, removedTxIds)
+            } else {
+                _gbtResult.value = null
+                _projectedBlocks.value = emptyList()
             }
 
             fetchLatestBlock(rpc)
@@ -260,24 +263,14 @@ class MempoolService : Service() {
             val generator = gbtGenerator ?: return
             if (addedTxIds.isEmpty() && removedTxIds.isEmpty()) return
 
-            val maxUid = uidCounter.get()
-
-            if (removedTxIds.isNotEmpty()) {
-                val newThreadTxs = addedTxIds.mapNotNull { txId ->
-                    currentMempool[txId]?.let { convertToThreadTransaction(txId, it) }
-                }
-                val removedUids = removedTxIds.mapNotNull { txIdToUid[it] }
-                val result = generator.update(newTxs = newThreadTxs, removeTxs = removedUids, maxUid = maxUid)
-                _gbtResult.value = result
-                result?.let { computeProjectedBlockInfo(it) }
-            } else {
-                val allThreadTxs = currentMempool.entries.mapNotNull { (txId, entry) ->
-                    convertToThreadTransaction(txId, entry)
-                }
-                val result = generator.make(mempool = allThreadTxs, maxUid = maxUid)
-                _gbtResult.value = result
-                result?.let { computeProjectedBlockInfo(it) }
+            // Always pack the whole mempool. Packing only what arrived since the last
+            // poll left the view showing one small block whenever anything left.
+            val allThreadTxs = currentMempool.entries.mapNotNull { (txId, entry) ->
+                convertToThreadTransaction(txId, entry)
             }
+            val result = generator.make(mempool = allThreadTxs, maxUid = uidCounter.get())
+            _gbtResult.value = result
+            result?.let { computeProjectedBlockInfo(it) }
         } catch (e: Exception) {
             Log.e(TAG, "Error running GBT algorithm", e)
         }

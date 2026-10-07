@@ -22,16 +22,6 @@ class GbtGenerator private constructor(
         return runFallback(mempool, accelerations)
     }
 
-    fun update(
-        newTxs: List<ThreadTransaction> = emptyList(),
-        removeTxs: List<Int> = emptyList(),
-        accelerations: List<ThreadAcceleration> = emptyList(),
-        maxUid: Int
-    ): GbtResult? {
-        // Fallback: just do a full remake with newTxs
-        return runFallback(newTxs, accelerations)
-    }
-
     private fun runFallback(
         mempool: List<ThreadTransaction>,
         accelerations: List<ThreadAcceleration>
