@@ -175,8 +175,7 @@ class MempoolService : Service() {
             _mempoolState.value = MempoolState(
                 transactionCount = mempoolInfo?.size ?: currentMempool.size,
                 totalVbytes = mempoolInfo?.bytes ?: currentMempool.values.sumOf { it.vsize },
-                totalFees = currentMempool.values.sumOf { it.fee },
-                vbytesPerSecond = 0.0
+                totalFees = currentMempool.values.sumOf { it.fee }
             )
 
             updateFeeRateHistogram()
@@ -452,7 +451,6 @@ data class MempoolState(
     val transactionCount: Int = 0,
     val totalVbytes: Int = 0,
     val totalFees: Double = 0.0,
-    val vbytesPerSecond: Double = 0.0,
     val lastUpdated: Long = System.currentTimeMillis()
 )
 

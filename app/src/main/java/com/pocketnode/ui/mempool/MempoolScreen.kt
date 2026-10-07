@@ -126,7 +126,6 @@ private fun MempoolStatsCard(mempoolState: MempoolState) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 StatItem("Transactions", mempoolState.transactionCount.toString(), Modifier.weight(1f))
                 StatItem("Total vMB", String.format("%.2f", mempoolState.totalVbytes / 1_000_000.0), Modifier.weight(1f))
-                StatItem("vB/s Inflow", String.format("%.1f", mempoolState.vbytesPerSecond), Modifier.weight(1f))
             }
         }
     }
