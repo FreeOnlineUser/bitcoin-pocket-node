@@ -219,7 +219,7 @@ fun FairTradeCard(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        if (oraclePrice != null) "UTXOracle ${priceWindow.label.lowercase()}: $${"%,d".format(oraclePrice)} USD/BTC"
+                        if (oraclePrice != null) (if (priceWindow == com.pocketnode.oracle.OracleUpdater.PriceWindow.DAY) "UTXOracle Block Window Price" else "${priceWindow.label} on-chain price") + ": $${"%,d".format(oraclePrice)} USD/BTC"
                         else "Price not yet available",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),

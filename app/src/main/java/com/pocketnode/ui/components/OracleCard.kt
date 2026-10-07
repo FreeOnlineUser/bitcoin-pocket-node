@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pocketnode.oracle.MempoolPrice
+import com.pocketnode.oracle.Edition
 import com.pocketnode.oracle.OracleUpdater
 
 /**
@@ -114,7 +114,7 @@ fun OracleCard(
             }
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OracleUpdater.PriceWindow.entries.forEach { w ->
+                OracleUpdater.availableWindows.forEach { w ->
                     FilterChip(
                         selected = window == w,
                         onClick = { OracleUpdater.setWindow(context, w) },
@@ -173,9 +173,9 @@ fun OracleCard(
                     }
                     // The figures not shown, each against the 24h average.
                     val others = listOfNotNull(
-                        result.takeIf { effective != OracleUpdater.PriceWindow.DAY }?.let { "24h $${"%,d".format(it.price)}" },
+                        result.takeIf { effective != OracleUpdater.PriceWindow.DAY }?.let { "block window $${"%,d".format(it.price)}" },
                         recent?.takeIf { effective != OracleUpdater.PriceWindow.HOUR }?.let {
-                            "hour $${"%,d".format(it.price)} (${"%+.1f".format((it.price - result.price) * 100.0 / result.price)}%)"
+                            "${Edition.RECENT_LABEL.lowercase()} $${"%,d".format(it.price)} (${"%+.1f".format((it.price - result.price) * 100.0 / result.price)}%)"
                         },
                         live?.takeIf { effective != OracleUpdater.PriceWindow.LIVE }?.let {
                             "live $${"%,d".format(it.price)} (${"%+.1f".format((it.price - result.price) * 100.0 / result.price)}%)"
@@ -190,7 +190,7 @@ fun OracleCard(
                     }
                     if (effective == OracleUpdater.PriceWindow.LIVE) {
                         Text(
-                            "Unconfirmed transactions, last ${MempoolPrice.WINDOW_MS / 60_000} min",
+                            "Unconfirmed transactions, last ${state.liveMinutes} min",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFFFFB74D)
                         )
@@ -248,7 +248,8 @@ fun OracleCard(
 
                     if (result != null) {
                         val r = result
-                        DetailRow("Price", "$${"%,d".format(r.price)} USD")
+                        // The licence asks for the canonical name on the unmodified 144-block figure.
+                        DetailRow("UTXOracle Block Window Price", "$${"%,d".format(r.price)}")
                         if (r.date == "recent-blocks" && state.updatedAt > 0) {
                             DetailRow("Updated", java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
                                 .format(java.util.Date(state.updatedAt)))
@@ -262,20 +263,29 @@ fun OracleCard(
                             DetailRow("Live estimate", "$${"%,d".format(it.price)} (${"%,d".format(state.liveOutputs)} outputs)")
                         }
                         if (recent != null) {
-                            DetailRow("Last hour estimate", "$${"%,d".format(recent.price)} " +
+                            DetailRow("${Edition.RECENT_LABEL} estimate", "$${"%,d".format(recent.price)} " +
                                 "(${recent.blockRange.last - recent.blockRange.first + 1} blocks)")
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "The main price averages the last 144 blocks (about a day), so it " +
-                            "trails moves. The last hour estimate runs the same method on the " +
-                            "newest ${OracleUpdater.RECENT_BLOCKS} blocks, so it follows the market " +
-                            "closely but leans on fewer transactions. Both come from mined " +
-                            "transactions and update with each block. Live uses unconfirmed " +
-                            "transactions from the last ${MempoolPrice.WINDOW_MS / 60_000} minutes " +
-                            "in your node's mempool (Max mode only): the freshest view, but those " +
-                            "can be replaced or never confirm, so the converter uses the last hour " +
-                            "figure even when Live is shown. None of these is an exchange quote.",
+                            if (Edition.INTERNAL)
+                                "The block window price averages the last 144 blocks (about a day), so " +
+                                "it trails moves. The last hour estimate runs the same method on the " +
+                                "newest ${OracleUpdater.RECENT_BLOCKS} blocks, so it follows the market " +
+                                "closely but leans on fewer transactions. Both come from mined " +
+                                "transactions and update with each block. Live uses unconfirmed " +
+                                "transactions from the last ${state.liveMinutes} minutes in your node's " +
+                                "mempool (Max mode only): the freshest view, but those can be replaced " +
+                                "or never confirm, so the converter uses the last hour figure even when " +
+                                "Live is shown. None of these is an exchange quote."
+                            else
+                                "The UTXOracle Block Window Price averages the last 144 blocks (about " +
+                                "a day), so it trails moves. Recent runs the same method on " +
+                                "${OracleUpdater.RECENT_BLOCKS} blocks ending 6 confirmations deep, so " +
+                                "it follows the market more closely, about an hour behind, but leans " +
+                                "on fewer transactions; it is our variation, not a UTXOracle figure. " +
+                                "Both come from mined transactions and update with each block. " +
+                                "Neither is an exchange quote.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )

@@ -31,13 +31,33 @@ android {
         applicationId = "com.pocketnode"
         minSdk = 28
         targetSdk = 34
-        versionCode = 51
-        versionName = "0.38.4-alpha"
+        versionCode = 53
+        versionName = "0.38.5-alpha"
 
         // Only include ARM64 native libs (bitcoind + libbwt_jni)
         ndk {
             abiFilters += "arm64-v8a"
         }
+    }
+
+    // Two editions. "public" is what ships on GitHub. "internal" adds price
+    // features the UTXOracle licence reserves for its author (a mempool price,
+    // prices from blocks under 6 confirmations); its code lives in a separate
+    // private repo next to this one and the flavor only exists where that repo
+    // is checked out. Release builds come from the public flavor only.
+    val internalSrc = rootProject.file("../bitcoin-pocket-node-internal/src")
+    flavorDimensions += "edition"
+    productFlavors {
+        create("public") { dimension = "edition" }
+        if (internalSrc.exists()) {
+            create("internal") {
+                dimension = "edition"
+                versionNameSuffix = "-internal"
+            }
+        }
+    }
+    if (internalSrc.exists()) {
+        sourceSets.getByName("internal").java.srcDir(internalSrc)
     }
 
     buildFeatures {

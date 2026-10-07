@@ -72,8 +72,9 @@ object UpdateChecker {
 
             var hasUpdate = isNewer(tagName, currentVersion)
 
-            // Same version? Compare APK size to detect rebuilt releases
-            if (!hasUpdate && assets != null) {
+            // Same version? Compare APK size to detect rebuilt releases. Not for an
+            // internal build: its size always differs from the published one.
+            if (!hasUpdate && assets != null && !com.pocketnode.oracle.Edition.INTERNAL) {
                 val localSize = getInstalledApkSize(context)
                 val remoteSize = getRemoteApkSize(assets)
                 if (localSize != null && remoteSize != null && localSize != remoteSize) {
@@ -83,10 +84,14 @@ object UpdateChecker {
             }
 
             // Collect release notes from all versions since current
-            val combinedNotes = if (hasUpdate) {
+            var combinedNotes = if (hasUpdate) {
                 collectReleaseNotes(currentVersion)
             } else {
                 releaseBody
+            }
+            if (hasUpdate && com.pocketnode.oracle.Edition.INTERNAL) {
+                combinedNotes = "This is a public build. Installing it replaces your internal build " +
+                    "and its extra price features.\n\n" + combinedNotes
             }
 
             UpdateInfo(

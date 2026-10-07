@@ -24,7 +24,9 @@ import java.io.File
  *
  * Two numbers come out of the same cached block outputs:
  *  - [OracleState.result]: the standard 144-block (~24h) window.
- *  - [OracleState.recent]: the same algorithm over the newest [RECENT_BLOCKS] blocks.
+ *  - [OracleState.recent]: the same algorithm over [RECENT_BLOCKS] blocks. In the public
+ *    edition the window ends 6 confirmations deep ([Edition.RECENT_SKIP]), as the
+ *    UTXOracle licence counts newer blocks as live data.
  *    Follows moves sooner, with more noise.
  */
 object OracleUpdater {
@@ -46,6 +48,7 @@ object OracleUpdater {
         val live: OracleResult? = null,
         val liveNote: String? = null,
         val liveOutputs: Int = 0,
+        val liveMinutes: Int = 0,
         val updatedAt: Long = 0,
         val running: Boolean = false,
         val progress: String = "",
@@ -53,7 +56,10 @@ object OracleUpdater {
     )
 
     /** Which figure the dashboard headline and the converter use. */
-    enum class PriceWindow(val label: String) { DAY("24h average"), HOUR("Last hour"), LIVE("Live") }
+    enum class PriceWindow(val label: String) { DAY("Block window"), HOUR(Edition.RECENT_LABEL), LIVE("Live") }
+
+    /** The windows this edition offers: Live only in the internal one. */
+    val availableWindows = PriceWindow.entries.filter { it != PriceWindow.LIVE || Edition.INTERNAL }
 
     private const val KEY_WINDOW = "price_window"
     private val _window = MutableStateFlow(PriceWindow.DAY)
@@ -65,7 +71,7 @@ object OracleUpdater {
         windowLoaded = true
         val prefs = context.getSharedPreferences("oracle_cache", Context.MODE_PRIVATE)
         val saved = prefs.getString(KEY_WINDOW, null)
-        _window.value = PriceWindow.entries.firstOrNull { it.name == saved } ?: PriceWindow.DAY
+        _window.value = availableWindows.firstOrNull { it.name == saved } ?: PriceWindow.DAY
         _chartShown.value = prefs.getBoolean(KEY_CHART, false)
     }
 
@@ -103,7 +109,7 @@ object OracleUpdater {
     private val lock = Mutex()
     private var job: Job? = null
     private var liveJob: Job? = null
-    private var mempool: MempoolPrice? = null
+    private var mempool: LivePriceSource? = null
     private var liveOracle: UTXOracle? = null
     private var oracle: UTXOracle? = null
     private lateinit var appContext: Context
@@ -141,8 +147,8 @@ object OracleUpdater {
             }
         }
         // Separate loop: the first mempool load can take minutes and must not
-        // hold up the block-based figures.
-        liveJob = scope.launch(Dispatchers.IO) {
+        // hold up the block-based figures. Internal edition only.
+        if (Edition.INTERNAL) liveJob = scope.launch(Dispatchers.IO) {
             while (isActive) {
                 try {
                     liveTick()
@@ -178,7 +184,7 @@ object OracleUpdater {
         if (info.has("_rpc_error") || info.optBoolean("initialblockdownload", true)) return
         // Own oracle instance: keeps its progress messages off the block figures' card text.
         val o = liveOracle ?: UTXOracle(rpc).also { liveOracle = it }
-        val mp = mempool ?: MempoolPrice(rpc).also { mempool = it }
+        val mp = mempool ?: Edition.liveSource(rpc)?.also { mempool = it } ?: return
         if (_state.value.live == null) _state.value = _state.value.copy(liveNote = "Collecting mempool data…")
         var r = mp.update(o, info.optLong("blocks", 0).toInt())
         // With ~700 outputs the histogram match sometimes locks onto double or half
@@ -193,6 +199,7 @@ object OracleUpdater {
         _state.value = _state.value.copy(
             live = r ?: _state.value.live,
             liveOutputs = mp.sampleOutputs,
+            liveMinutes = mp.windowMinutes,
             liveNote = if (r == null && _state.value.live == null) "Collecting mempool data (${mp.sampleOutputs} outputs)…" else null
         )
         r?.let { Log.i(TAG, "Live estimate $${it.price} from ${mp.sampleOutputs} outputs (t=${System.currentTimeMillis() / 1000})") }
@@ -280,7 +287,7 @@ object OracleUpdater {
     }
 
     private fun publishRecent(o: UTXOracle) {
-        val recent = o.priceFromCache(RECENT_BLOCKS)
+        val recent = o.priceFromCache(RECENT_BLOCKS, o.cachedBlocks.size - Edition.RECENT_SKIP)
         _state.value = _state.value.copy(recent = recent)
         recent?.let { Log.i(TAG, "Recent ${RECENT_BLOCKS}-block estimate $${it.price}") }
     }
@@ -289,7 +296,7 @@ object OracleUpdater {
     private fun recordHistory(o: UTXOracle) {
         val blocks = o.cachedBlocks
         var added = 0
-        for (end in RECENT_BLOCKS..blocks.size) {
+        for (end in RECENT_BLOCKS..blocks.size - Edition.RECENT_SKIP) {
             val b = blocks[end - 1]
             if (priceHistory.has(b.height)) continue
             o.priceFromCache(RECENT_BLOCKS, end)?.let {
