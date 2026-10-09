@@ -39,4 +39,21 @@ class PriceHistoryTest {
             file.delete()
         }
     }
+
+    @Test
+    fun dropsDoubledPointButKeepsRealMove() {
+        val h = PriceHistory(File.createTempFile("history", ".json").apply { delete() })
+        // Flat at 82k, one block reads double, then the price steps down 20% and stays.
+        for (i in 0 until 40) {
+            val price = when {
+                i == 15 -> 164_000
+                i >= 25 -> 65_600
+                else -> 82_000
+            }
+            h.add(PricePoint(1000 + i, i * 600L, price))
+        }
+        h.dropOutliers(0.3)
+        assertFalse(h.has(1015))
+        assertEquals(39, h.all().size)
+    }
 }

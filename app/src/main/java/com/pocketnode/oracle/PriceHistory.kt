@@ -60,6 +60,21 @@ class PriceHistory(private val file: File) {
         points.values.removeAll { it.time < newest - KEEP_SECONDS }
     }
 
+    /**
+     * Drops points far from the median of the blocks around them. A 6-block window
+     * now and then reads double or half the price; one such point would otherwise
+     * set the chart's scale for a week.
+     */
+    @Synchronized
+    fun dropOutliers(maxDeviation: Double) {
+        val list = points.values.toList()
+        val bad = list.indices.filter { i ->
+            val near = (maxOf(0, i - 6) until minOf(list.size, i + 7)).filter { it != i }.map { list[it].price }.sorted()
+            near.size >= 4 && kotlin.math.abs(list[i].price.toDouble() / near[near.size / 2] - 1) > maxDeviation
+        }
+        bad.forEach { points.remove(list[it].height) }
+    }
+
     @Synchronized
     fun all(): List<PricePoint> = points.values.toList()
 }

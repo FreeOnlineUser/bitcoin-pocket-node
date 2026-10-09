@@ -39,7 +39,10 @@ object OracleUpdater {
     const val RECENT_BLOCKS = 6
     // A live figure more than this far from the last-hour mined price is a
     // mismatch, not a market move: 15% in ten minutes would be extraordinary.
-    private const val LIVE_MAX_DEVIATION = 0.15
+    private const val MAX_DEVIATION = 0.15
+    // Mined 6-block figures are checked looser, against the day's price and against
+    // their neighbours: a wrong peak is double or half, a real day can move 15%.
+    private const val MINED_MAX_DEVIATION = 0.3
 
     data class OracleState(
         val result: OracleResult? = null,
@@ -119,7 +122,7 @@ object OracleUpdater {
         if (_state.value.result == null) _state.value = _state.value.copy(result = loadResult(), updatedAt = loadUpdatedAt())
         if (job?.isActive == true) return
         backfillJob = scope.launch(Dispatchers.IO) {
-            _history.value = priceHistory.all()
+            publishHistory()
             delay(60_000)  // let the block figures go first
             while (isActive) {
                 try {
@@ -192,7 +195,7 @@ object OracleUpdater {
         // prices are the reference: a live figure far off them is dropped, keeping
         // the last good one.
         val ref = _state.value.recent ?: _state.value.result
-        if (r != null && ref != null && kotlin.math.abs(r.price.toDouble() / ref.price - 1) > LIVE_MAX_DEVIATION) {
+        if (r != null && ref != null && kotlin.math.abs(r.price.toDouble() / ref.price - 1) > MAX_DEVIATION) {
             Log.w(TAG, "Live estimate $${r.price} rejected, last hour is $${ref.price}")
             r = null
         }
@@ -288,6 +291,13 @@ object OracleUpdater {
 
     private fun publishRecent(o: UTXOracle) {
         val recent = o.priceFromCache(RECENT_BLOCKS, o.cachedBlocks.size - Edition.RECENT_SKIP)
+        // Six blocks can lock onto double or half the price the same way live does
+        // (seen 2026-10-09: $164k between $82k readings). Keep the last good figure.
+        val ref = _state.value.result
+        if (recent != null && ref != null && kotlin.math.abs(recent.price.toDouble() / ref.price - 1) > MINED_MAX_DEVIATION) {
+            Log.w(TAG, "Recent estimate $${recent.price} rejected, block window is $${ref.price}")
+            return
+        }
         _state.value = _state.value.copy(recent = recent)
         recent?.let { Log.i(TAG, "Recent ${RECENT_BLOCKS}-block estimate $${it.price}") }
     }
@@ -309,6 +319,7 @@ object OracleUpdater {
 
     private fun publishHistory() {
         priceHistory.trim()
+        priceHistory.dropOutliers(MINED_MAX_DEVIATION)
         priceHistory.save()
         _history.value = priceHistory.all()
     }
