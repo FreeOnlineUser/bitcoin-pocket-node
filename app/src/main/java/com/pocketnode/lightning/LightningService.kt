@@ -241,23 +241,11 @@ class LightningService(private val context: Context) {
             }
             if (!rpcReady) throw Exception("bitcoind RPC not reachable after 60 seconds")
 
-            // --- Stale chain state detection ---
-            // If LDK's stored height is far behind bitcoind, synchronize_listeners
-            // will hang trying to fetch pruned blocks. Proactively reset chain state
-            // while preserving the seed and any channel data.
+            // A node that has been off for days starts behind and catches up: blocks
+            // still on disk replay directly, pruned ones come from the prune feed.
+            // (A reset here used to throw the wallet back to its birthday, so it
+            // had to rescan weeks of pruned blocks from the network.)
             storageDir = File(context.filesDir, STORAGE_DIR)
-            if (storageDir.exists()) {
-                val chainInfo = rpc.getBlockchainInfoSync()
-                val bitcoindHeight = chainInfo?.optLong("blocks", 0) ?: 0
-                val lastLdkHeight = context.getSharedPreferences("pocketnode_prefs", MODE_PRIVATE)
-                    .getLong("last_ldk_sync_height", 0)
-                val staleThreshold = 500 // blocks behind before we reset
-                if (lastLdkHeight > 0 && bitcoindHeight > 0 && (bitcoindHeight - lastLdkHeight) > staleThreshold) {
-                    Log.w(TAG, "LDK chain state is stale: LDK at $lastLdkHeight, bitcoind at $bitcoindHeight (${bitcoindHeight - lastLdkHeight} blocks behind)")
-                    Log.w(TAG, "Requesting chain state reset to avoid synchronize_listeners hang (refused if channel monitors exist).")
-                    recovery.resetChainState(storageDir)
-                }
-            }
 
             // --- Build LDK node ---
             if (!storageDir.exists()) storageDir.mkdirs()
