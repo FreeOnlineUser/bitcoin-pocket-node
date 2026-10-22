@@ -41,6 +41,15 @@ class RecoveryManager(private val context: Context) {
         // Size of a persisted BDK local_chain holding only the genesis block (measured
         // on the phone; one more checkpoint makes it larger).
         private const val GENESIS_ONLY_CHAIN_BYTES = 42L
+        // A wallet this far below the prune height is restored from the blocks holding
+        // its coins instead of fetched block by block (a day is ~144 blocks).
+        private const val FAST_RESTORE_MIN_GAP = 1_000L
+        // How long to wait for one coin block from peers before giving up.
+        private const val RESTORE_BLOCK_WAIT_MS = 3 * 60_000L
+        // In the store dir, so resetChainState keeps them.
+        const val RESTORE_PLAN = "wallet_restore.json"
+        const val HISTORY_PARTIAL = "wallet_history_partial"
+        const val FULL_HISTORY = "wallet_full_history"
     }
 
     /** State flow reference for scan progress updates, set by LightningService */
@@ -368,7 +377,8 @@ class RecoveryManager(private val context: Context) {
             return
         }
         val preserveNames = setOf("keys_seed", "keys_seed.bak", "mnemonic", "channel_manager", "monitors",
-            "archived_monitors", "wallet_birthday", "channel_backups.json")
+            "archived_monitors", "wallet_birthday", "channel_backups.json",
+            RESTORE_PLAN, HISTORY_PARTIAL, FULL_HISTORY)
         // Move, don't delete: everything cleared goes to a dated folder beside the
         // store, so a reset is always reversible by hand.
         val moveTo = File(storageDir.parentFile, "lightning_reset_${System.currentTimeMillis()}")
@@ -550,6 +560,10 @@ class RecoveryManager(private val context: Context) {
             stateFlow.value = stateFlow.value.copy(
                 recoveryProblem = "Lightning's wallet lost its birthday checkpoint. Rebuilding it from block ${"%,d".format(birthday)}…"
             )
+            if (!fastRestoreTried) {
+                fastRestoreTried = true
+                if (fastRestore(rpc, storageDir, rpcUser, rpcPassword, rpcPort)) return
+            }
             rebuildWalletFromBirthday(rpc, storageDir, rpcUser, rpcPassword, rpcPort, knownBirthday = birthday)
             return
         }
@@ -675,7 +689,10 @@ class RecoveryManager(private val context: Context) {
                 // No report for a while: LDK is either synced or hasn't retried yet.
                 // Its retry backoff tops out at 5 minutes, so 15 minutes of silence means done.
                 if (need < 0 || now - lastReportAt > IDLE_AFTER_MS) {
-                    if (need >= 0) Log.i(TAG, "Prune feed: no missing blocks reported for ${IDLE_AFTER_MS / 60_000} min, idle")
+                    if (need >= 0) {
+                        Log.i(TAG, "Prune feed: no missing blocks reported for ${IDLE_AFTER_MS / 60_000} min, idle")
+                        File(context.filesDir, "$STORAGE_DIR/$FULL_HISTORY").delete()
+                    }
                     need = -1
                     firstNeed = -1
                     requested.clear()
@@ -691,6 +708,23 @@ class RecoveryManager(private val context: Context) {
 
                 val info = rpc.getBlockchainInfo()
                 val pruneHeight = info?.optLong("pruneheight", 0) ?: 0
+                val storeDir = File(context.filesDir, STORAGE_DIR)
+                if (pruneHeight > 0 && pruneHeight - need > FAST_RESTORE_MIN_GAP && !fastRestoreTried &&
+                    !File(storeDir, FULL_HISTORY).exists() && countStoredMonitors(storeDir) == 0) {
+                    fastRestoreTried = true
+                    fastRestoreRunning = true
+                    Log.i(TAG, "Prune feed: LDK needs block $need, ${pruneHeight - need} below the prune height. Restoring the wallet from its coin blocks instead.")
+                    // Its own thread: on success it restarts LDK, which cancels this coroutine.
+                    // On failure the feed below carries on as before.
+                    Thread({
+                        try { fastRestore(rpc, storeDir, rpcUser, rpcPassword, rpcPort) }
+                        finally { fastRestoreRunning = false }
+                    }, "wallet-fast-restore").start()
+                }
+                if (fastRestoreRunning) {
+                    kotlinx.coroutines.delay(5_000)
+                    continue
+                }
                 if (pruneHeight > 0 && pruneHeight - need > MAX_FEED_BLOCKS) {
                     // Something in LDK's store sits implausibly far back. The known cause is an
                     // on-chain wallet created at genesis (ldk-node before d0ed6a3 did that when
@@ -923,6 +957,212 @@ class RecoveryManager(private val context: Context) {
             stateFlow.value = stateFlow.value.copy(recoveryProblem = "Wallet rebuild failed: ${e.message}")
             repairStarted = false
         }
+    }
+
+    // ── Fast wallet restore ──
+    //
+    // A wallet that has to sync from far below the prune height would fetch every block
+    // since its oldest coin from peers: after five days off on 2026-10-21 that was
+    // 30,000 blocks, about 45 GB. Its balance only depends on the blocks holding its
+    // unspent coins, which bitcoind's UTXO set names. So fetch those few blocks, start
+    // a new wallet at the tip, and give it the blocks before LDK starts
+    // (applyPendingFastRestore). Coins already spent drop out of the history; the
+    // screen says so, and rebuildFullHistory() brings them back the slow way.
+
+    @Volatile private var fastRestoreTried = false
+    @Volatile private var fastRestoreRunning = false
+
+    private val restoreBlocksDir get() = File(context.filesDir, "wallet_restore_blocks")
+
+    /** True while the wallet's history is limited to transactions that left a coin. */
+    fun historyPartial(): Boolean = File(context.filesDir, "$STORAGE_DIR/$HISTORY_PARTIAL").exists()
+
+    /**
+     * Finds the wallet's coins in the UTXO set, fetches the blocks they were confirmed
+     * in, and restarts LDK on a new wallet at the tip with those blocks queued. Only
+     * with no channel monitors in the store. False, with nothing changed, if any step
+     * before the reset fails.
+     */
+    private fun fastRestore(
+        rpc: BitcoinRpcClient, storageDir: File, rpcUser: String, rpcPassword: String, rpcPort: Int
+    ): Boolean {
+        val pmm = com.pocketnode.power.PowerModeManager.getInstance(context)
+        var holding = false
+        try {
+            if (countStoredMonitors(storageDir) != 0) return false
+            val mnemonic = File(storageDir, "mnemonic").takeIf { it.exists() }?.readText()?.trim() ?: return false
+            stateFlow.value = stateFlow.value.copy(
+                recoveryProblem = "Lightning's wallet is far behind. Finding its coins in the UTXO set…"
+            )
+            val scanObjects = JSONArray()
+            for (d in WalletRecoveryService(context).descriptorsFromMnemonic(mnemonic)) {
+                scanObjects.put(JSONObject().put("desc", d).put("range", 200))
+            }
+            try { rpc.callSync("scantxoutset", JSONArray().put("abort"), readTimeoutMs = 10_000) } catch (_: Exception) {}
+            val result = rpc.callSync("scantxoutset", JSONArray().put("start").put(scanObjects), readTimeoutMs = 600_000)
+            if (result == null || result.has("_rpc_error")) {
+                Log.e(TAG, "Fast restore: UTXO scan failed")
+                stateFlow.value = stateFlow.value.copy(recoveryProblem = null)
+                return false
+            }
+            val scanHeight = result.optLong("height", 0)
+            if (scanHeight <= 6) return false
+            // The new wallet starts a few blocks back, so coins in the newest blocks come
+            // in through normal sync from blocks still on disk.
+            val tip = scanHeight - 6
+            val unspents = result.optJSONArray("unspents") ?: JSONArray()
+            val heights = sortedSetOf<Long>()
+            var ext = 0
+            var int = 0
+            val index = Regex("""/([01])/(\d+)\]""")
+            for (i in 0 until unspents.length()) {
+                val u = unspents.getJSONObject(i)
+                val h = u.optLong("height", 0)
+                if (h in 1 until tip) heights.add(h)
+                index.find(u.optString("desc"))?.let { m ->
+                    val n = m.groupValues[2].toInt()
+                    if (m.groupValues[1] == "0") ext = maxOf(ext, n) else int = maxOf(int, n)
+                }
+            }
+            val historyFrom = heights.firstOrNull()?.let { (it - 10).coerceAtLeast(1) } ?: tip
+
+            restoreBlocksDir.deleteRecursively()
+            restoreBlocksDir.mkdirs()
+            if (heights.isNotEmpty()) {
+                pmm.setRpc(rpc)
+                pmm.holdNetwork()
+                holding = true
+            }
+            for ((n, h) in heights.withIndex()) {
+                stateFlow.value = stateFlow.value.copy(
+                    recoveryProblem = "Restoring Lightning's wallet: fetching coin block ${n + 1} of ${heights.size}…"
+                )
+                val block = fetchBlockSync(rpc, h)
+                if (block == null) {
+                    Log.e(TAG, "Fast restore: couldn't get block $h, keeping the current wallet")
+                    restoreBlocksDir.deleteRecursively()
+                    stateFlow.value = stateFlow.value.copy(recoveryProblem = null)
+                    return false
+                }
+                File(restoreBlocksDir, h.toString()).writeBytes(block)
+            }
+
+            File(storageDir, RESTORE_PLAN).writeText(JSONObject()
+                .put("tip", tip).put("heights", JSONArray(heights.toList()))
+                .put("external", ext).put("internal", int).put("historyFrom", historyFrom).toString())
+            val birthdayFile = File(storageDir, "wallet_birthday")
+            val oldBirthday = birthdayFile.takeIf { it.exists() }?.readText()
+            birthdayFile.writeText(tip.toString())
+            Log.i(TAG, "Fast restore: ${heights.size} coin block(s) fetched, new wallet at $tip, restarting LDK")
+
+            stopNode?.invoke()
+            Thread.sleep(500)
+            resetChainState(storageDir)
+            if (File(storageDir, "ldk_node_data.sqlite").exists()) {
+                // resetChainState refused (monitors after all): undo and leave the wallet alone.
+                Log.e(TAG, "Fast restore: store not reset, restarting LDK unchanged")
+                File(storageDir, RESTORE_PLAN).delete()
+                if (oldBirthday != null) birthdayFile.writeText(oldBirthday) else birthdayFile.delete()
+                restoreBlocksDir.deleteRecursively()
+            }
+            stateFlow.value = stateFlow.value.copy(recoveryProblem = null)
+            clearStartingFlag?.invoke()
+            startNode?.invoke(rpcUser, rpcPassword, rpcPort)
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Fast restore failed", e)
+            stateFlow.value = stateFlow.value.copy(recoveryProblem = null)
+            return false
+        } finally {
+            if (holding) pmm.releaseNetworkHold()
+        }
+    }
+
+    /** A block by height, from disk or, if pruned, from a peer that keeps old blocks. */
+    private fun fetchBlockSync(rpc: BitcoinRpcClient, height: Long): ByteArray? {
+        val hash = rpc.callSync("getblockhash", JSONArray().put(height))?.optString("value")
+            ?.takeIf { it.isNotEmpty() } ?: return null
+        fun read(): ByteArray? = rpc.callSync("getblock", JSONArray().put(hash).put(0), readTimeoutMs = 60_000)
+            ?.takeIf { !it.has("_rpc_error") }?.optString("value")?.takeIf { it.isNotEmpty() }?.let { hexToBytes(it) }
+        read()?.let { return it }
+        val asked = HashSet<Int>()
+        val deadline = System.currentTimeMillis() + RESTORE_BLOCK_WAIT_MS
+        while (System.currentTimeMillis() < deadline) {
+            val peers = rpc.callSync("getpeerinfo")?.optJSONArray("value")?.let { arr ->
+                (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.filter { p ->
+                    val sv = p.optJSONArray("servicesnames")
+                    sv != null && (0 until sv.length()).any { sv.optString(it) == "NETWORK" }
+                }.map { it.optInt("id") }
+            } ?: emptyList()
+            if (peers.isNotEmpty() && peers.all { it in asked }) asked.clear()
+            peers.firstOrNull { it !in asked }?.let { peer ->
+                asked.add(peer)
+                rpc.callSync("getblockfrompeer", JSONArray().put(hash).put(peer))
+            }
+            repeat(10) {
+                Thread.sleep(2_000)
+                read()?.let { return it }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Gives a new wallet the coin blocks a fast restore fetched. Call between
+     * builder.build() and node.start(). If it fails the plan stays, and the next start
+     * tries again (the blocks still sit below the wallet's tip).
+     */
+    fun applyPendingFastRestore(node: org.lightningdevkit.ldknode.Node, storageDir: File) {
+        val plan = File(storageDir, RESTORE_PLAN).takeIf { it.exists() } ?: return
+        try {
+            val j = JSONObject(plan.readText())
+            val arr = j.getJSONArray("heights")
+            val heights = (0 until arr.length()).map { arr.getLong(it) }
+            val blocks = heights.map { File(restoreBlocksDir, it.toString()).readBytes() }
+            val found = node.restoreOnchainWalletFromBlocks(
+                blocks, heights.map { it.toUInt() }, j.optInt("external").toUInt(), j.optInt("internal").toUInt()
+            )
+            File(storageDir, HISTORY_PARTIAL).writeText(j.optLong("historyFrom").toString())
+            plan.delete()
+            restoreBlocksDir.deleteRecursively()
+            Log.i(TAG, "Fast restore: wallet rebuilt from ${heights.size} block(s), $found transaction(s)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Fast restore: applying the coin blocks failed, will retry at next start", e)
+        }
+    }
+
+    /**
+     * Rebuilds the wallet's full history after a fast restore by syncing from the
+     * oldest coin's block, fetching every pruned block on the way (WiFi only, like any
+     * prune feed). Only with no channel monitors in the store.
+     */
+    fun rebuildFullHistory(rpcUser: String, rpcPassword: String, rpcPort: Int) {
+        Thread({
+            try {
+                val storageDir = File(context.filesDir, STORAGE_DIR)
+                val partial = File(storageDir, HISTORY_PARTIAL)
+                val from = partial.takeIf { it.exists() }?.readText()?.trim()?.toLongOrNull() ?: return@Thread
+                if (countStoredMonitors(storageDir) != 0) {
+                    stateFlow.value = stateFlow.value.copy(
+                        recoveryProblem = "Full history rebuild isn't available while channels are open."
+                    )
+                    return@Thread
+                }
+                Log.i(TAG, "Rebuilding full wallet history from block $from")
+                stopNode?.invoke()
+                Thread.sleep(500)
+                resetChainState(storageDir)
+                if (!File(storageDir, "ldk_node_data.sqlite").exists()) {
+                    File(storageDir, "wallet_birthday").writeText(from.toString())
+                    File(storageDir, FULL_HISTORY).writeText(from.toString())
+                    partial.delete()
+                }
+                clearStartingFlag?.invoke()
+                startNode?.invoke(rpcUser, rpcPassword, rpcPort)
+            } catch (e: Exception) {
+                Log.e(TAG, "Full history rebuild failed", e)
+            }
+        }, "history-rebuild").start()
     }
 
     private class FeedPeer(val id: Int, val inFlight: List<Long>)

@@ -61,6 +61,8 @@ class LightningService(private val context: Context) {
         val recoveryProblem: String? = null,
         /** Result of the read-only UTXO-set check of this wallet's coins. */
         val walletScan: String? = null,
+        /** The wallet was rebuilt from its coins only, so older spent history may be missing. */
+        val historyPartial: Boolean = false,
         // Background UTXO scan
         val scanningForFunds: Boolean = false,
         val scanProgress: Int = 0,  // 0-100%
@@ -436,6 +438,8 @@ class LightningService(private val context: Context) {
             }
 
             val ldkNode = builder.build(entropy)
+            // A fast restore restarts LDK on a new wallet at the tip; give it its coin blocks now.
+            recovery.applyPendingFastRestore(ldkNode, storageDir)
 
             // --- Start LDK (sync, blocks until tokio runtime is running) ---
             // After this point, LDK owns its tokio runtime. Coroutine machinery
@@ -1008,6 +1012,7 @@ class LightningService(private val context: Context) {
                 recoveryWaitingForWifi = _state.value.recoveryWaitingForWifi,
                 recoveryProblem = _state.value.recoveryProblem,
                 walletScan = _state.value.walletScan,
+                historyPartial = recovery.historyPartial(),
                 scanningForFunds = _state.value.scanningForFunds,
                 scanProgress = _state.value.scanProgress,
                 lastChannelError = _state.value.lastChannelError,

@@ -204,6 +204,41 @@ fun LightningScreen(
                             Text(scan, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                         }
+                        if (effectiveState.historyPartial) {
+                            var confirmRebuild by remember { mutableStateOf(false) }
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "This wallet was restored from its coins, so older transactions whose coins " +
+                                    "were already spent may be missing from the history. The balance is complete.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                            TextButton(onClick = { confirmRebuild = true }, contentPadding = PaddingValues(0.dp)) {
+                                Text("Rebuild full history", style = MaterialTheme.typography.bodySmall)
+                            }
+                            if (confirmRebuild) {
+                                AlertDialog(
+                                    onDismissRequest = { confirmRebuild = false },
+                                    title = { Text("Rebuild full history?") },
+                                    text = {
+                                        Text("Lightning restarts and replays every block since your oldest coin. " +
+                                            "Blocks this node has pruned are downloaded again over WiFi, which can " +
+                                            "take hours and tens of GB. Your balance stays the same.")
+                                    },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            confirmRebuild = false
+                                            com.pocketnode.util.ConfigGenerator.readCredentials(context)?.let {
+                                                lightning.recovery.rebuildFullHistory(it.first, it.second, 8332)
+                                            }
+                                        }) { Text("Rebuild") }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { confirmRebuild = false }) { Text("Cancel") }
+                                    }
+                                )
+                            }
+                        }
                         effectiveState.recoveryProblem?.let { problem ->
                             Spacer(Modifier.height(8.dp))
                             Text(problem, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)

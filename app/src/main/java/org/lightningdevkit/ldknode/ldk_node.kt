@@ -1209,6 +1209,8 @@ internal open class UniffiVTableCallbackInterfaceVssHeaderProvider(
 
 
 
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -1357,6 +1359,8 @@ fun uniffi_ldk_node_checksum_method_node_payment(
 fun uniffi_ldk_node_checksum_method_node_payment_path_attempts(
 ): Short
 fun uniffi_ldk_node_checksum_method_node_remove_payment(
+): Short
+fun uniffi_ldk_node_checksum_method_node_restore_onchain_wallet_from_blocks(
 ): Short
 fun uniffi_ldk_node_checksum_method_node_sign_message(
 ): Short
@@ -1827,6 +1831,8 @@ fun uniffi_ldk_node_fn_method_node_payment_path_attempts(`ptr`: Pointer,uniffi_o
 ): RustBuffer.ByValue
 fun uniffi_ldk_node_fn_method_node_remove_payment(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
+fun uniffi_ldk_node_fn_method_node_restore_onchain_wallet_from_blocks(`ptr`: Pointer,`blocks`: RustBuffer.ByValue,`heights`: RustBuffer.ByValue,`externalIndex`: Int,`internalIndex`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Int
 fun uniffi_ldk_node_fn_method_node_sign_message(`ptr`: Pointer,`msg`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_ldk_node_fn_method_node_splice_in(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`spliceAmountSats`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2504,6 +2510,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_remove_payment() != 22427.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_restore_onchain_wallet_from_blocks() != 16158.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_sign_message() != 49319.toShort()) {
@@ -8424,6 +8433,8 @@ public interface NodeInterface {
     
     fun `removePayment`(`paymentId`: PaymentId)
     
+    fun `restoreOnchainWalletFromBlocks`(`blocks`: List<kotlin.ByteArray>, `heights`: List<kotlin.UInt>, `externalIndex`: kotlin.UInt, `internalIndex`: kotlin.UInt): kotlin.UInt
+    
     fun `signMessage`(`msg`: List<kotlin.UByte>): kotlin.String
     
     fun `spliceIn`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `spliceAmountSats`: kotlin.ULong)
@@ -8949,6 +8960,19 @@ open class Node: Disposable, AutoCloseable, NodeInterface
 }
     }
     
+    
+
+    
+    @Throws(NodeException::class)override fun `restoreOnchainWalletFromBlocks`(`blocks`: List<kotlin.ByteArray>, `heights`: List<kotlin.UInt>, `externalIndex`: kotlin.UInt, `internalIndex`: kotlin.UInt): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(NodeException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_restore_onchain_wallet_from_blocks(
+        it, FfiConverterSequenceByteArray.lower(`blocks`),FfiConverterSequenceUInt.lower(`heights`),FfiConverterUInt.lower(`externalIndex`),FfiConverterUInt.lower(`internalIndex`),_status)
+}
+    }
+    )
+    }
     
 
     override fun `signMessage`(`msg`: List<kotlin.UByte>): kotlin.String {
@@ -20455,6 +20479,34 @@ public object FfiConverterSequenceUByte: FfiConverterRustBuffer<List<kotlin.UByt
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterUByte.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>> {
+    override fun read(buf: ByteBuffer): List<kotlin.UInt> {
+        val len = buf.getInt()
+        return List<kotlin.UInt>(len) {
+            FfiConverterUInt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.UInt>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterUInt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.UInt>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterUInt.write(it, buf)
         }
     }
 }
