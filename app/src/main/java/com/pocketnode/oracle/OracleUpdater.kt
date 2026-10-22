@@ -43,6 +43,9 @@ object OracleUpdater {
     // Mined 6-block figures are checked looser, against the day's price and against
     // their neighbours: a wrong peak is double or half, a real day can move 15%.
     private const val MINED_MAX_DEVIATION = 0.3
+    // A chart point this far from the week's median is a wrong peak (double is +100%,
+    // half is -50%); a real week moving 40% would be extraordinary.
+    private const val WEEK_MAX_DEVIATION = 0.4
 
     data class OracleState(
         val result: OracleResult? = null,
@@ -319,7 +322,7 @@ object OracleUpdater {
 
     private fun publishHistory() {
         priceHistory.trim()
-        priceHistory.dropOutliers(MINED_MAX_DEVIATION)
+        priceHistory.dropOutliers(MINED_MAX_DEVIATION, WEEK_MAX_DEVIATION)
         priceHistory.save()
         _history.value = priceHistory.all()
     }

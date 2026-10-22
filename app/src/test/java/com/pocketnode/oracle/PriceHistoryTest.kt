@@ -52,8 +52,19 @@ class PriceHistoryTest {
             }
             h.add(PricePoint(1000 + i, i * 600L, price))
         }
-        h.dropOutliers(0.3)
+        h.dropOutliers(0.3, 0.4)
         assertFalse(h.has(1015))
         assertEquals(39, h.all().size)
+    }
+
+    @Test
+    fun dropsDoubledRunBesideAGap() {
+        val h = PriceHistory(File.createTempFile("history", ".json").apply { delete() })
+        // Eight doubled points, then two days missing, then a normal stretch.
+        for (i in 0 until 8) h.add(PricePoint(1000 + i, i * 600L, 164_000))
+        for (i in 0 until 60) h.add(PricePoint(1300 + i, 200_000L + i * 600L, 82_000 + i * 10))
+        h.dropOutliers(0.3, 0.4)
+        assertTrue(h.all().all { it.price < 100_000 })
+        assertEquals(60, h.all().size)
     }
 }

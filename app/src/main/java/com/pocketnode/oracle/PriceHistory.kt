@@ -61,12 +61,23 @@ class PriceHistory(private val file: File) {
     }
 
     /**
-     * Drops points far from the median of the blocks around them. A 6-block window
-     * now and then reads double or half the price; one such point would otherwise
-     * set the chart's scale for a week.
+     * Drops points that read double or half the price. A 6-block window now and then
+     * locks onto the wrong peak, and since neighbouring windows share five blocks the
+     * error can last several points in a row; one such run would otherwise set the
+     * chart's scale for a week. A point goes if it is more than [maxDeviation] from the
+     * median of the blocks around it, or more than [maxWeekDeviation] from the week's
+     * median. The second catches a run too long for its neighbours to outvote, or one
+     * sitting alone beside a gap (seen 2026-10-22: a Friday run at $164k next to two
+     * missing days).
      */
     @Synchronized
-    fun dropOutliers(maxDeviation: Double) {
+    fun dropOutliers(maxDeviation: Double, maxWeekDeviation: Double) {
+        // Week check first, so a long run can't outvote the good points beside it.
+        if (points.size >= 24) {
+            val all = points.values.map { it.price }.sorted()
+            val week = all[all.size / 2].toDouble()
+            points.values.removeAll { kotlin.math.abs(it.price / week - 1) > maxWeekDeviation }
+        }
         val list = points.values.toList()
         val bad = list.indices.filter { i ->
             val near = (maxOf(0, i - 6) until minOf(list.size, i + 7)).filter { it != i }.map { list[it].price }.sorted()
