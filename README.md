@@ -10,7 +10,7 @@ Turn any Android phone into a fully-validating Bitcoin full node. No server depe
 
 - **Two proven bootstrap paths:** sync from home node (under 1 hour) or download from internet (3-6 hours, on-chain only)
 - **Phone-to-phone and relay sharing:** scan a QR code, get a full node. Resume on failure. Works over WiFi or LAN
-- **Every maintained Bitcoin Core version:** Core 29.5 (default), 30.4, 31.2 and 32.1. One-tap switching, same chainstate
+- **Every maintained Bitcoin Core version:** Core 30.4 (default), 31.2 and 32.1. One-tap switching, same chainstate
 - **No thermal load:** phone shows no sign of load or overheat during normal operation
 - ~13 GB total disk (11 GB chainstate + 2 GB pruned blocks). Optional: +13 GB for block filter index (Neutrino wallets only, not needed for Lightning)
 - **Pure Kotlin Electrum server** with wallet tracking: balance, transactions, UTXOs all served from your own pruned node
@@ -111,8 +111,7 @@ One build of each Bitcoin Core major version still maintained upstream, with one
 
 | Implementation | Size | Policy |
 |---|---|---|
-| **Bitcoin Core 29.5** (default) | 8 MB | Standard relay rules and OP_RETURN limits |
-| **Bitcoin Core 30.4** | 8.5 MB | Permissive: larger OP_RETURN data allowed |
+| **Bitcoin Core 30.4** (default) | 8.5 MB | Permissive: larger OP_RETURN data allowed |
 | **Bitcoin Core 31.2** | 10 MB | Permissive: larger OP_RETURN data allowed |
 | **Bitcoin Core 32.1** | 10 MB | Permissive: larger OP_RETURN data allowed |
 
@@ -122,7 +121,7 @@ See [Version Selection Design](docs/VERSION-SELECTION.md) for details.
 
 ## Features
 
-- **Four Bitcoin Core versions** with one-tap switching: Core 29.5 (default), 30.4, 31.2 and 32.1
+- **Three Bitcoin Core versions** with one-tap switching: Core 30.4 (default), 31.2 and 32.1
 - **Two proven bootstrap paths:** home node or internet download (phone-to-phone built, untested)
 - **Pure Kotlin Electrum server** purpose-built for pruned nodes: the only Electrum server that works with `prune=2048`. Balances from the UTXO set, transaction history persisted forever (survives pruning), unsolicited notifications push new transactions to BlueWallet in real time
 - **Built-in Lightning node** powered by LDK (send, receive, channels, peer browser, seed backup/restore with automatic fund recovery)
@@ -189,7 +188,7 @@ Download from `https://utxo.download/mainnet-910000-utxos.dat` (9 GB) by default
 │       │              │              │                 │
 │  ┌────┴──────────────┴──────────────┴──────────────┐  │
 │  │  bitcoind (ARM64), user selects:                │  │
-│  │  Core 29.5 (default) | 30.4 | 31.2 | 32.1      │  │
+│  │  Core 30.4 (default) | 31.2 | 32.1             │  │
 │  │  Foreground service, local RPC                  │  │
 │  │  Tor mode: -proxy=127.0.0.1:9050 -onlynet=onion│  │
 │  └────────────────┬────────────────────────────────┘  │
@@ -280,8 +279,9 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 
 - **OS:** Android 7+ (tested on GrapheneOS, EMUI, Samsung OneUI)
 - **Hardware:** Any ARM64 device (tested on Pixel, Samsung, Huawei)
-- **Default:** Bitcoin Core 29.5 (standard relay rules and OP_RETURN limits)
-- **Also bundled:** Bitcoin Core 30.4, 31.2 and 32.1 (user selects from dashboard; permissive OP_RETURN)
+- **Default:** Bitcoin Core 30.4, the oldest major still maintained upstream
+- **Also bundled:** Bitcoin Core 31.2 and 32.1 (user selects from dashboard)
+- Core 29 left the app when it reached end of life with Core 32.1 (October 2026); a saved 29 choice moves to 30.4
 - **AssumeUTXO heights:** 840k (upstream) + 880k, 910k (910k backported from Core 30; Core 30 and 31 carry it natively, 31 also has 935k)
 
 ## Building
@@ -290,7 +290,7 @@ Built-in peer browser using mempool.space API. Browse nodes by:
 - macOS or Linux build machine
 - Android SDK + NDK r27
 - JDK 17
-- Bitcoin Core 29.5 source (stock tag, plus the Android fdsan patch)
+- Bitcoin Core 30.4, 31.2 and 32.1 sources (stock tags, plus the Android fdsan patch)
 
 ### Build bitcoind for ARM64
 See [docs/cross-compile-android.md](docs/cross-compile-android.md)

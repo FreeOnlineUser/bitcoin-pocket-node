@@ -114,7 +114,7 @@ cp -r ~/tools/android-cross-deps/android-deps /private/tmp/
 
 ### Clone
 
-**Core 29.5** (vanilla, the default `libbitcoind_core.so`; 29.4 from v0.37):
+**Core 29.x** (`libbitcoind_core.so`, the default from v0.37 until 29 reached end of life in October 2026; removed since):
 ```bash
 git clone --depth 1 --branch v29.5 https://github.com/bitcoin/bitcoin.git bitcoin-core-v29.5
 ```

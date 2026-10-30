@@ -34,13 +34,6 @@ object BinaryExtractor {
         val description: String,
         val policyStance: String
     ) {
-        CORE(
-            "libbitcoind_core.so",
-            "Bitcoin Core",
-            "29.5",
-            "Reference implementation. Standard relay rules and OP_RETURN limits.",
-            "Standard -- default relay policy"
-        ),
         CORE_30(
             "libbitcoind_v30.so",
             "Bitcoin Core",
@@ -64,14 +57,15 @@ object BinaryExtractor {
         );
 
         companion object {
-            val DEFAULT = CORE
+            // The oldest Core major still maintained upstream.
+            val DEFAULT = CORE_30
 
             fun fromName(name: String): BitcoinVersion {
                 return try {
-                    // Legacy selections: retired Knots builds and the old Core
-                    // naming both fall back to the current Core default.
+                    // Retired builds move to the default: Knots, Core 28.1, and Core 29
+                    // ("CORE"), which reached end of life with the release of 32.1.
                     when (name) {
-                        "KNOTS", "KNOTS_BIP110", "CORE_28_1" -> CORE
+                        "KNOTS", "KNOTS_BIP110", "CORE_28_1", "CORE" -> DEFAULT
                         else -> valueOf(name)
                     }
                 } catch (_: IllegalArgumentException) {
