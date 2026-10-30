@@ -1538,9 +1538,10 @@ private fun ActionButtons(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.verticalScroll(rememberScrollState())
                     ) {
-                        com.pocketnode.util.BinaryExtractor.BitcoinVersion.entries.forEach { version ->
-                            VersionCard(version)
-                        }
+                        // Newest release first.
+                        com.pocketnode.util.BinaryExtractor.BitcoinVersion.entries
+                            .sortedByDescending { v -> v.versionString.split('.').map { it.toIntOrNull() ?: 0 }.let { it[0] * 1000 + it.getOrElse(1) { 0 } } }
+                            .forEach { version -> VersionCard(version) }
                     }
                 },
                 confirmButton = {
