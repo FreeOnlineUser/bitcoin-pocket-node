@@ -52,6 +52,13 @@ object BinaryExtractor {
             "libbitcoind_v31.so",
             "Bitcoin Core",
             "31.2",
+            "Relaxed OP_RETURN data size limits.",
+            "Permissive -- larger OP_RETURN data allowed"
+        ),
+        CORE_32(
+            "libbitcoind_v32.so",
+            "Bitcoin Core",
+            "32.1",
             "Latest release. Relaxed OP_RETURN data size limits.",
             "Permissive -- larger OP_RETURN data allowed"
         );

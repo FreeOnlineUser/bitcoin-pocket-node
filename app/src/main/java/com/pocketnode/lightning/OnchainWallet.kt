@@ -126,6 +126,17 @@ class OnchainWallet(private val context: Context) {
         }
     }
 
+    /** What [sendAllOnchain] would send at [feeRate]: the spendable balance less the fee. */
+    fun estimateSendAll(address: String?, feeRate: FeeRate): Long? {
+        val n = node ?: return null
+        return try {
+            n.onchainPayment().estimateSendAllAmount(address?.takeIf { it.isNotBlank() }, feeRate).toLong()
+        } catch (e: Exception) {
+            // An address still being typed fails to parse; estimate for a plain output instead.
+            try { n.onchainPayment().estimateSendAllAmount(null, feeRate).toLong() } catch (_: Exception) { null }
+        }
+    }
+
     fun sendAllOnchain(address: String, feeRate: FeeRate? = null): Result<String> {
         val n = node ?: return Result.failure(Exception("Node not running"))
         return try {

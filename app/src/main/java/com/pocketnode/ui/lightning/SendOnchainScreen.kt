@@ -43,6 +43,8 @@ fun SendOnchainScreen(
     var amountSats by remember { mutableStateOf("") }
     var feeRate by remember { mutableStateOf("4") }
     var sendAll by remember { mutableStateOf(false) }
+    // What MAX sends at the current fee rate, shown in the (disabled) amount field.
+    var maxAmount by remember { mutableStateOf<Long?>(null) }
     var sending by remember { mutableStateOf(false) }
     var sendComplete by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<String?>(null) }
@@ -127,6 +129,15 @@ fun SendOnchainScreen(
                 }
             )
 
+            LaunchedEffect(sendAll, feeRate, address, state.onchainBalanceSats) {
+                maxAmount = null
+                if (!sendAll) return@LaunchedEffect
+                val rate = feeRate.toDoubleOrNull()?.takeIf { it >= 1.0 } ?: return@LaunchedEffect
+                maxAmount = withContext(Dispatchers.IO) {
+                    lightning.estimateSendAll(address, FeeRate.fromSatPerVbUnchecked(rate.toLong().toULong()))
+                }
+            }
+
             // Amount input
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -134,14 +145,14 @@ fun SendOnchainScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
-                    value = if (sendAll) "" else amountSats,
+                    value = if (sendAll) maxAmount?.toString() ?: "" else amountSats,
                     onValueChange = {
                         amountSats = it.filter { c -> c.isDigit() }
                         sendAll = false
                         error = null
                         result = null
                     },
-                    label = { Text("Amount (sats)") },
+                    label = { Text(if (sendAll) "Amount (sats), all after fee" else "Amount (sats)") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,

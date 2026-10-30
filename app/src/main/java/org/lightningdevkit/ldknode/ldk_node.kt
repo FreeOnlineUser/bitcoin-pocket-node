@@ -1211,6 +1211,8 @@ internal open class UniffiVTableCallbackInterfaceVssHeaderProvider(
 
 
 
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -1557,6 +1559,8 @@ fun uniffi_ldk_node_checksum_method_offer_offer_description(
 fun uniffi_ldk_node_checksum_method_offer_supports_chain(
 ): Short
 fun uniffi_ldk_node_checksum_method_onchainpayment_bump_fee_rbf(
+): Short
+fun uniffi_ldk_node_checksum_method_onchainpayment_estimate_send_all_amount(
 ): Short
 fun uniffi_ldk_node_checksum_method_onchainpayment_new_address(
 ): Short
@@ -2113,6 +2117,8 @@ fun uniffi_ldk_node_fn_free_onchainpayment(`ptr`: Pointer,uniffi_out_err: Uniffi
 ): Unit
 fun uniffi_ldk_node_fn_method_onchainpayment_bump_fee_rbf(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_ldk_node_fn_method_onchainpayment_estimate_send_all_amount(`ptr`: Pointer,`address`: RustBuffer.ByValue,`feeRate`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): Long
 fun uniffi_ldk_node_fn_method_onchainpayment_new_address(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,`retainReserves`: Byte,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2807,6 +2813,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_onchainpayment_bump_fee_rbf() != 54102.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_onchainpayment_estimate_send_all_amount() != 33338.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_onchainpayment_new_address() != 43992.toShort()) {
@@ -10206,6 +10215,13 @@ public interface OnchainPaymentInterface {
     fun `bumpFeeRbf`(`paymentId`: PaymentId, `feeRate`: FeeRate?): Txid
     
     /**
+     * Returns the amount [`Self::send_all_to_address`] with `retain_reserves` set to `false`
+     * would send at `fee_rate`: all spendable funds less the fee. With no `address` the
+     * estimate assumes a P2WPKH output. Nothing is signed or broadcast.
+     */
+    fun `estimateSendAllAmount`(`address`: Address?, `feeRate`: FeeRate): kotlin.ULong
+    
+    /**
      * Retrieve a new on-chain/funding address.
      */
     fun `newAddress`(): Address
@@ -10352,6 +10368,24 @@ open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface
     uniffiRustCallWithError(NodeException) { _status ->
     UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_bump_fee_rbf(
         it, FfiConverterTypePaymentId.lower(`paymentId`),FfiConverterOptionalTypeFeeRate.lower(`feeRate`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Returns the amount [`Self::send_all_to_address`] with `retain_reserves` set to `false`
+     * would send at `fee_rate`: all spendable funds less the fee. With no `address` the
+     * estimate assumes a P2WPKH output. Nothing is signed or broadcast.
+     */
+    @Throws(NodeException::class)override fun `estimateSendAllAmount`(`address`: Address?, `feeRate`: FeeRate): kotlin.ULong {
+            return FfiConverterULong.lift(
+    callWithPointer {
+    uniffiRustCallWithError(NodeException) { _status ->
+    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_estimate_send_all_amount(
+        it, FfiConverterOptionalTypeAddress.lower(`address`),FfiConverterTypeFeeRate.lower(`feeRate`),_status)
 }
     }
     )

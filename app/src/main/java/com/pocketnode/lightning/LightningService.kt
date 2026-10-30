@@ -1210,6 +1210,7 @@ class LightningService(private val context: Context) {
     fun markDepositAddressUsed(address: String) = onchain.markDepositAddressUsed(address)
     fun sendOnchain(address: String, amountSats: Long, feeRate: FeeRate? = null): Result<String> = onchain.sendOnchain(address, amountSats, feeRate)
     fun sendAllOnchain(address: String, feeRate: FeeRate? = null): Result<String> = onchain.sendAllOnchain(address, feeRate)
+    fun estimateSendAll(address: String?, feeRate: FeeRate): Long? = onchain.estimateSendAll(address, feeRate)
 
     fun getLdkHeight(): Int = try { node?.status()?.currentBestBlock?.height?.toInt() ?: 0 } catch (_: Exception) { 0 }
     fun isRunning(): Boolean = node != null
