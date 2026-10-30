@@ -114,9 +114,9 @@ cp -r ~/tools/android-cross-deps/android-deps /private/tmp/
 
 ### Clone
 
-**Core 29.4** (vanilla, the default `libbitcoind_core.so` since v0.37):
+**Core 29.5** (vanilla, the default `libbitcoind_core.so`; 29.4 from v0.37):
 ```bash
-git clone --depth 1 --branch v29.4 https://github.com/bitcoin/bitcoin.git bitcoin-core-v29.4
+git clone --depth 1 --branch v29.5 https://github.com/bitcoin/bitcoin.git bitcoin-core-v29.5
 ```
 Same cmake flags as the Core 29.3 section below, plus two patches: fdsan, and the
 mainnet assumeutxo entry for height 910,000 copied verbatim from Core v30.0

@@ -37,21 +37,21 @@ object BinaryExtractor {
         CORE(
             "libbitcoind_core.so",
             "Bitcoin Core",
-            "29.4",
+            "29.5",
             "Reference implementation. Standard relay rules and OP_RETURN limits.",
             "Standard -- default relay policy"
         ),
         CORE_30(
             "libbitcoind_v30.so",
             "Bitcoin Core",
-            "30.3",
+            "30.4",
             "Relaxed OP_RETURN data size limits.",
             "Permissive -- larger OP_RETURN data allowed"
         ),
         CORE_31(
             "libbitcoind_v31.so",
             "Bitcoin Core",
-            "31.1",
+            "31.2",
             "Latest release. Relaxed OP_RETURN data size limits.",
             "Permissive -- larger OP_RETURN data allowed"
         );
