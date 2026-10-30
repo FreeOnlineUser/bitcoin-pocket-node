@@ -1,5 +1,15 @@
 # Bitcoin Core Version Selection
 
+> **Current (2026-10, v0.39-alpha):** one build of each Bitcoin Core major still
+> maintained upstream: Core 30.4 (default, `libbitcoind_v30.so`), 31.2
+> (`libbitcoind_v31.so`) and 32.1 (`libbitcoind_v32.so`), listed newest first in the
+> picker. Rule: a user's choice is never changed for them; a version leaves the app
+> only when Core stops maintaining it, and a saved choice of it moves to the default
+> (`BinaryExtractor.BitcoinVersion.fromName`). Core 29 left in v0.39 when 32.1 made it
+> end of life (`libbitcoind_core.so` removed; a saved "CORE" now means 30.4). All
+> builds are stock tags plus the Android fdsan patch, from
+> `~/tools/bitcoind-build/build-v*.sh`. Everything below is design history.
+
 > **Update (2026-08, v0.36-alpha):** Bitcoin Knots and the BIP-110 signaling toggle
 > were removed. BIP-110 never activated, and Knots diverged from mainnet consensus,
 > so bundling it shipped a consensus-incompatible binary. The app now bundles Bitcoin
