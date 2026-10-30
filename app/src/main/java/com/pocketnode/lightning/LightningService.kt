@@ -755,6 +755,24 @@ class LightningService(private val context: Context) {
             starting = false
             val errorMsg = e.message ?: "Unknown error"
 
+            // bitcoind has no fee estimates yet: after a restart without its saved
+            // estimates (an unclean stop, or a switch from Core 32, which keeps them in a
+            // new file) it needs a few blocks to rebuild them. Keep trying rather than
+            // leave Lightning down until someone notices.
+            if (errorMsg.contains("fee rate", ignoreCase = true)) {
+                Log.w(TAG, "Fee estimates still not ready; retrying Lightning start in 5 min")
+                _state.value = _state.value.copy(
+                    status = LightningState.Status.STARTING,
+                    error = "Waiting for bitcoind's fee estimates. After a restart without them " +
+                        "it needs a few blocks to rebuild them. Lightning starts as soon as they're ready."
+                )
+                Thread({
+                    Thread.sleep(5 * 60_000)
+                    if (node == null && !starting) start(rpcUser, rpcPassword, rpcPort)
+                }, "ldk-start-retry").start()
+                return
+            }
+
             if (errorMsg.contains("WalletSetupFailed") || errorMsg.contains("wallet")) {
                 val recovered = recovery.tryRestoreSeedBackup()
                 if (recovered) {
